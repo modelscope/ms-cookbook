@@ -1,0 +1,130 @@
+<article>
+<h1>从频繁报错到稳定出图：我给 ComfyUI 插件的云 API 节点做了一次全面体检</h1>
+<blockquote><p>一句话摘要：我把自己的 ComfyUI 插件 <code>comfyui_bozo</code> 里三个云 API 出图模块（BizyAIR、ModelScope、柏拉图AI）从"三天两头报错"修到了"稳定出图"，顺手新增了 2 个出图节点，全程只动 Python，不花钱。</p></blockquote>
+<img src="https://modelscope.cn/models/bozoyan/dsh-bizyair-i2-assets/resolve/master/comfyui-bozo-fix/17895341444501.jpg" alt="" class="article-image" loading="lazy" decoding="async" />
+<h2><b>写在前面</b></h2>
+<p>我自己重度使用 ComfyUI 做 AI 绘图工作流，前段时间DeepSeek-V4.1-Flash 发布，我就第一时间接入了魔搭社区的LLM节点。</p>
+<img src="https://modelscope.cn/models/bozoyan/dsh-bizyair-i2-assets/resolve/master/comfyui-bozo-fix/iShot_2026-09-16_12.05.43.png" alt="iShot_2026-09-16_12.05.43" class="article-image" loading="lazy" decoding="async" />
+<p>当然，插件节点包里也有少不少VLM的节点</p>
+<img src="https://modelscope.cn/models/bozoyan/dsh-bizyair-i2-assets/resolve/master/comfyui-bozo-fix/VLM.png" alt="VLM" class="article-image" loading="lazy" decoding="async" />
+<p>特别是方便的出图接口：BizyAIR、魔搭 ModelScope、柏拉图AI（apilio.ai）。用得多了问题就来了——</p>
+<ul><li>BizyAIR 的节点十次里有两三次下载结果图直接报 <code>SSLError(SSLEOFError)</code>，更气人的是有时候明明生成了 4 张图，最后输出却是空白；</li><li>魔搭的节点跑着跑着突然就不出图了，日志里翻半天也找不到原因；</li><li>长任务一跑就是几分钟，终端黑着没任何输出，根本不知道它是死了还是在干活。</li></ul>
+<p>这次我下决心把这些节点全部梳理了一遍：一边排查修复老问题，一边把几个只写了命令行脚本的能力（BizyAIR 的 gpt-image-2、柏拉图AI 的 GPT-image-2）封装成了正式的节点面板。这篇文章就是把整个修改思路完整复盘出来，每个问题都带真实报错和定位过程，希望同样在写 ComfyUI 插件的朋友能少踩坑。</p>
+<h2><b>效果先看</b></h2>
+<p>修完之后达到的效果：</p>
+<ul><li><b>SSL 中断自愈</b>：结果图下载偶发中断时自动重试，不再丢图、不再输出空白图；</li><li><b>终端读秒</b>：长任务执行期间每秒刷新「已等待 MM:SS」，任务状态一目了然；</li><li><b>多 Key 容错</b>：401 失效 key 自动标记跳过、429 限流自动换 key 重试；</li><li><b>新节点 ×2</b>：BizyAIR GPT-I2 出图节点、柏拉图AI GPT-image-2 出图节点。</li></ul>
+<img src="https://modelscope.cn/models/bozoyan/dsh-bizyair-i2-assets/resolve/master/comfyui-bozo-fix/iShot_2026-09-16_12.01.47.png" alt="iShot_2026-09-16_12.01.47" class="article-image" loading="lazy" decoding="async" />
+<h2><b>本篇大纲</b></h2>
+<ol><li>准备工作</li><li>实践流程总览</li><li>第一步：修复 BizyAIR 图像下载的 SSL 中断与丢图 bug</li><li>第二步：把 gpt-image-2 CLI 封装成 BizyAIR GPT-I2 节点</li><li>第三步：终端读秒 + 直连加固</li><li>第四步：排查 401，揪出 Fake-IP 代理这个真凶</li><li>第五步：兼容 webapp 接口的新返回格式</li><li>第六步：对照可用实现修复魔搭节点</li><li>第七步：吸收批量脚本的工程经验</li><li>第八步：新增柏拉图AI 出图节点</li><li>踩坑记录</li><li>小结</li><li>模型信息</li></ol>
+<h2><b>准备工作</b></h2>
+<ul><li><b>ComfyUI 环境</b>：本机已装好的 ComfyUI，插件放在 <code>custom_nodes/comfyui_bozo/</code>；</li><li><b>插件源码</b>：<a href="https://github.com/bozoyan/comfyui_bozo" target="_blank" rel="noopener noreferrer">https://github.com/bozoyan/comfyui_bozo</a> ，本次改动集中在 <code>BizyAIR.py</code>、<code>image.py</code>、<code>node.py</code>、<code>bltcy.py</code>、<code>__init__.py</code>；</li><li><b>各平台 API Key</b>：BizyAIR key、魔搭访问令牌（<a href="https://modelscope.cn" target="_blank" rel="noopener noreferrer">https://modelscope.cn</a> 我的页面 → 访问令牌）、柏拉图AI key，分别放插件的 <code>key/</code> 目录下对应文件；</li><li><b>参考实现</b>：两个我确认能跑通的脚本——一个调用 BizyAIR <code>gpt-image-2-channel</code> 的 CLI，一个调魔搭批量出图的脚本。修节点的核心方法论就是"拿能跑的对照不能跑的"；</li><li><b>依赖</b>：<code>pip install requests alibabacloud_oss_v2</code>（后者是新节点上传参考图用的）。</li></ul>
+<h2><b>实践流程总览</b></h2>
+<ol><li>复现并定位 BizyAIR 下载 SSL 中断 + 丢图 bug；</li><li>引入强制直连与自动重试；</li><li>封装 BizyAIR GPT-I2 异步出图节点；</li><li>给长任务加终端读秒；</li><li>排查 401 报错，发现本机 Fake-IP 代理干扰；</li><li>兼容 webapp 接口的新旧两种返回格式；</li><li>对照 MCP 实现修复魔搭节点字段；</li><li>吸收批量脚本的多 Key 管理经验；</li><li>新增柏拉图AI 出图节点；</li><li>全量语法检查 + 文档归档。</li></ol>
+<h2><b>第一步：修复 BizyAIR 下载 SSL 中断与丢图 bug</b></h2>
+<p><b>做什么</b>：让结果图下载失败时自动重试，并修掉"下载失败导致全部丢图"的连锁 bug。</p>
+<p><b>怎么做</b>：先看真实报错，日志里是这样的：</p>
+<pre data-language="text"><code>❌ 加载图像失败: HTTPSConnectionPool(host=&#x27;storage.bizyair.ai&#x27;, port=443):
+   Max retries exceeded ... SSLError(SSLEOFError(8, &#x27;[SSL: UNEXPECTED_EOF_WHILE_READING]&#x27;))</code></pre>
+<p>更隐蔽的是后面这个 bug：第一张图下载失败后，老代码返回了一张 64×64 的占位图；合并多张图时逻辑是"以第一张的尺寸为基准过滤"，结果后面 3 张下载成功的图全被当成"尺寸不匹配"丢掉了，最终输出空白。看到这行日志就能确认：</p>
+<pre data-language="text"><code>⚠️ 警告: 忽略了 3 张尺寸不匹配的图像
+✅ 合并了 1 张图像，最终形状: torch.Size([1, 64, 64, 3])</code></pre>
+<p>修复分三处：</p>
+<pre data-language="python"><code># 1. 统一带重试的请求函数，遇到 SSL 中断自动重试 3 次（3s→6s→9s 退避）
+def _request_with_retry(method, url, **kwargs):
+    last_err = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            resp = requests.request(method, url, **kwargs)
+            resp.raise_for_status()
+            return resp
+        except requests.RequestException as e:
+            last_err = e
+            if attempt &lt; MAX_RETRIES:
+                time.sleep(RETRY_BACKOFF_SEC * attempt)
+    raise last_err
+
+# 2. url_to_tensor 失败时返回 None，调用方直接跳过（不再返回占位图）
+# 3. 合并时只拼接尺寸一致的张量，异常图天然被排除</code></pre>
+<p><b>预期看到什么</b>：偶发 SSL 中断时终端多一两条「⚠️ 请求异常（第 1 次），3 秒后重试」，随后正常出图；4 张图全部成功合并为 <code>torch.Size([4, 1664, 960, 3])</code>。</p>
+<h2><b>第二步：封装 BizyAIR GPT-I2 出图节点</b></h2>
+<p><b>做什么</b>：把只在命令行里能用的 <code>gpt-image-2-channel</code> 接口封装成正式节点。</p>
+<p><b>怎么做</b>：照着我那份能跑通的 CLI 脚本还原完整流程——提交任务、等 40 秒、每 5 秒轮询一次、超时 1200 秒、下载结果。节点面板设计成：</p>
+<pre data-language="python"><code>&quot;required&quot;: {
+    &quot;prompt&quot;: ...,                          # 提示词
+    &quot;aspect_ratio&quot;: (GPT_I2_ASPECT_RATIOS), # 15 种比例
+    &quot;resolution&quot;: ([&quot;1k&quot;, &quot;2k&quot;, &quot;4k&quot;]),     # 分辨率，默认 4k
+},
+&quot;optional&quot;: {
+    &quot;image&quot;: (&quot;IMAGE&quot;,),                    # 参考图，有值自动走图生图
+    &quot;image_urls&quot;: ...,                      # URL 每行一个，最多 10 张
+    &quot;api_key&quot;: ...,                         # 留空读 key 文件
+}</code></pre>
+<p>本地张量参考图的上传走两步：先 <code>GET /v1/upload/token</code> 拿 STS 临时凭证，再用 <code>alibabacloud_oss_v2</code> 传到阿里云 OSS，拿到公网 URL 再提交任务。</p>
+<p><b>预期看到什么</b>：重启 ComfyUI 后节点面板 <code>🇨🇳BOZO/BizyAir</code> 分类下出现「GPT图像生成（BizyAIR）」，跑一次文生图约 1~3 分钟返回图像。</p>
+<h2><b>第三步：终端读秒 + 直连加固</b></h2>
+<p><b>做什么</b>：长任务等待期间终端不再"黑屏"，并进一步压缩 SSL 中断的发生概率。</p>
+<p><b>怎么做</b>：写了一个后台线程读秒器，每秒在终端同一行覆盖刷新（<code>\r</code> 回行首是实现动态刷新的关键）：</p>
+<pre data-language="python"><code>class ElapsedTimer:
+    def _run(self):
+        for i in itertools.count(1):
+            if self._stop_event.is_set():
+                break
+            mins, secs = divmod(i, 60)
+            print(f&quot;\r⏳ {self.label}... 已等待 {mins:02d}:{secs:02d} (分:秒)   &quot;,
+                  end=&quot;&quot;, flush=True)
+            self._stop_event.wait(1)</code></pre>
+<p>直连加固则是在每次请求时新建 <code>Session</code> 并设 <code>trust_env=False</code>，同时加 <code>Connection: close</code> 请求头不复用旧连接，重试次数提到 5 次。</p>
+<p><b>预期看到什么</b>：跑长任务时终端每秒跳动「⏳ BizyAIR 任务执行中... 已等待 00:37 (分:秒)」，结束后自动换行输出结果日志。</p>
+<h2><b>第四步：排查 401，揪出 Fake-IP 代理这个真凶</b></h2>
+<p><b>做什么</b>：搞清楚为什么修完网络还是偶发 401。</p>
+<p><b>怎么做</b>：这是我这次排查里最有意思的一段。401 的字面意思是"鉴权失败"，第一反应是 key 失效——但同一个 key 有时能过有时不能。我用 <code>curl</code> 和 <code>dig</code> 逐层排查：</p>
+<pre data-language="bash"><code>$ dig +short api.bizyair.ai
+198.18.0.28        # ← 可疑！</code></pre>
+<p><code>198.18.x.x</code> 是保留网段，正常公网解析不可能返回它。这是 Clash/Surge 这类代理工具 <b>TUN/Fake-IP 模式</b>的标志性地址——也就是说我的<b>系统代理在网络层接管了全部流量</b>，代码里设 <code>NO_PROXY</code>、<code>trust_env=False</code> 都绕不过去（它们只能管应用层的代理环境变量）。用阿里 DoH 拿真实 IP 一对比就清楚了：</p>
+<pre data-language="bash"><code>$ curl -s &quot;https://223.5.5.5/resolve?name=api.bizyair.ai&amp;type=A&quot;
+# 真实 IP：104.18.20.64 / 104.18.21.64（Cloudflare）</code></pre>
+<p><b>预期看到什么</b>：确认根因后，在代理客户端加一条直连规则 <code>DOMAIN-SUFFIX,bizyair.ai,DIRECT</code>，SSL 中断和 401 基本绝迹。这个坑代码层无解，必须改代理配置。</p>
+<h2><b>第五步：兼容 webapp 接口的新返回格式</b></h2>
+<p><b>做什么</b>：让老节点能解析平台改版后的返回结构。</p>
+<p><b>怎么做</b>：任务查询接口的 <code>outputs</code> 字段从「列表 + <code>object_url</code> 字段」变成了「按类型分组的字典」，长这样：</p>
+<pre data-language="json"><code>&quot;outputs&quot;: {
+  &quot;images&quot;: [&quot;https://storage.bizyair.ai/outputs/xxx.png&quot;],
+  &quot;videos&quot;: [], &quot;texts&quot;: [], &quot;audios&quot;: [], &quot;meshes&quot;: [], &quot;archives&quot;: []
+}</code></pre>
+<p>我把解析逻辑归一化：字典格式按类别映射扩展名（images→图片、videos→mp4、texts/audios→文本），再按 URL 实际扩展名兜底；旧的列表格式原样保留兼容。这样平台以后再改回旧格式也不会挂。</p>
+<p><b>预期看到什么</b>：webapp 任务完成后，image / mp4 / txt 各输出口都能正常拿到对应内容。</p>
+<h2><b>第六步：对照可用实现修复魔搭节点</b></h2>
+<p><b>做什么</b>：让魔搭三个出图节点（PicRun、多 LoRA 文生图、多 LoRA 图生图）恢复出图。</p>
+<p><b>怎么做</b>：方法论还是"拿能跑的对照不能跑的"。我手里有一份实测可用的魔搭 MCP server 代码，逐字段对比后发现两处关键差异：</p>
+<pre data-language="python"><code># 老节点（跑不通）                    # MCP（能跑通）
+payload = {&quot;scale&quot;: guidance, ...}    payload = {&quot;guidance&quot;: guidance, ...}
+&quot;image_url&quot;: [url1, url2]             &quot;image_url&quot;: url1            # 单张传字符串
+&quot;loras&quot;: {id: 1.0}                    &quot;loras&quot;: &quot;model_id&quot;          # 单个传字符串</code></pre>
+<p>修复策略：引导系数 <code>guidance</code> 和 <code>scale</code> <b>双字段同发</b>（后来发现我另一份批量脚本用的就是 <code>scale</code>，说明新旧字段平台都认，双发最稳）；单张图/单 LoRA 传字符串，多张才传列表；<code>seed=-1</code> 在客户端直接生成随机数并打印实际值，方便复现。</p>
+<p><b>预期看到什么</b>：节点正常返回图片，<code>image_url</code> 输出可访问的结果链接。</p>
+<h2><b>第七步：吸收批量脚本的工程经验</b></h2>
+<p><b>做什么</b>：把我另一份"实战中反复打磨过"的多 Key 批量出图脚本里的机制搬进节点。</p>
+<p><b>怎么做</b>：这份脚本每天要跑几百个任务，它的 Key 管理策略明显更成熟，我挑了四条搬过来：</p>
+<table><thead><tr><th>脚本机制</th><th>节点落地方式</th></tr></thead><tbody><tr><td>prompt 截断 1900 字符（魔搭上限 2000）</td><td>三个节点提交前统一截断</td></tr><tr><td>401 永久标记死 key</td><td>key 池新增 <code>mark_dead()</code>，失效 key 退出轮询</td></tr><tr><td>429 限流换 key 立即重试</td><td>提交遇 401/429 自动切下一个 key</td></tr><tr><td>首次轮询前等 10~20 秒</td><td>减少提交后立刻查询的无效请求</td></tr></tbody></table>
+<p>另外还发现脚本会把 <code>output_images</code> 里的<b>所有图</b>都下载，而老节点只取第一张——也顺手改成了多张合并 batch 输出。</p>
+<p><b>预期看到什么</b>：某个 key 被平台禁用后，日志出现「key …xxxxxx 已标记失效(401)，剩余 N 个可用」，任务自动用下一个 key 跑完，不需要人工干预。</p>
+<h2><b>第八步：新增柏拉图AI 出图节点</b></h2>
+<p><b>做什么</b>：把柏拉图AI（apilio.ai）的 GPT-image-2 CLI 也封装成节点。</p>
+<p><b>怎么做</b>：和第二步同一套思路，但这个接口是<b>同步</b>的——一个请求挂 90 秒到 10 分钟才返回。所以重点是把 CLI 里现成的动态读秒计时器直接复用进来，避免长等待期间终端无输出。key 读取 <code>key/bltcy.txt</code>，支持多 key 轮询和自动回写保存。</p>
+<p><b>预期看到什么</b>：节点面板出现「柏拉图图像生成~ 🎯BOZO」，执行期间终端读秒跳动，最终返回图像和 URL。</p>
+<img src="https://modelscope.cn/models/bozoyan/dsh-bizyair-i2-assets/resolve/master/comfyui-bozo-fix/BLT-1.png" alt="BLT-1" class="article-image" loading="lazy" decoding="async" />
+<img src="https://modelscope.cn/models/bozoyan/dsh-bizyair-i2-assets/resolve/master/comfyui-bozo-fix/BLT.png" alt="BLT" class="article-image" loading="lazy" decoding="async" />
+<h2><b>踩坑记录</b></h2>
+<p><b>Q1：SSL 中断到底是谁的锅？</b> 分两层。应用层：requests 会读 macOS 系统代理，<code>trust_env=False</code> + <code>NO_PROXY</code> 能管住；网络层：TUN/Fake-IP 模式的代理在网络层截流，代码无解，只能在代理客户端加直连规则。遇到"怎么改代码都不行"的网络问题，先 <code>dig</code> 一下域名，看到 <code>198.18.x.x</code> 就直接去查代理。</p>
+<p><b>Q2：明明生成了 4 张图，为什么输出是空白？</b> 老代码下载失败时返回 64×64 占位图，而合并逻辑以"第一张的尺寸"为基准过滤，第一张恰好是占位图时，后面所有正常图都被丢掉。教训：<b>错误状态不要伪装成正常值往下游传</b>，返回 <code>None</code> 让调用方跳过更安全。</p>
+<p><b>Q3：ComfyUI 节点的 IS_CHANGED 报 missing self？</b> ComfyUI 是以类方法形式调用 <code>IS_CHANGED</code> 的，定义必须写成 <code>def IS_CHANGED(*args, **kwargs):</code>，不能写 <code>self</code>。这是 ComfyUI 插件的固定写法，跟普通 Python 类不一样。</p>
+<p><b>Q4：节点字段到底该用 scale 还是 guidance？</b> 我一开始只按 MCP 改成 <code>guidance</code>，后来发现自己另一份每天在跑的批量脚本用的是 <code>scale</code>——说明平台两个都认。结论：<b>有多个可用参照时，找它们之间的"公共兼容写法"（双字段同发），比赌单边更稳</b>。</p>
+<p><b>Q5：为什么终端读秒用 <code>\r</code> 而不是不断 print 新行？</b> ComfyUI 的终端日志很长，读秒如果每秒一行会把关键报错冲没。<code>\r</code> 回到行首覆盖刷新，一行始终只占一屏，结束后再 <code>print()</code> 换行把光标让出来。</p>
+<h2><b>小结</b></h2>
+<p>这次重构最大的收获是想清楚了一个方法论：<b>修节点不要凭感觉改，先找一个"确认能跑通"的参照实现，逐字段逐请求地对照</b>。BizyAIR 的 GPT-I2 节点是照 CLI 还原的，魔搭节点是照 MCP 修的，柏拉图AI 节点干脆和 CLI 共用同一份代码——参照物让每个决定都有依据。</p>
+<p>不足也有：Fake-IP 代理的坑只能在客户端侧解决，插件本身没法自动检测；魔搭返回多张图时尺寸不一致的场景还没做缩放对齐。下一步我打算把三个云 API 节点的公共逻辑（重试、读秒、多图合并、key 轮询）抽成一个共享模块，新接平台时就能直接复用。</p>
+<h2><b>模型信息</b></h2>
+<p>本项目基于 ModelScope 魔搭社区的大模型开发，感谢社区提供免费算力与模型支持：</p>
+<ul><li><b>模型</b>：<code>bozoyan/k-yanbo</code></li><li><b>模型主页</b>：<a href="https://modelscope.cn/models/bozoyan/k-yanbo" target="_blank" rel="noopener noreferrer">https://modelscope.cn/models/bozoyan/k-yanbo</a></li><li><b>调用方式</b>：<code>model=&#x27;bozoyan/k-yanbo&#x27;</code>（魔搭 API-Inference 异步任务接口）</li><li><b>节点默认模型</b>：<code>Qwen/Qwen-Image</code>（<a href="https://modelscope.cn/models/Qwen/Qwen-Image" target="_blank" rel="noopener noreferrer">https://modelscope.cn/models/Qwen/Qwen-Image</a> ）</li></ul>
+<img src="https://modelscope.cn/models/bozoyan/dsh-bizyair-i2-assets/resolve/master/comfyui-bozo-fix/%E9%80%89%E6%8B%A9%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A8%A1%E5%9E%8B.png" alt="选择自定义模型" class="article-image" loading="lazy" decoding="async" />
+</article>

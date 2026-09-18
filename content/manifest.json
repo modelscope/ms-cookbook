@@ -307,6 +307,20 @@
       "file": "source-html/chapter-34.html",
       "status": "ready",
       "discussionId": "chapter-34"
+    },
+    {
+      "number": 35,
+      "title": "从频繁报错到稳定出图：我给 ComfyUI 插件的云 API 节点做了一次全面体检",
+      "partIndex": 5,
+      "file": "source-html/chapter-35.html",
+      "status": "ready"
+    },
+    {
+      "number": 36,
+      "title": "把三个生图服务打包成 MCP：让 AI 助手随口一句话就能画图的实践",
+      "partIndex": 6,
+      "file": "source-html/chapter-36.html",
+      "status": "ready"
     }
   ]
 }
