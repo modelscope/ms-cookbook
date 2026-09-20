@@ -116,7 +116,7 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | [30 · 快速使用PI](content/chapters/chapter-30.md) | Getting started with PI |
 | [31 · 快速使用DeepSeek Harness](content/chapters/chapter-31.md) | Getting started with DeepSeek Harness |
 | [32 · 补充：Agent框架知识](content/chapters/chapter-32.md) | Agent framework fundamentals |
-| [33 · 用 Penguin Harness 快速开发并优化产线巡检 Agent 应用](content/chapters/chapter-33.md) | Develop, evaluate, and optimize a production-line inspection Agent |
+| [33 · 业务实践：用 Penguin Harness 开发与优化产线巡检 Agent](content/chapters/chapter-33.md) | Develop, evaluate, and optimize a production-line inspection Agent |
 | **Part 8 · Supplementary fundamentals** | |
 | [34 · 补充：大模型基础知识](content/chapters/chapter-34.md) | Model architecture, training, inference, and limitations |
 | [35 · 主流LLM评测](content/chapters/chapter-35.md) | Invitation to contribute evaluations of mainstream models |

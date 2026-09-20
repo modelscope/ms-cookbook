@@ -1,6 +1,6 @@
 <!-- Generated from ../source-html/chapter-33.html; do not edit independently. -->
 
-# 用 Penguin Harness 快速开发并优化产线巡检 Agent 应用
+# 业务实践：用 Penguin Harness 开发与优化产线巡检 Agent
 
 <a id="c33-s1"></a>
 
