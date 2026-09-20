@@ -1,5 +1,5 @@
 <article>
-<h1>快速使用PI</h1>
+<h1>快速使用 PI</h1>
 <p>Pi 的核心是 Agent Loop、模型调用、工具和终端界面。你需要 Skills、Prompt Templates、Extensions 和 Packages ，配上就行。</p>
 <img src="../../assets/manuscript-20260914/c28-f8d0dc4f94a6ac.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>另外，如果你平时已经在折腾 Codex、Claude Code、Agent Skills，Pi 还是很值得学习一下的。</p>
@@ -13,10 +13,10 @@
 <ul><li><code>pi-ai</code>：统一连接 OpenAI、Anthropic、Google、DeepSeek、OpenRouter、Ollama 等模型；</li><li><code>pi-agent-core</code>：负责工具调用、状态管理和 Agent 循环；</li><li><code>pi-tui</code>：终端交互界面；</li><li><code>pi-coding-agent</code>：我们真正安装和使用的 CLI。</li></ul>
 <p>Pi 默认交给模型的核心工具只有四个：<code>read</code>、<code>write</code>、<code>edit</code> 和 <code>bash</code>。</p>
 <p>新版 CLI 里还能按需开放 <code>grep</code>、<code>find</code>、<code>ls</code>，Windows 也有可选的 PowerShell 工具。</p>
-<p>看起来东西不多，但Agent底层无非就是读、写、改、执行。很多更复杂的能力，其实都可以从这几个原语长出来。</p>
+<p>看起来东西不多，但 Agent 底层无非就是读、写、改、执行。很多更复杂的能力，其实都可以从这几个原语长出来。</p>
 <img src="../../assets/manuscript-20260914/c28-f3d9d1eae668f1.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>很多 Agent 产品会把计划、子 Agent、MCP、权限审批和任务列表全部做好，用户只需要设置一下就行。</p>
-<p>Pi 是给你一个能跑的Agent骨架，可以自定义Agent。想要计划模式，就用文件写或者装扩展；想要子 Agent，就用 tmux 拉起多个 Pi，或者自己写 Extension；想接 MCP，也可以装对应扩展。</p>
+<p>Pi 是给你一个能跑的 Agent 骨架，可以自定义 Agent。想要计划模式，就用文件写或者装扩展；想要子 Agent，就用 tmux 拉起多个 Pi，或者自己写 Extension；想接 MCP，也可以装对应扩展。</p>
 <p>它更像一套已经通水通电的毛坯房。住得舒不舒服，取决于你后面怎么装修。</p>
 <h2>安装</h2>
 <h3><b>方法一：直接丢给 Agent 帮忙安装</b></h3>
@@ -114,12 +114,12 @@ pi</code></pre>
 <p>如果项目里带有 <code>.pi/settings.json</code>、<code>.pi</code> 资源或项目级 Skills，Pi 可能会询问是否信任当前目录。</p>
 <p>信任项目意味着它可以加载项目配置、安装缺失的项目包，并执行项目 Extension。</p>
 <p />
-<p><b>先记住这些Pi的常用命令</b></p>
+<p><b>先记住这些 Pi 的常用命令</b></p>
 <ul><li><code>/login</code>：登录或切换模型提供商；</li><li><code>/model</code>：换模型；</li><li><code>/thinking</code>：调整思考等级；</li><li><code>/new</code>：新建会话；</li><li><code>/resume</code>：继续历史会话；</li><li><code>/tree</code>：打开会话树，跳回任意节点；</li><li><code>/compact</code>：手动压缩上下文；</li><li><code>/reload</code>：重新加载配置、Skills、扩展和主题；</li><li><code>/hotkeys</code>：查看全部快捷键；</li><li><code>/session</code>：看当前会话文件、ID、Token 和费用。</li></ul>
 <p>我觉得这个指令很重要 <code>/tree</code>。</p>
 <p>普通聊天如果前面如果方向错了，后面可能只有重新开一个会话。Pi 的 Session 用树结构保存，你可以跳回某条旧消息，从那里长出一条新分支，原来的分支还在同一个 JSONL 文件里。</p>
 <p>比如让 Agent 重构代码，跑到一半如果发现路线不对，直接回到“开始重构”之前，再换个方案，这样就不用把前面的上下文全喂一遍。特别是长任务里，这个功能非常实用。</p>
-<p>pi的会话默认按工作目录保存在：</p>
+<p>pi 的会话默认按工作目录保存在：</p>
 <pre data-language="text"><code>~/.pi/agent/sessions/</code></pre>
 <p>命令行里还可以这样继续对话：</p>
 <pre data-language="bash"><code>pi -c
@@ -135,9 +135,9 @@ pi -r</code></pre>
 <pre data-language="bash"><code>pi --mode json "分析当前项目"</code></pre>
 <p>RPC 模式通过标准输入输出接收 JSONL，适合把 Pi 嵌进非 Node.js 应用：</p>
 <pre data-language="bash"><code>pi --mode rpc</code></pre>
-<p>Pi还有 SDK。开发者可以直接在 TypeScript 项目里创建 Agent Session，把 Pi 当成自己的 Agent Runtime。</p>
+<p>Pi 还有 SDK。开发者可以直接在 TypeScript 项目里创建 Agent Session，把 Pi 当成自己的 Agent Runtime。</p>
 <p>所以你看到的是同一套内核，但在终端、脚本、服务和自己的产品里都能用。</p>
-<h2><b>三个官方案例，更了解Pi</b></h2>
+<h2><b>三个官方案例，更了解 Pi</b></h2>
 <p>下面三个案例来自 Pi 官方公开页面。主要是想让大家更清楚这套 Harness 到底怎么用。</p>
 <h3><b>案例一：一份树形会话</b></h3>
 <p>刚刚说了，Pi 的会话不是只有一条聊天流水线。官方共享会话页左边直接展示了 241 个节点和不同分支；右边则能展开 System Prompt、工具、消息和调用记录。</p>
@@ -173,7 +173,7 @@ pi -r</code></pre>
 <p>Skills 会以渐进式方式加载。启动时只把名称和描述放进上下文，任务匹配后再读取完整 <code>SKILL.md</code>，不会一上来把所有说明都塞进上下文。</p>
 <p>想强制调用某个 Skill，可以输入：</p>
 <pre data-language="text"><code>/skill:skill-name</code></pre>
-<p>这个设计和现在的 Agent Skills 标准是对齐的。你过去给 Codex、Claude Code 做的很多Skill能力包，都可以复用。</p>
+<p>这个设计和现在的 Agent Skills 标准是对齐的。你过去给 Codex、Claude Code 做的很多 Skill 能力包，都可以复用。</p>
 <h2><b>让 Pi 扩展更多能力</b></h2>
 <p>Skills 主要解决“怎么做”，Extensions 能直接改 Pi 本身，功能更加强大。</p>
 <p>一个 Extension 可以注册新工具、新命令、新快捷键和事件；能改状态栏、编辑器、弹窗、主题；也能实现子 Agent、计划模式、权限门、Git 自动提交、SSH 执行、沙箱，甚至补上 MCP。</p>
@@ -189,8 +189,8 @@ pi config</code></pre>
 <p><b>它最容易被忽略的坑：默认没有权限保护</b></p>
 <p>Pi 默认不会像一些桌面 Agent 那样，删文件、跑命令之前弹一个确认框。它直接继承了启动进程的文件、网络、凭据和系统权限。</p>
 <p>但是这不算隐藏 Bug，官方首页就把“No permission popups”写得很明白。</p>
-<p>对熟悉终端的人，这代表yolo模式，也就是任务不会频繁被打断。</p>
-<p>但对小白来说，可能一句写得不够严谨的 Prompt，真有可能让 Agent 干坏事，比如清空你的C盘啥的。。。</p>
+<p>对熟悉终端的人，这代表 YOLO 模式，也就是任务不会频繁被打断。</p>
+<p>但对小白来说，可能一句写得不够严谨的 Prompt，真有可能让 Agent 干坏事，比如清空你的 C 盘啥的。。。</p>
 <p>小白第一次使用，一定要注意以下几点：</p>
 <ul><li>先用空白目录，不要上来就打开桌面、文档或整个 Home 目录；</li><li>读代码时，用 <code>--tools read,grep,find,ls</code> 锁成只读；</li><li>不要让模型读取 <code>~/.pi/agent/auth.json</code>、<code>.env</code> 和其他凭据文件；</li><li>第三方 Package 和 Extension 先审源码，再安装；</li><li>真要让它长时间自动跑，放进 Docker、OpenShell 或其他沙箱。</li></ul>
 <p>官方给了多种隔离方案。最容好用的是把整个 Pi 放进 Docker。</p>

@@ -1,10 +1,10 @@
 <!-- Generated from ../source-html/chapter-31.html; do not edit independently. -->
 
-# 快速使用DeepSeek Harness
+# 快速使用 DeepSeek Harness
 
-DeepSeek 在2026年8月13号开源了他们的第一个 Agent 产品：DeepSeek Harness。
+DeepSeek 在 2026 年 8 月 13 号开源了他们的第一个 Agent 产品：DeepSeek Harness。
 
-这 Star 涨得快的离谱。我记得，我记得，仅仅一天就涨到了 <strong>64.2k Star</strong>，写这篇的时候已经221K Star了。一个月的时间，涨了22万星，恐怖如斯。
+这 Star 涨得快的离谱。我记得仅仅一天就涨到了 <strong>64.2k Star</strong>，写这篇的时候已经 221K Star 了。一个月的时间，涨了 22 万星，恐怖如斯。
 
 ![正文配图](<../../assets/manuscript-20260914/c29-742525f0e682d2.webp>)
 
@@ -442,7 +442,7 @@ dsh web
 
 打开之后：添加 API Key、选一个测试工作区、用标准模式跑一个能读文件并生成 README 的最小任务。五分钟，就能验证它在你机器上到底行不行。
 
-从一条命令装好，到插件工作台，再到 Agent 在运行中给自己造工具，DeepSeek Harness并不是"DeepSeek版Codex"：它把模型、工具、UI 全部拆成了可替换的插件。<strong>它不是一个定死的产品，你可以按自己的工作流，把它重新拼装成一套属于你的 Agent 底座。</strong>
+从一条命令装好，到插件工作台，再到 Agent 在运行中给自己造工具，DeepSeek Harness 并不是“DeepSeek 版 Codex”：它把模型、工具、UI 全部拆成了可替换的插件。<strong>它不是一个定死的产品，你可以按自己的工作流，把它重新拼装成一套属于你的 Agent 底座。</strong>
 
 <p></p>
 

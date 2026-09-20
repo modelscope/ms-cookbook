@@ -5,7 +5,7 @@
 <p>RAG（Retrieval-Augmented Generation，检索增强生成）提供了一种解决方案，在大模型回答问题之前，先从企业知识库中检索与问题相关的内容，再将检索结果提供给大模型生成答案。</p>
 <p>RAG 的核心思想可以概括为：先检索，再回答。传统的大模型问答主要依赖模型参数中已经学习到的知识。例如，当用户提出一个问题时，模型会根据训练阶段学习到的信息直接生成答案。RAG 在这个过程中增加了一个知识检索步骤。当用户提出问题后，系统首先从外部知识库中查找与问题相关的内容，然后将用户问题和检索到的知识一起发送给大模型，由模型结合这些内容生成最终答案。</p>
 <p>一个基本的 RAG 流程可以表示为：用户问题 → 知识检索 → 获取相关内容 → LLM 生成答案 → 返回结果。RAG 并不是让模型重新学习这些知识，而是在模型回答问题时，临时为模型提供当前问题所需要的参考资料。</p>
-<h2>知识经常更新，什么时候适合用RAG？</h2>
+<h2>知识经常更新，什么时候适合用 RAG？</h2>
 <p>RAG 并不是所有大模型应用都必须使用，但对于企业知识问答、智能客服和文档助手等场景非常常见。</p>
 <p>如果业务知识需要持续更新，通常比较适合使用 RAG。例如企业的产品说明、业务制度和操作规范可能会不断调整。如果将这些知识通过模型训练的方式写入模型，每次知识发生变化都重新训练模型，成本较高，也不方便维护。</p>
 <p>RAG 可以直接更新外部知识库。当文档发生变化后，只需要重新处理相关文档并更新索引，不需要重新训练整个大模型。如果回答需要提供来源依据，RAG 也比较适合。由于模型的回答是基于检索到的文档生成的，因此可以同时返回文档名称、章节、页码或者原文片段，让用户知道答案来自哪里。</p>
@@ -15,8 +15,8 @@
 <p>模型微调的方式则不同。微调需要使用特定的训练数据进一步训练模型，并在训练过程中调整模型参数，使模型逐渐学习特定任务的处理方式。例如第九章中提到的实体识别任务，需要模型输出固定格式的回答。当任务要求发生较大变化时，通常需要准备新的训练数据并重新进行微调。</p>
 <p>在实际应用中，可以根据需要解决的问题选择不同的方法：需要补充或更新知识时，更适合使用 RAG；需要调整模型的任务能力、输出格式或行为方式时，更适合使用模型微调。RAG 和模型微调两者可以结合使用。例如，可以通过微调让模型掌握问答或指令遵循能力，再通过 RAG 为模型提供领域内的知识，使模型既能够按照业务要求完成任务，又能够基于最新的领域知识生成回答。</p>
 <h2>从一份文档开始，搭起问答系统</h2>
-<p>一个完整的 RAG 系统通常可以分为两个主要阶段：知识库构建和在线问答。知识库构建主要负责将 PDF、Word、Markdown、网页等原始资料处理成可以被检索的知识。在线问答则是在用户提出问题之后，从已经建立的知识库中寻找相关内容，本次实验采用网上公开的《中华人民共和国道路交通安全法实施条例》作为文档库来源，搭建关于交通安全法问答的RAG系统。</p>
-<h3>先把PDF、Word里的内容读出来</h3>
+<p>一个完整的 RAG 系统通常可以分为两个主要阶段：知识库构建和在线问答。知识库构建主要负责将 PDF、Word、Markdown、网页等原始资料处理成可以被检索的知识。在线问答则是在用户提出问题之后，从已经建立的知识库中寻找相关内容，本次实验采用网上公开的《中华人民共和国道路交通安全法实施条例》作为文档库来源，搭建关于交通安全法问答的 RAG 系统。</p>
+<h3>先把 PDF、Word 里的内容读出来</h3>
 <p>企业知识通常分散在 PDF、Word、Excel、Markdown、网页等不同类型的文件中。由于不同文件的格式和内部结构存在较大差异，在构建 RAG 知识库之前，通常需要先将这些文档转换为统一、可处理的文本或结构化数据，这一过程称为文档解析。对于 RAG 系统而言，一个较好的文档解析工具不仅只是识别文本中的文字，还需要尽可能识别和保留原始文档中的结构信息，例如：文档标题、文档段落、表格、图片、公式等等。</p>
 <p>目前已经有许多开源工具可以用于文档解析，比较常见的包括：</p>
 <p><b>1）</b>MinerU 是一个面向复杂文档的开源解析工具，可以将 PDF、图片、Word、PPT、Excel 等文档转换为 Markdown、JSON 等机器可读格式。它能够识别标题、正文、表格、图片、公式等内容，并尽可能按照人类阅读顺序还原文档结构，因此比较适合作为 RAG 系统中的文档预处理工具，<a href="https://github.com/opendatalab/MinerU?utm_source=chatgpt.com" target="_blank" rel="noopener noreferrer">opendatalab/MinerU</a></p>
@@ -24,20 +24,20 @@
 <p><b>3）</b>Dolphin 是字节跳动开源的文档图像解析模型，采用“先分析、再解析”的方式处理文档。它能够先识别页面布局和阅读顺序，再进一步解析文本、表格、公式、代码等不同类型的文档元素，适合处理布局复杂的 PDF 或扫描类文档，<a href="https://github.com/ByteDance/Dolphin?utm_source=chatgpt.com" target="_blank" rel="noopener noreferrer">ByteDance/Dolphin</a></p>
 <p><b>4）</b>PaddleOCR 是 PaddlePaddle 开源的 OCR 与文档解析工具。除了常见的文字识别之外，还提供版面分析、表格识别以及文档结构化解析等能力，可以将 PDF 和图片中的内容转换为更适合后续 AI 系统处理的结构化数据。对于扫描 PDF、图片型文档以及包含大量中文文字的文档，PaddleOCR 是一种常见的选择，<a href="https://github.com/PaddlePaddle/PaddleOCR?utm_source=chatgpt.com" target="_blank" rel="noopener noreferrer">PaddlePaddle/PaddleOCR</a></p>
 <p>不同文档解析工具各有特点，并不存在一种工具能够适用于所有文档。在实际构建 RAG 系统时，可以根据文档的类型、版式复杂程度、解析准确率以及部署成本等因素选择合适的解析工具。</p>
-<p>本次实验采用MinerU进行文档解析，首先在ModelScope的Notebook环境中安装MinerU，执行命令如下：</p>
+<p>本次实验采用 MinerU 进行文档解析，首先在 ModelScope 的 Notebook 环境中安装 MinerU，执行命令如下：</p>
 <pre data-language="Plain Text"><code>pip install -U "mineru[all]"</code></pre>
 <img src="../../assets/manuscript-20260914/c19-4634a78ab4ee88.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>安装完成后，可以直接对文档解析，输入需要解析的文件路径，执行命令如下：</p>
 <pre data-language="Plain Text"><code>mineru -p /mnt/workspace/RAG/data -o /mnt/workspace/RAG/output </code></pre>
-<p>其中：-p是输入文件路径，-o是模型输出的文件路径，也就是解析后的文本。</p>
+<p>其中：-p 是输入文件路径，-o 是模型输出的文件路径，也就是解析后的文本。</p>
 <img src="../../assets/manuscript-20260914/c19-8d82808cdcf0d9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>解析后的文件如下，里面包括了很多中间文件，可以按需选择，本次实验我们选择md文件作为文档源，里面包括了文本的段落格式信息。</p>
+<p>解析后的文件如下，里面包括了很多中间文件，可以按需选择，本次实验我们选择 md 文件作为文档源，里面包括了文本的段落格式信息。</p>
 <img src="../../assets/manuscript-20260914/c19-fa3ebd62d3431c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h3>文档太长，怎么切成合适的片段？</h3>
 <p>完成文档解析后，需要将较长的文档拆分成多个较小的文本片段，这些文本片段通常称为 Chunk。在 RAG 系统中，Embedding 和检索通常以 Chunk 为基本单位，因此合理的文档切分有助于提高后续检索的准确性。</p>
 <p>对于解析后的 Markdown 文档，可以先按照空行将内容拆分成段落，再按照设定的 <code>chunk_size</code> 将相邻段落依次合并。当内容超过指定长度时，则生成一个新的 Chunk。</p>
 <p>为了避免切分位置造成上下文信息丢失，还可以设置 <code>chunk_overlap</code>，让相邻 Chunk 之间保留少量重复内容。例如：chunk_size = 500，chunk_overlap = 50，表示每个 Chunk 控制在 500 个字符左右，相邻 Chunk 保留约 50 个字符的重叠内容。切分完成后，可以为每个 Chunk 保存 <code>id</code>、<code>content</code> 和 <code>file</code> 等信息，方便后续进行向量化、检索以及答案来源定位。</p>
-<p>下面是切分chunk的代码</p>
+<p>下面是切分 chunk 的代码</p>
 <pre data-language="Python"><code>import os
 import json
 def load_markdown(file_path):
@@ -109,13 +109,13 @@ if __name__ == "__main__":
         output_file="output/chunks.jsonl"
     )
 </code></pre>
-<p>执行完之后，可以看到刚才解析的md文件中，共切分出39个chunk。</p>
+<p>执行完之后，可以看到刚才解析的 md 文件中，共切分出 39 个 chunk。</p>
 <img src="../../assets/manuscript-20260914/c19-c4e1759f0c6f34.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>用Embedding，把文档变成可检索的向量</h3>
+<h3>用 Embedding，把文档变成可检索的向量</h3>
 <h4>Embedding 模型</h4>
 <p>完成文档切分后，需要进一步构建可检索的文档库。由于计算机无法直接根据自然语言的语义进行检索，因此需要使用 Embedding 模型将每个 Chunk 转换为向量表示。Embedding 模型可以将文本映射到高维向量空间，语义越相近的文本，其向量在空间中的距离也越接近。因此，在用户提出问题后，可以将问题同样转换为向量，再与文档库中的 Chunk 向量进行比较，从而检索出与问题语义最相关的内容。</p>
-<p>目前开源社区已经提供了多种Embedding 模型，比如 BGE-M3 和 Qwen3-Embedding。BGE-M3 是 BAAI 推出的多语言 Embedding 模型，支持 100 多种语言以及最长 8192 Token 的文本输入。与普通的 Dense Embedding 模型相比，BGE-M3 同时支持稠密检索、稀疏检索和 Multi-Vector 检索，因此既可以用于常见的向量语义检索，也可以用于混合检索等场景<a href="https://github.com/FlagOpen/FlagEmbedding" target="_blank" rel="noopener noreferrer">FlagEmbedding</a>。</p>
-<p>Qwen3-Embedding 是 Qwen 团队推出的文本向量模型系列，基于 Qwen3 架构构建，主要面向文本检索、文本聚类、文本分类和代码检索等任务。Qwen3-Embedding 提供 0.6B、4B 和 8B 等不同参数规模，可以根据模型效果和计算资源进行选择，同时具有较好的多语言和长文本处理能力<a href="https://github.com/QwenLM/Qwen3-Embedding" target="_blank" rel="noopener noreferrer">Qwen3-Embedding</a>。</p>
+<p>目前开源社区已经提供了多种 Embedding 模型，比如 BGE-M3 和 Qwen3-Embedding。BGE-M3 是 BAAI 推出的多语言 Embedding 模型，支持 100 多种语言以及最长 8192 Token 的文本输入。与普通的 Dense Embedding 模型相比，BGE-M3 同时支持稠密检索、稀疏检索和 Multi-Vector 检索，因此既可以用于常见的向量语义检索，也可以用于混合检索等场景 <a href="https://github.com/FlagOpen/FlagEmbedding" target="_blank" rel="noopener noreferrer">FlagEmbedding</a>。</p>
+<p>Qwen3-Embedding 是 Qwen 团队推出的文本向量模型系列，基于 Qwen3 架构构建，主要面向文本检索、文本聚类、文本分类和代码检索等任务。Qwen3-Embedding 提供 0.6B、4B 和 8B 等不同参数规模，可以根据模型效果和计算资源进行选择，同时具有较好的多语言和长文本处理能力 <a href="https://github.com/QwenLM/Qwen3-Embedding" target="_blank" rel="noopener noreferrer">Qwen3-Embedding</a>。</p>
 <p>本节采用 Qwen3-Embedding-0.6B 作为 Embedding 模型进行实验，第九章已经介绍过 ms-swift，除了大模型训练和微调之外，ms-swift 也支持 Qwen3-Embedding 系列的训练和推理。因此，本节继续使用 ms-swift 启动 Qwen3-Embedding-0.6B，并通过接口的方式完成文档 Chunk 和用户问题的向量化。</p>
 <p>可以使用如下命令启动 Embedding 服务：</p>
 <pre data-language="Plain Text"><code>CUDA_VISIBLE_DEVICES=0 \
@@ -130,11 +130,11 @@ swift deploy \
 <img src="../../assets/manuscript-20260914/c19-1ea5a862527b52.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h4>向量检索工具</h4>
 <p>目前常用的向量检索工具包括 Faiss 和 Milvus。Faiss 是 Meta 开源的向量相似度检索库，主要用于高效地进行向量索引和近邻搜索。它部署简单，不需要单独启动数据库服务，可以直接在 Python 程序中使用，比较适合学习、实验以及中小规模 RAG 系统。Milvus 是面向大规模向量数据的向量数据库，除了向量检索之外，还提供数据持久化、分布式存储、索引管理和多种查询能力，更适合数据规模较大、需要长期运行和工程化部署的场景。相比 Faiss，Milvus 的功能更加完整，但部署和使用过程也相对复杂。</p>
-<p>本实验采用 Faiss进行向量存储和相似度检索，首先安装faiss库，执行命令如下：</p>
+<p>本实验采用 Faiss 进行向量存储和相似度检索，首先安装 faiss 库，执行命令如下：</p>
 <pre data-language="Plain Text"><code>pip install faiss-cpu</code></pre>
 <img src="../../assets/manuscript-20260914/c19-c07144937fca5a.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>安装完成后，可以将上一节生成的 Chunk 依次发送给 Embedding 接口，获得对应的向量，并将向量与 Chunk 的 <code>id</code>、<code>content</code>、<code>file</code> 等信息建立对应关系。为了后续能够快速完成相似度计算和知识检索。</p>
-<p>创建索引代码build_index.py如下：</p>
+<p>创建索引代码 build_index.py 如下：</p>
 <pre data-language="Python"><code>import json
 import requests
 import numpy as np
@@ -194,9 +194,9 @@ if __name__ == "__main__":
     )</code></pre>
 <p>执行后输出对应的索引文件以及向量</p>
 <img src="../../assets/manuscript-20260914/c19-ebb9afa3f554f7.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>用Reranker，把更相关的内容排到前面</h3>
-<p>Embedding 模型能够将用户问题和文档 Chunk 分别转换为向量，并通过向量之间的距离或相似度进行检索。这种方式的优势是：文档向量可以提前计算并存储，在用户提问时只需要计算一次问题向量，就能够快速从大量文档中召回相关内容。但是，这种高效的检索方式也存在一定局限。Embedding 模型将Query 和 Chunk 分别进行编码，在计算相关性时，比较两个向量在向量空间中的相似程度。Reranker模型是交互式匹配。通过将 Query 和候选 Chunk 同时输入模型，让模型直接分析两段文本之间的相关关系，因此能够进行更加细致的语义匹配。</p>
-<p>因此，在 RAG 系统中通常采用Embedding 召回 + Reranker 重排的两阶段检索方式：首先利用 Embedding 从大量 Chunk 中快速筛选出一批候选结果，再利用 Reranker 对少量候选结果进行更加精细的相关性判断和重新排序。这样既能够保证检索效率，又能够进一步提高最终提供给大语言模型的上下文质量。</p>
+<h3>用 Reranker，把更相关的内容排到前面</h3>
+<p>Embedding 模型能够将用户问题和文档 Chunk 分别转换为向量，并通过向量之间的距离或相似度进行检索。这种方式的优势是：文档向量可以提前计算并存储，在用户提问时只需要计算一次问题向量，就能够快速从大量文档中召回相关内容。但是，这种高效的检索方式也存在一定局限。Embedding 模型将 Query 和 Chunk 分别进行编码，在计算相关性时，比较两个向量在向量空间中的相似程度。Reranker 模型是交互式匹配。通过将 Query 和候选 Chunk 同时输入模型，让模型直接分析两段文本之间的相关关系，因此能够进行更加细致的语义匹配。</p>
+<p>因此，在 RAG 系统中通常采用 Embedding 召回 + Reranker 重排的两阶段检索方式：首先利用 Embedding 从大量 Chunk 中快速筛选出一批候选结果，再利用 Reranker 对少量候选结果进行更加精细的相关性判断和重新排序。这样既能够保证检索效率，又能够进一步提高最终提供给大语言模型的上下文质量。</p>
 <p>本节采用 Qwen3-Reranker-0.6B 作为重排模型，可以使用 ms-swift 启动服务：</p>
 <pre data-language="Plain Text"><code>CUDA_VISIBLE_DEVICES=0 \
 swift deploy \
@@ -206,10 +206,10 @@ swift deploy \
     --host 0.0.0.0 \
     --port 18001</code></pre>
 <img src="../../assets/manuscript-20260914/c19-59e65688b71b86.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>服务启动后，可以将用户问题和 Embedding检索得到的候选 Chunk 输入Reranker，根据模型计算得到的相关性分数重新排序，并选择排名靠前的 Chunk 作为后续大语言模型生成答案的参考内容。</p>
+<p>服务启动后，可以将用户问题和 Embedding 检索得到的候选 Chunk 输入 Reranker，根据模型计算得到的相关性分数重新排序，并选择排名靠前的 Chunk 作为后续大语言模型生成答案的参考内容。</p>
 <h3>先召回再重排，实际找一次答案</h3>
-<p>前面经完成了 Embedding 服务、Reranker 服务以及 Faiss 向量索引的构建。在此基础上，按照提到的采用Embedding召回 + Reranker 重排的两阶段检索方式筛选出候选Chunk。</p>
-<p>第一阶段使用 Faiss 从知识库中进行向量检索，首先获取相似度排名前 10 的候选 Chunk,下面是针对问题：初次申领机动车号牌、行驶证应向哪个部门申请注册登记？向量检索top10结果。</p>
+<p>前面经完成了 Embedding 服务、Reranker 服务以及 Faiss 向量索引的构建。在此基础上，按照提到的采用 Embedding 召回 + Reranker 重排的两阶段检索方式筛选出候选 Chunk。</p>
+<p>第一阶段使用 Faiss 从知识库中进行向量检索，首先获取相似度排名前 10 的候选 Chunk,下面是针对问题：初次申领机动车号牌、行驶证应向哪个部门申请注册登记？向量检索 top10 结果。</p>
 <pre data-language="Plain Text"><code>
 import json
 import faiss
@@ -286,12 +286,12 @@ print("candidates",candidates)</code></pre>
         item["rerank_rank"] = rank
 
     return results</code></pre>
-<p>下面是针对问题：初次申领机动车号牌、行驶证应向哪个部门申请注册登记？经过Reranker模型重新排序后的结果：</p>
+<p>下面是针对问题：初次申领机动车号牌、行驶证应向哪个部门申请注册登记？经过 Reranker 模型重新排序后的结果：</p>
 <img src="../../assets/manuscript-20260914/c19-9d5052bb89590b.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>从上面两个结果可以看出，经过重排序后的Chunk,排序明显发生了变化，在实际应用中，在实际项目中，可以根据知识库规模、Chunk 长度、问题复杂程度以及实际检索效果进行调整。例如，对于答案分布在多个文档片段中的问题，可以适当增加最终保留的 Chunk 数量；也可以结合 Reranker 得分设置相关性阈值，进一步过滤相关性较低的内容。除了上述方式，实际 RAG 系统还可以采用混合检索（Hybrid Search），将向量检索与 BM25 等关键词检索方式结合，对多路召回结果进行融合后再进行重排序。</p>
+<p>从上面两个结果可以看出，经过重排序后的 Chunk,排序明显发生了变化，在实际应用中，在实际项目中，可以根据知识库规模、Chunk 长度、问题复杂程度以及实际检索效果进行调整。例如，对于答案分布在多个文档片段中的问题，可以适当增加最终保留的 Chunk 数量；也可以结合 Reranker 得分设置相关性阈值，进一步过滤相关性较低的内容。除了上述方式，实际 RAG 系统还可以采用混合检索（Hybrid Search），将向量检索与 BM25 等关键词检索方式结合，对多路召回结果进行融合后再进行重排序。</p>
 <h3>资料找到了，怎样让模型据此回答？</h3>
-<p>完成检索和重排序后，已经获得了与用户问题相关性较高的若干个 Chunk。接下来需要将这些内容作为参考资料，与用户问题一起提交给LLM，如果相关性满足要求，则将检索内容提交给大语言模型生成答案；如果知识库中没有找到足够相关的内容，则直接返回拒答结果，避免模型在缺少依据的情况下生成答案。</p>
-<p>首先，在Notebook中启动大模型服务，本次实验采用Qwen3-4B模型，启动方式如下：</p>
+<p>完成检索和重排序后，已经获得了与用户问题相关性较高的若干个 Chunk。接下来需要将这些内容作为参考资料，与用户问题一起提交给 LLM，如果相关性满足要求，则将检索内容提交给大语言模型生成答案；如果知识库中没有找到足够相关的内容，则直接返回拒答结果，避免模型在缺少依据的情况下生成答案。</p>
+<p>首先，在 Notebook 中启动大模型服务，本次实验采用 Qwen3-4B 模型，启动方式如下：</p>
 <pre data-language="SQL"><code>CUDA_VISIBLE_DEVICES=0 swift deploy \
   --model Qwen/Qwen3-4B \
   --load_args false \
@@ -306,7 +306,7 @@ print("candidates",candidates)</code></pre>
 <p>启动后显示如下，说明模型启动成功，服务启动后，即可通过 <code>18002</code> 端口调用 Qwen3-4B。</p>
 <img src="../../assets/manuscript-20260914/c19-d73faa5ebd537f.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h4>构建 LLM 参考内容</h4>
-<p>Reranker 会根据用户问题与候选 Chunk 的相关程度重新调整排序。本实验直接选择排名前 5 的 Chunk作为LLM的参考资料，为了使模型尽量依据知识库内容回答，可以在 Prompt 中明确限定回答范围。同时，当提供的参考资料无法回答用户问题时，要求模型直接拒答，而不是利用自身知识补充答案，prompt如下：</p>
+<p>Reranker 会根据用户问题与候选 Chunk 的相关程度重新调整排序。本实验直接选择排名前 5 的 Chunk 作为 LLM 的参考资料，为了使模型尽量依据知识库内容回答，可以在 Prompt 中明确限定回答范围。同时，当提供的参考资料无法回答用户问题时，要求模型直接拒答，而不是利用自身知识补充答案，prompt 如下：</p>
 <pre data-language="Plain Text"><code>prompt = f"""
 请根据下面的参考资料回答用户问题。
 
@@ -368,7 +368,7 @@ def generate_answer(query, top_chunks):
 <h2>没答好，问题出在检索还是生成？</h2>
 <p>完成 RAG 系统后，还需要通过评测判断整个问答流程是否真正有效。与普通大模型问答不同，RAG 的结果同时受到<b>知识检索</b>和<b>答案生成</b>两个阶段的影响。因此，RAG 评测通常也需要从这两个方面分别进行。</p>
 <p>1） 检索效果评测</p>
-<p>检索阶段的评测标准是用户的问题是否可以在召回的Chunk中找到答案，常用指标为Recall@K。其中，Recall@K 是比较直观的指标，用于衡量前 K 个检索结果覆盖了多少相关文档：</p>
+<p>检索阶段的评测标准是用户的问题是否可以在召回的 Chunk 中找到答案，常用指标为 Recall@K。其中，Recall@K 是比较直观的指标，用于衡量前 K 个检索结果覆盖了多少相关文档：</p>
 <p>Recall@K：正确的文档是否出现在前 K 个检索结果中。</p>
 <p><span class="arithmatex display-math">\(Recall@K =
 \frac{\text{Top K 中检索到的相关文档数量}}
@@ -376,7 +376,7 @@ def generate_answer(query, top_chunks):
 \)</span></p>
 <p>例如，一个问题对应 2 个正确的知识片段，在 Top 5 检索结果中找到了其中 2 个，则 Recall@5 为 100%。</p>
 <p>2） 生成效果评测</p>
-<p>检索到相关知识并不代表最终答案一定正确，还需要进一步评价 LLM 的生成结果，生成阶段可以重点关注答案正确性、完整性、相关性、引用准确性以及幻觉，此部分可参考第十二章中的12.3 生成任务评测指标，通过这些指标，可以判断模型是否能够准确利用检索到的知识生成答案，并进一步发现答案遗漏、内容偏差或无依据生成等问题。在实际应用中，如果检索结果已经较为准确，但生成效果仍然无法满足要求，可以考虑选择能力更强、参数规模更大的模型作为 RAG 的生成模型，以提升复杂问题的理解和回答能力。</p>
+<p>检索到相关知识并不代表最终答案一定正确，还需要进一步评价 LLM 的生成结果，生成阶段可以重点关注答案正确性、完整性、相关性、引用准确性以及幻觉，此部分可参考第十二章中的 12.3 生成任务评测指标，通过这些指标，可以判断模型是否能够准确利用检索到的知识生成答案，并进一步发现答案遗漏、内容偏差或无依据生成等问题。在实际应用中，如果检索结果已经较为准确，但生成效果仍然无法满足要求，可以考虑选择能力更强、参数规模更大的模型作为 RAG 的生成模型，以提升复杂问题的理解和回答能力。</p>
 <p />
 <p>此章节涉及到的实验数据以及实验代码，可参考：https://modelscope.cn/gallery/liucong/564dcc20-ccfc-4d5a-bb12-20386d9d932f</p>
 </article>

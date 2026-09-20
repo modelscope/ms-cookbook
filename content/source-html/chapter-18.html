@@ -2,38 +2,38 @@
 <h1>搭建一个能听也能说的语音助手</h1>
 <p>在聊天框里问模型一个问题，已经很熟悉了。如果把键盘换成麦克风，直接开口问，等它把答案说出来，会是什么样？</p>
 <p />
-<p>这里会用到前面介绍过的几类模型，ASR负责把语音转成文字，LLM负责回答，TTS再把文字转成声音。录音什么时候开始、用户有没有说话、历史对话怎样保存，也都要安排好。</p>
+<p>这里会用到前面介绍过的几类模型，ASR 负责把语音转成文字，LLM 负责回答，TTS 再把文字转成声音。录音什么时候开始、用户有没有说话、历史对话怎样保存，也都要安排好。</p>
 <p />
 <h2>从开口提问到听见回答，中间经过哪些步骤？</h2>
-<p>语音助手需要接收用户的语音问题，理解问题后生成回答，并通过语音将回答播放出来。这个过程主要由ASR、LLM、TTS三个核心模型共同完成。</p>
+<p>语音助手需要接收用户的语音问题，理解问题后生成回答，并通过语音将回答播放出来。这个过程主要由 ASR、LLM、TTS 三个核心模型共同完成。</p>
 <h3>ASR，先把你说的话转成文字</h3>
-<p>ASR需要将麦克风采集到的音频信号转换为文本。</p>
+<p>ASR 需要将麦克风采集到的音频信号转换为文本。</p>
 <p>例如，用户对着麦克风说：“北京有哪些著名景点？”，麦克风采集到的是音频数据：</p>
 <figure><a href="../../assets/manuscript-20260914/c18-97a3eee17bf6ef.wav" class="attachment" download="query.wav">query.wav</a></figure>
-<p>LLM不能按照普通文本的方式处理这些数据，需要先通过ASR进行语音识别，ASR识别结果会作为文字输入交给后面的LLM。</p>
-<p>语音助手中的ASR不仅需要关注识别内容是否正确，还需要考虑口音、语速、环境噪声等因素。例如，同一句话在安静环境和嘈杂环境中的识别效果可能存在差异。</p>
+<p>LLM 不能按照普通文本的方式处理这些数据，需要先通过 ASR 进行语音识别，ASR 识别结果会作为文字输入交给后面的 LLM。</p>
+<p>语音助手中的 ASR 不仅需要关注识别内容是否正确，还需要考虑口音、语速、环境噪声等因素。例如，同一句话在安静环境和嘈杂环境中的识别效果可能存在差异。</p>
 <p />
 <h3>LLM，接过问题来回答</h3>
-<p>LLM拿到ASR输出的用户问题文本，生成对应的回答文本。单轮对话中，问题进去回答出来，流程相对直接。</p>
-<p>例如，ASR识别得到：“北京有哪些著名景点？”，将这段文字发送给LLM后，模型生成回答：“北京比较著名的景点包括故宫、天坛、颐和园和八达岭长城等。”</p>
-<p>多轮对话则不同。为了让LLM理解用户问题在上一轮或前几轮中的指代，需要将前几轮的用户问题和助手回答一并放入上下文。</p>
+<p>LLM 拿到 ASR 输出的用户问题文本，生成对应的回答文本。单轮对话中，问题进去回答出来，流程相对直接。</p>
+<p>例如，ASR 识别得到：“北京有哪些著名景点？”，将这段文字发送给 LLM 后，模型生成回答：“北京比较著名的景点包括故宫、天坛、颐和园和八达岭长城等。”</p>
+<p>多轮对话则不同。为了让 LLM 理解用户问题在上一轮或前几轮中的指代，需要将前几轮的用户问题和助手回答一并放入上下文。</p>
 <p />
 <h3>TTS，把文字回答读出来</h3>
-<p>TTS负责将LLM生成的回答转换成对应的语音，由语音助手把回答“说出来”，。</p>
-<p>例如，针对LLM生成的回答：“北京比较著名的景点包括故宫、天坛、颐和园和八达岭长城等。”，利用TTS转为音频：</p>
+<p>TTS 负责将 LLM 生成的回答转换成对应的语音，由语音助手把回答“说出来”，。</p>
+<p>例如，针对 LLM 生成的回答：“北京比较著名的景点包括故宫、天坛、颐和园和八达岭长城等。”，利用 TTS 转为音频：</p>
 <figure><a href="../../assets/manuscript-20260914/c18-5a6f60ab3affcb.wav" class="attachment" download="answer.wav">answer.wav</a></figure>
 <p>生成的语音可以直接通过扬声器播放，也可以保存为音频文件。</p>
-<p>除了保证文字内容能够正确朗读，TTS还会影响语音助手最终的听感。例如，声音是否清晰、停顿是否自然、语速是否合适，都会影响实际的交互体验。</p>
-<p>在语音助手中，TTS的输出方式分为非流式和流式两种。如果等LLM生成完整回答后再启动TTS，用户会明显感知到等待时间。更合理的做法是流式TTS——LLM每生成几个字，TTS就立即开始合成对应的音频片段并推送给播放模块，实现“边说边放”。</p>
+<p>除了保证文字内容能够正确朗读，TTS 还会影响语音助手最终的听感。例如，声音是否清晰、停顿是否自然、语速是否合适，都会影响实际的交互体验。</p>
+<p>在语音助手中，TTS 的输出方式分为非流式和流式两种。如果等 LLM 生成完整回答后再启动 TTS，用户会明显感知到等待时间。更合理的做法是流式 TTS——LLM 每生成几个字，TTS 就立即开始合成对应的音频片段并推送给播放模块，实现“边说边放”。</p>
 <p />
 <h3>把录音、识别、回答和播放连起来</h3>
-<p>在实际的语音助手中，除了ASR、LLM和TTS三个核心模型，还需要音频采集、VAD语音活动检测和音频播放等模块。各模块协同工作，将用户的语音问题转换为语音回答，并支持流式音频输出和多轮对话。完整的处理流程如下图所示。</p>
+<p>在实际的语音助手中，除了 ASR、LLM 和 TTS 三个核心模型，还需要音频采集、VAD 语音活动检测和音频播放等模块。各模块协同工作，将用户的语音问题转换为语音回答，并支持流式音频输出和多轮对话。完整的处理流程如下图所示。</p>
 <img src="../../assets/manuscript-20260914/c18-2f2d5ab6857d11.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>下面按照这条处理链路，从音频输入开始，逐步搭建一个可以在本地运行的语音助手。</p>
 <p />
 <h2>动手搭一个能语音问答的助手</h2>
-<p>前面介绍了语音助手的基本处理流程。下面按照音频采集、VAD、ASR、LLM和TTS的顺序，逐步实现各个功能模块，并在此基础上增加流式音频输出和多轮对话，最后将这些模块组合成一个完整的本地语音助手。</p>
-<p>为了便于后续组合，本节会将需要加载模型的ASR、LLM和TTS封装成类，将音频采集、播放等功能封装成函数。每完成一个功能模块，都先单独进行测试，确认能够正常运行后，再继续后面的实现。</p>
+<p>前面介绍了语音助手的基本处理流程。下面按照音频采集、VAD、ASR、LLM 和 TTS 的顺序，逐步实现各个功能模块，并在此基础上增加流式音频输出和多轮对话，最后将这些模块组合成一个完整的本地语音助手。</p>
+<p>为了便于后续组合，本节会将需要加载模型的 ASR、LLM 和 TTS 封装成类，将音频采集、播放等功能封装成函数。每完成一个功能模块，都先单独进行测试，确认能够正常运行后，再继续后面的实现。</p>
 <h3>准备运行环境</h3>
 <p>安装基础依赖：</p>
 <pre data-language="YAML"><code>!pip3 install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0
@@ -46,13 +46,13 @@
 !pip3 install jiwer bert_score onnxruntime</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c18-e8861a4ee62ef9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>安装完以来后，需要点击上方的<code>Restart</code>重启kernel。</p>
+<p>安装完以来后，需要点击上方的<code>Restart</code>重启 kernel。</p>
 <img src="../../assets/manuscript-20260914/c18-c3cb3a269cb1fe.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h3>采集麦克风音频</h3>
 <p>语音助手首先需要获取用户的音频。</p>
-<p>如果程序直接运行在本地电脑上，可以通过 <code>sounddevice</code> 等库访问麦克风设备。但本章使用的是 ModelScope Notebook，Python程序实际运行在远程服务器上，服务器无法直接访问用户电脑上的麦克风。</p>
+<p>如果程序直接运行在本地电脑上，可以通过 <code>sounddevice</code> 等库访问麦克风设备。但本章使用的是 ModelScope Notebook，Python 程序实际运行在远程服务器上，服务器无法直接访问用户电脑上的麦克风。</p>
 <p>因此，本节使用 Gradio 在浏览器中采集麦克风音频，再将音频数据传给后端程序。</p>
-<p>音频采集有2种类型：</p>
+<p>音频采集有 2 种类型：</p>
 <p>1）实时音频采集</p>
 <p>开始采集后，会一直收集麦克风音频。代码如下：</p>
 <pre data-language="Python"><code>import gradio as gr
@@ -137,12 +137,12 @@ demo.launch()</code></pre>
 <p>停止后可以看到音频信息，这说明程序已经接采集到麦克风音频了。</p>
 <img src="../../assets/manuscript-20260914/c18-7a5099960ef1d2.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p />
-<h3>VAD检测语音活动</h3>
-<p>VAD在语音助手中，主要用于判断用户什么时候开始说话，以及什么时候结束一轮语音输入。</p>
-<p>WebRTC VAD的检测等级可以设置为0、1、2、3，数字越大，对非语音声音的过滤越严格。代码如下：</p>
+<h3>VAD 检测语音活动</h3>
+<p>VAD 在语音助手中，主要用于判断用户什么时候开始说话，以及什么时候结束一轮语音输入。</p>
+<p>WebRTC VAD 的检测等级可以设置为 0、1、2、3，数字越大，对非语音声音的过滤越严格。代码如下：</p>
 <p>下面结合采集麦克风音频进行测试：</p>
-<p>1）实时音频采集+VAD语音活动检测</p>
-<p>针对实时的音频采集，VAD主要用来监测用户是否说话了，判断语音开始和结束的时间，并将用户说话的音频裁剪出来。这里采用逐 30ms 音频帧判断是否存在语音活动，VAD检测代码如下：</p>
+<p>1）实时音频采集+VAD 语音活动检测</p>
+<p>针对实时的音频采集，VAD 主要用来监测用户是否说话了，判断语音开始和结束的时间，并将用户说话的音频裁剪出来。这里采用逐 30ms 音频帧判断是否存在语音活动，VAD 检测代码如下：</p>
 <pre data-language="Python"><code>import numpy as np
 import webrtcvad
 from scipy.signal import resample_poly
@@ -251,8 +251,8 @@ demo.launch(share=True)</code></pre>
 <img src="../../assets/manuscript-20260914/c18-b7152920d11c1c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>打开日志打印的网页地址：“<a href="http://127.0.0.1:7871/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:7871</a>”，点击“录制”并允许浏览器访问麦克风，然后说话即可。点击停止后页面会显示日志，样例如下。</p>
 <img src="../../assets/manuscript-20260914/c18-c617719236fd27.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>2）非实时音频采集+VAD语音活动检测</p>
-<p>针对非实时采集的音频，VAD主要作为前置过滤器，去除静音和环境噪声，避免ASR做无效识别，节省资源。系统会将Gradio接收到的整个音频切片，分割为若干20毫秒的短帧，并对每一帧进行语音/非语音状态标记。最后根据该切片中的语音帧数量与阈值的关系，判断该段音频的是否交给ASR处理。VAD检测代码如下：</p>
+<p>2）非实时音频采集+VAD 语音活动检测</p>
+<p>针对非实时采集的音频，VAD 主要作为前置过滤器，去除静音和环境噪声，避免 ASR 做无效识别，节省资源。系统会将 Gradio 接收到的整个音频切片，分割为若干 20 毫秒的短帧，并对每一帧进行语音/非语音状态标记。最后根据该切片中的语音帧数量与阈值的关系，判断该段音频的是否交给 ASR 处理。VAD 检测代码如下：</p>
 <pre data-language="Python"><code>import webrtcvad
 import numpy as np
 from collections import deque
@@ -453,8 +453,8 @@ demo.launch(debug=True)</code></pre>
 <img src="../../assets/manuscript-20260914/c18-7a11023344c1c0.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>打开日志打印的网页地址：“<a href="http://127.0.0.1:7869/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:7869</a>”，点击“录制”并允许浏览器访问麦克风，然后说话即可。点击停止后页面会显示日志，样例如下。</p>
 <img src="../../assets/manuscript-20260914/c18-461ac2cc3c020e.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>ASR语音识别</h3>
-<p>获得音频以后，下一步是将语音转换成文字。以<a href="https://modelscope.cn/models/Qwen/Qwen3-ASR-0.6B" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-ASR-0.6B</a>模型为例，ASR实现代码如下：</p>
+<h3>ASR 语音识别</h3>
+<p>获得音频以后，下一步是将语音转换成文字。以 <a href="https://modelscope.cn/models/Qwen/Qwen3-ASR-0.6B" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-ASR-0.6B</a> 模型为例，ASR 实现代码如下：</p>
 <pre data-language="Python"><code>import torch
 from modelscope import snapshot_download
 from qwen_asr import Qwen3ASRModel
@@ -487,8 +487,8 @@ text = asr.transcribe("query.wav")
 print("ASR识别结果：", text)</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c18-bbba4b10d3a721.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>LLM理解问题并生成回答</h3>
-<p>本节使用<a href="https://modelscope.cn/models/Qwen/Qwen3-4B" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-4B</a>模型进行问题理解和答案生成，模型加载和推理代码如下：</p>
+<h3>LLM 理解问题并生成回答</h3>
+<p>本节使用 <a href="https://modelscope.cn/models/Qwen/Qwen3-4B" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-4B</a> 模型进行问题理解和答案生成，模型加载和推理代码如下：</p>
 <pre data-language="Python"><code>from modelscope import AutoModelForCausalLM, AutoTokenizer
 
 class LLMService:
@@ -544,8 +544,8 @@ answer = llm.chat("北京有哪些著名景点？")
 
 print("回答：", answer)</code></pre>
 <img src="../../assets/manuscript-20260914/c18-8c4bf36bbd1b9b.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>TTS生成回答语音</h3>
-<p>本节选择<a href="https://modelscope.cn/models/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice</a>模型将LLM答案转为语音，CustomVoice模型支持指定预置音色生成语音，可以根据业务需要选择合适的音色。具体实现代码如下：</p>
+<h3>TTS 生成回答语音</h3>
+<p>本节选择 <a href="https://modelscope.cn/models/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice</a> 模型将 LLM 答案转为语音，CustomVoice 模型支持指定预置音色生成语音，可以根据业务需要选择合适的音色。具体实现代码如下：</p>
 <pre data-language="Python"><code>import torch
 from modelscope import snapshot_download
 from qwen_tts import Qwen3TTSModel
@@ -594,7 +594,7 @@ print("采样率：", sample_rate)</code></pre>
 <p>生成音频如下，可试听：</p>
 <figure><a href="../../assets/manuscript-20260914/c18-3a026da3de7a82.wav" class="attachment" download="tts_answer.wav">tts_answer.wav</a></figure>
 <h3>流式处理</h3>
-<p>等整段语音合成完毕再播放，用户等待时间较长。流式生成在推理阶段同步输出音频，边生成边播放，首帧延迟明显降低，用户交互体验更流畅。TTSService服务流式音频输出的实现代码如下：</p>
+<p>等整段语音合成完毕再播放，用户等待时间较长。流式生成在推理阶段同步输出音频，边生成边播放，首帧延迟明显降低，用户交互体验更流畅。TTSService 服务流式音频输出的实现代码如下：</p>
 <pre data-language="Python"><code>import torch
 import numpy as np
 from modelscope import snapshot_download
@@ -679,7 +679,7 @@ if chunks:
 <p>生成音频如下，可试听：</p>
 <figure><a href="../../assets/manuscript-20260914/c18-1acadc154136e3.wav" class="attachment" download="output.wav">output.wav</a></figure>
 <h3>实现多轮语音对话</h3>
-<p>多轮对话场景中，对于存在上下文关联的问题，如果只把当前问题发给LLM，模型无法理解指代对象。例如：</p>
+<p>多轮对话场景中，对于存在上下文关联的问题，如果只把当前问题发给 LLM，模型无法理解指代对象。例如：</p>
 <pre data-language="Plain Text"><code>用户：北京有哪些著名景点？
 助手：北京有许多著名景点，如故宫、长城、颐和园、天坛、景山、北海公园、南锣鼓巷等。这些地方历史悠久，风景优美，是北京的标志性景点。
 
@@ -719,10 +719,10 @@ print("第二轮会话结束")
 print("会话历史：", conversation.get_history())</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c18-5d9b9eccd5f601.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>多轮对话保存的是用户问题文本和助手回答文本。下一轮对话时，再把这些历史消息与新的用户问题一起发送给LLM。这样，语音输入和输出仍然负责用户与系统之间的交互，而对话上下文则由LLM使用的文字历史进行管理。</p>
+<p>多轮对话保存的是用户问题文本和助手回答文本。下一轮对话时，再把这些历史消息与新的用户问题一起发送给 LLM。这样，语音输入和输出仍然负责用户与系统之间的交互，而对话上下文则由 LLM 使用的文字历史进行管理。</p>
 <h3>一个完整的本地语音助手</h3>
 <p>前面已经分别介绍了音频采集、VAD、ASR、LLM、TTS、流式处理和多轮对话。现在可以直接复用前面定义的类和函数，将这些模块连接成一个完整的本地语音助手，其中对已有的<code>ConversationManager</code>类进行了改造，扩充了用于前端展示的额外信息存储。</p>
-<p>由于gadio展示限制，这里采用非实时音频采集（点击录制→上传处理）和非流式音频输出（生成完整音频后返回）的方式搭建本地语音助手。</p>
+<p>由于 gadio 展示限制，这里采用非实时音频采集（点击录制→上传处理）和非流式音频输出（生成完整音频后返回）的方式搭建本地语音助手。</p>
 <p>完整代码如下：</p>
 <pre data-language="Plain Text"><code>import gradio as gr
 import numpy as np
@@ -1015,20 +1015,20 @@ demo.launch(share=True, show_error=True, debug=False)</code></pre>
 <p>语音助手的评测需要从四个相互独立的维度分别考察，每个维度对应一项或多项可计算的指标。四个维度分别为准确性、实时性、鲁棒性和交互自然度。</p>
 <p>1）准确性</p>
 <p>准确性衡量语音助手“说得对不对”和“答得对不对”两个层面。</p>
-<p>ASR字错率（WER） 是衡量语音转文字精度的硬指标。计算方法是将ASR输出的识别文本与人工标注的标准转写文本按最小编辑距离对齐，统计替换（S）、删除（D）、插入（I）三类错误的总数，除以标准文本总字数N，即 WER = (S+D+I)/N。中文语音识别在实际业务中，WER控制在5%~15%就算可接受区间，再低当然更好，但要付出的优化成本会指数上升。</p>
+<p>ASR 字错率（WER） 是衡量语音转文字精度的硬指标。计算方法是将 ASR 输出的识别文本与人工标注的标准转写文本按最小编辑距离对齐，统计替换（S）、删除（D）、插入（I）三类错误的总数，除以标准文本总字数 N，即 WER = (S+D+I)/N。中文语音识别在实际业务中，WER 控制在 5%~15%就算可接受区间，再低当然更好，但要付出的优化成本会指数上升。</p>
 <p>LLM 回答语义相似度评估生成回答与标准答案在语义层面的接近程度。采用 BERTScore 指标，通过预训练语言模型将生成回答和标准答案分别编码为上下文向量，计算两段文本中每个 token 向量的余弦相似度，再综合得到整体相似性分数。BERTScore 取值范围为 0 到 1，分数越接近 1 表示语义越一致。该指标相比传统的 BLEU 或 ROUGE，对同义表达具有更好的容忍度。对于无法自动判定的开放性问题，可辅以人工评分（5 分制）作为补充。</p>
 <p>2）耗时</p>
 <p>耗时衡量语音助手各阶段及整体的处理速度，直接反映系统的计算效率。</p>
-<p>端到端总耗时是从VAD检测到用户语音结束（t_vad_end）到TTS完成全部音频输出（t_tts_end）之间的时间间隔，即 T = t_tts_end − t_vad_end。该指标反映了用户从结束发言到获得完整语音回答的完整等待时间。</p>
+<p>端到端总耗时是从 VAD 检测到用户语音结束（t_vad_end）到 TTS 完成全部音频输出（t_tts_end）之间的时间间隔，即 T = t_tts_end − t_vad_end。该指标反映了用户从结束发言到获得完整语音回答的完整等待时间。</p>
 <p>各阶段独立耗时将端到端总耗时拆解为四个子阶段的分别耗时：</p>
 <ul><li>VAD 耗时：从音频输入到完成语音活动检测的时间</li><li>ASR 耗时：从语音段提取到完成文字识别的时间</li><li>LLM 耗时：从用户文本输入到完成回答生成的时间</li><li>TTS 耗时：从回答文本输入到完成全部音频合成的时间</li></ul>
 <p>分别记录各阶段的起止时间戳，便于定位系统瓶颈。四个子阶段耗时的加和即为端到端总耗时。</p>
 <p>3）鲁棒性</p>
 <p>鲁棒性考察语音助手在非理想条件下的性能衰减程度。</p>
 <p>评测时需构建多组对照测试集，各组包含相同的问句集合，但施加不同的干扰条件，并将各条件下的评测结果与基线条件（安静环境、标准普通话、正常语速）进行对比，以性能衰减幅度作为鲁棒性的量化依据。</p>
-<p>噪声环境：在原始语音上叠加三类背景噪声（白噪声、街道噪声、多说话人噪声），每种噪声按三个信噪比档位（0dB、10dB、20dB）分别施加，记录各档位下的WER和端到端延迟，观察噪声对识别精度和响应速度的影响。</p>
-<p>口音差异：采集或合成带有不同方言口音（如四川话、东北话、粤式普通话）的测试语音，与标准普通话测试集的结果进行对比，WER的差值直接反映ASR在各口音方向上的偏倚程度。</p>
-<p>语速变化：通过语音信号处理工具将测试语音加速至1.3倍和减速至0.7倍，观察WER随语速变化而产生的波动。</p>
+<p>噪声环境：在原始语音上叠加三类背景噪声（白噪声、街道噪声、多说话人噪声），每种噪声按三个信噪比档位（0dB、10dB、20dB）分别施加，记录各档位下的 WER 和端到端延迟，观察噪声对识别精度和响应速度的影响。</p>
+<p>口音差异：采集或合成带有不同方言口音（如四川话、东北话、粤式普通话）的测试语音，与标准普通话测试集的结果进行对比，WER 的差值直接反映 ASR 在各口音方向上的偏倚程度。</p>
+<p>语速变化：通过语音信号处理工具将测试语音加速至 1.3 倍和减速至 0.7 倍，观察 WER 随语速变化而产生的波动。</p>
 <p>4）交互自然度</p>
 <p>交互自然度评估的是多轮对话场景下语音助手的行为是否连贯、顺畅。</p>
 <p>VAD 误断率包含两类错误：误触发（用户未说话时 VAD 判定为有语音）和漏检（用户说话时 VAD 未能检测到）。误触发会导致助手在静默状态下意外开始录音和处理，漏检则会导致用户语音被截断，两者均影响交互体验。评测时在真实对话场景中连续运行 30 分钟，统计 VAD 判定状态与人工标注的真实语音活动之间的不一致帧数占总帧数的比例。</p>

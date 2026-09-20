@@ -1,91 +1,91 @@
 <article>
-<h1>定制？使用DiffSynth训练图像LoRA</h1>
-<p>在实际应用中，通用图像生成模型不一定能够准确生成指定的人物、商品或者画面风格。如果希望模型能生成特定的人物、商品或风格特征，可以使用LoRA进行训练。本章首先介绍图像生成模型和LoRA的基本概念，再使用DiffSynth完成一次图像LoRA训练。</p>
+<h1>定制？使用 DiffSynth 训练图像 LoRA</h1>
+<p>在实际应用中，通用图像生成模型不一定能够准确生成指定的人物、商品或者画面风格。如果希望模型能生成特定的人物、商品或风格特征，可以使用 LoRA 进行训练。本章首先介绍图像生成模型和 LoRA 的基本概念，再使用 DiffSynth 完成一次图像 LoRA 训练。</p>
 <h2>一句提示词，怎样变成一张图片？</h2>
-<p>目前常见的图像生成模型主要由文本编码器、扩散模型和VAE等组件组成。用户输入提示词后，模型先理解文字内容，再逐步生成图像特征，最后将这些特征转换为可以直接查看的图片。</p>
+<p>目前常见的图像生成模型主要由文本编码器、扩散模型和 VAE 等组件组成。用户输入提示词后，模型先理解文字内容，再逐步生成图像特征，最后将这些特征转换为可以直接查看的图片。</p>
 <p>文本编码器主要负责理解提示词，将文字转换为模型能够处理的文本特征。例如，输入“一只戴着墨镜的橘猫坐在沙滩上”，文本编码器会对“橘猫”“墨镜”“沙滩”等内容进行编码，为后续图像生成提供条件。</p>
 <p>扩散模型是生成图像的核心组件。它从随机噪声开始，根据文本特征经过多次计算逐渐去除噪声，形成画面中的物体、颜色和结构。例如，在生成上述图片时，最开始的画面只是一片随机噪声，经过多轮处理后，橘猫、墨镜和沙滩等内容会逐渐形成。</p>
-<p>VAE（Variational Autoencoder，变分自编码器）负责在图像和特征空间之间进行转换。为了减少计算量，扩散模型通常不会直接在高分辨率图片上进行计算，而是在压缩后的特征空间中生成图像。生成完成后，再通过VAE将图像特征还原为最终图片。</p>
+<p>VAE（Variational Autoencoder，变分自编码器）负责在图像和特征空间之间进行转换。为了减少计算量，扩散模型通常不会直接在高分辨率图片上进行计算，而是在压缩后的特征空间中生成图像。生成完成后，再通过 VAE 将图像特征还原为最终图片。</p>
 <p>将这些组件组合起来，一次基本的文生图过程如下所示：</p>
 <img src="../../assets/manuscript-20260914/c21-f0637e13299fd7.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>用户输入提示词后，模型依次经过文本编码、图像特征生成和图像还原，最终得到图片。不同图像生成模型在具体结构上会有所不同，但整体都需要完成从文本输入到图像输出的转换过程。</p>
-<h2>想让模型画得更像，图像LoRA能做什么？</h2>
+<h2>想让模型画得更像，图像 LoRA 能做什么？</h2>
 <p>通用图像生成模型通常是使用大量图片训练得到的，能够生成多种类型的内容，但对于特定人物、商品或画面风格，生成效果可能不够准确。</p>
 <p>例如，希望模型生成某个指定商品时，即使在提示词中详细描述商品的颜色、形状和外观，生成结果也可能与真实商品存在较大差异。</p>
-<p>可以通过训练让模型学习这些新的视觉特征，但重新训练整个模型需要大量训练数据和计算资源。对于这类特定特征的学习，可以采用参数高效训练方法 LoRA，具体原理可见本文9.2节。训练时冻结原模型的大部分参数，只训练新增的少量参数，使模型学习新的特征。</p>
-<p>训练图像LoRA只需要准备少量目标图片，就可以让模型学习特定的人物、商品、风格或其他视觉特征。训练完成后得到的LoRA文件比完整模型小很多。使用时加载原始模型，再加载对应的LoRA，就可以使用新学习的视觉特征。</p>
+<p>可以通过训练让模型学习这些新的视觉特征，但重新训练整个模型需要大量训练数据和计算资源。对于这类特定特征的学习，可以采用参数高效训练方法 LoRA，具体原理可见本文 9.2 节。训练时冻结原模型的大部分参数，只训练新增的少量参数，使模型学习新的特征。</p>
+<p>训练图像 LoRA 只需要准备少量目标图片，就可以让模型学习特定的人物、商品、风格或其他视觉特征。训练完成后得到的 LoRA 文件比完整模型小很多。使用时加载原始模型，再加载对应的 LoRA，就可以使用新学习的视觉特征。</p>
 <p />
 <h2>训练之前，先明确想让模型学什么</h2>
-<p>根据学习目标不同，图像LoRA可以分为风格LoRA、人物LoRA、商品LoRA和概念LoRA等类型。</p>
-<h3>风格LoRA</h3>
-<p>风格LoRA学习的是画面的整体视觉风格：色彩、线条、构图、表现方式。训练时需要准备一组相似画风的图片，图片中的内容可以不同，但整体风格应尽量保持一致。</p>
-<p>例如：使用一组水墨画画风的图片训练风格LoRA，可以让模型生成具有水墨画风格的人物、动物或风景图片。</p>
+<p>根据学习目标不同，图像 LoRA 可以分为风格 LoRA、人物 LoRA、商品 LoRA 和概念 LoRA 等类型。</p>
+<h3>风格 LoRA</h3>
+<p>风格 LoRA 学习的是画面的整体视觉风格：色彩、线条、构图、表现方式。训练时需要准备一组相似画风的图片，图片中的内容可以不同，但整体风格应尽量保持一致。</p>
+<p>例如：使用一组水墨画画风的图片训练风格 LoRA，可以让模型生成具有水墨画风格的人物、动物或风景图片。</p>
 <p>训练集示例图：</p>
 <img src="../../assets/manuscript-20260914/c21-ce6de2b2e02e44.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>测试提示词：一只坐在竹林里吃竹子的熊猫。</p>
-<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载LoRA结果：</p></td><td><p>加载风格LoRA结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-3fd3a32c64192e.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-5d3e6ea0689d4c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
-<p>可以看到，加载风格LoRA后，画面转换为水墨画风格。</p>
-<h3>人物LoRA</h3>
-<p>人物LoRA主要学习特定人物的外观特征，包括脸部、发型和整体形象等。训练需要同一个人物不同角度、表情、背景和服装的图片，让模型学习人物相对稳定的外观特征。训练完成后，可以通过提示词让这个人物以不同的状态出现在办公室、街道或雪山等不同场景中。</p>
+<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载风格 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-3fd3a32c64192e.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-5d3e6ea0689d4c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
+<p>可以看到，加载风格 LoRA 后，画面转换为水墨画风格。</p>
+<h3>人物 LoRA</h3>
+<p>人物 LoRA 主要学习特定人物的外观特征，包括脸部、发型和整体形象等。训练需要同一个人物不同角度、表情、背景和服装的图片，让模型学习人物相对稳定的外观特征。训练完成后，可以通过提示词让这个人物以不同的状态出现在办公室、街道或雪山等不同场景中。</p>
 <p>样例：提供一个男生的多张生活照，让模型学习他的外观特征。</p>
 <p>训练集示例图：</p>
 <img src="../../assets/manuscript-20260914/c21-0358bf22af1ebf.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>测试提示词：一个男生坐在地铁里玩手机。</p>
-<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载LoRA结果：</p></td><td><p>加载人物LoRA结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-86fa3181793ea9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-050a6a06b15640.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
-<p>加载人物LoRA后，模型可以保持人物的脸部、发型等外观特征稳定。</p>
-<h3>商品LoRA</h3>
-<p>商品LoRA主要学习特定商品的外观特征，例如包装、形状、颜色和标志性结构。训练时可以准备同一商品在不同角度、背景和光照条件下的图片，让模型学习商品相对固定的外观。训练完成后，可以将该商品应用到不同展示场景中，生成商品展示图、电商素材和广告图片。</p>
+<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载人物 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-86fa3181793ea9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-050a6a06b15640.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
+<p>加载人物 LoRA 后，模型可以保持人物的脸部、发型等外观特征稳定。</p>
+<h3>商品 LoRA</h3>
+<p>商品 LoRA 主要学习特定商品的外观特征，例如包装、形状、颜色和标志性结构。训练时可以准备同一商品在不同角度、背景和光照条件下的图片，让模型学习商品相对固定的外观。训练完成后，可以将该商品应用到不同展示场景中，生成商品展示图、电商素材和广告图片。</p>
 <p>样例：准备待宣传运动鞋的一组图片，让模型学习该商品特征，生成广告图。</p>
 <p>训练集示例图：</p>
 <img src="../../assets/manuscript-20260914/c21-394431c612a4d1.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>测试提示词：一双白色运动鞋放置在现代城市街头的混凝土地面上。清晨阳光从侧面照射，背景为模糊的现代建筑和城市道路，运动品牌广告摄影风格，低机位拍摄，浅景深。</p>
-<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载LoRA结果：</p></td><td><p>加载商品LoRA结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-9586bc196eadee.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-5411cf6bf8b9c9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
-<p>加载商品LoRA后，生成结果保持了运动鞋的外观特征。</p>
-<h3>概念LoRA</h3>
-<p>概念LoRA学习的是一类抽象视觉概念或组合特征，例如未来城市、机械风建筑、科幻元素或特殊服饰元素。与人物LoRA和商品LoRA不同，概念LoRA学习的不是某个具体对象，而是多个对象共同具有的视觉特征。训练时需要准备一组具有相似概念的图片，图片中的具体内容可以不同，但整体概念特征需尽量保持一致。</p>
+<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载商品 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-9586bc196eadee.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-5411cf6bf8b9c9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
+<p>加载商品 LoRA 后，生成结果保持了运动鞋的外观特征。</p>
+<h3>概念 LoRA</h3>
+<p>概念 LoRA 学习的是一类抽象视觉概念或组合特征，例如未来城市、机械风建筑、科幻元素或特殊服饰元素。与人物 LoRA 和商品 LoRA 不同，概念 LoRA 学习的不是某个具体对象，而是多个对象共同具有的视觉特征。训练时需要准备一组具有相似概念的图片，图片中的具体内容可以不同，但整体概念特征需尽量保持一致。</p>
 <p>样例：准备一组未来科技城市图片，让模型学习未来感建筑、智能设备和科幻视觉元素。</p>
 <p>训练集示例图：</p>
 <img src="../../assets/manuscript-20260914/c21-1d1c74d25e4af1.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>测试提示词：一座未来科技城市，宏伟的悬浮建筑和空中交通，飞行汽车在空中穿梭，巨大的环形轨道和全息广告，蓝天白云，电影级构图，充满未来感的科幻氛围。</p>
-<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载LoRA结果：</p></td><td><p>加载概念LoRA结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-50abbbbdc3040e.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-c587b8f2fac6ff.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
-<p>加载概念LoRA后，生成结果体现了未来科技城市的视觉元素。</p>
-<h2>从训练到出图，DiffSynth能帮我们做什么？</h2>
-<p>DiffSynth是一个面向图像和视频生成、编辑与训练的开源框架。</p>
-<p>在进行图像LoRA训练时，需要完成基础模型加载、训练数据读取、训练参数配置、LoRA训练和模型保存等工作。DiffSynth对这些过程进行了封装，并针对不同的图像生成模型提供了相应的训练脚本。使用时只需要按照模型要求准备训练数据并配置相关参数，就可以启动LoRA训练。</p>
-<p>DiffSynth还提供图像生成Pipeline。训练完成后，可以直接加载基础模型和训练得到的LoRA权重，通过提示词生成图片，测试LoRA是否学习到了目标特征。从训练到测试可以在同一个框架中完成。</p>
-<p>使用DiffSynth训练图像LoRA的基本过程如下所示：</p>
+<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载概念 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-50abbbbdc3040e.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td><td><img src="../../assets/manuscript-20260914/c21-c587b8f2fac6ff.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" /></td></tr></tbody></table>
+<p>加载概念 LoRA 后，生成结果体现了未来科技城市的视觉元素。</p>
+<h2>从训练到出图，DiffSynth 能帮我们做什么？</h2>
+<p>DiffSynth 是一个面向图像和视频生成、编辑与训练的开源框架。</p>
+<p>在进行图像 LoRA 训练时，需要完成基础模型加载、训练数据读取、训练参数配置、LoRA 训练和模型保存等工作。DiffSynth 对这些过程进行了封装，并针对不同的图像生成模型提供了相应的训练脚本。使用时只需要按照模型要求准备训练数据并配置相关参数，就可以启动 LoRA 训练。</p>
+<p>DiffSynth 还提供图像生成 Pipeline。训练完成后，可以直接加载基础模型和训练得到的 LoRA 权重，通过提示词生成图片，测试 LoRA 是否学习到了目标特征。从训练到测试可以在同一个框架中完成。</p>
+<p>使用 DiffSynth 训练图像 LoRA 的基本过程如下所示：</p>
 <img src="../../assets/manuscript-20260914/c21-6601e8dc60e5d6.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>其中，基础模型决定模型原本具备的图像生成能力，训练数据决定LoRA学习的内容，而训练参数会影响最终的训练效果。</p>
-<h2>用一组柯基图片，动手训练LoRA</h2>
-<p>下面使用DiffSynth官方提供的样例数据集完成一次图像LoRA训练。</p>
+<p>其中，基础模型决定模型原本具备的图像生成能力，训练数据决定 LoRA 学习的内容，而训练参数会影响最终的训练效果。</p>
+<h2>用一组柯基图片，动手训练 LoRA</h2>
+<p>下面使用 DiffSynth 官方提供的样例数据集完成一次图像 LoRA 训练。</p>
 <h3>准备环境</h3>
-<p>需要下载并安装DiffSynth-Studio。安装命令如下：</p>
+<p>需要下载并安装 DiffSynth-Studio。安装命令如下：</p>
 <pre data-language="Plain Text"><code>!git clone https://github.com/modelscope/DiffSynth-Studio.git  
 %cd DiffSynth-Studio
 !pip3 install -e .</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c21-b55aa52f6df6f5.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h3>选择模型</h3>
-<p>LoRA需要基于已有的图像生成模型进行训练，需要先选择基础模型。</p>
-<p>DiffSynth支持多种图像生成模型，本节选择 <a href="https://www.modelscope.cn/models/Tongyi-MAI/Z-Image-Turbo" target="_blank" rel="noopener noreferrer">Tongyi-MAI/Z-Image-Turbo</a> 作为基础模型。该模型参数量较小，需要的显存和计算资源较少，在当前实验环境下可以比较方便快速地完成LoRA训练和图片生成测试。</p>
-<p>训练完成后，得到的LoRA权重需要与Z-Image-Turbo基础模型配合使用，不能单独用于图片生成。</p>
+<p>LoRA 需要基于已有的图像生成模型进行训练，需要先选择基础模型。</p>
+<p>DiffSynth 支持多种图像生成模型，本节选择 <a href="https://www.modelscope.cn/models/Tongyi-MAI/Z-Image-Turbo" target="_blank" rel="noopener noreferrer">Tongyi-MAI/Z-Image-Turbo</a> 作为基础模型。该模型参数量较小，需要的显存和计算资源较少，在当前实验环境下可以比较方便快速地完成 LoRA 训练和图片生成测试。</p>
+<p>训练完成后，得到的 LoRA 权重需要与 Z-Image-Turbo 基础模型配合使用，不能单独用于图片生成。</p>
 <h3>准备训练数据</h3>
-<p>本节使用ModelScope上的 <a href="https://www.modelscope.cn/datasets/DiffSynth-Studio/diffsynth_example_dataset" target="_blank" rel="noopener noreferrer">DiffSynth-Studio/diffsynth_example_dataset</a> 样例数据集进行LoRA训练，可以通过以下命令下载：</p>
+<p>本节使用 ModelScope 上的 <a href="https://www.modelscope.cn/datasets/DiffSynth-Studio/diffsynth_example_dataset" target="_blank" rel="noopener noreferrer">DiffSynth-Studio/diffsynth_example_dataset</a> 样例数据集进行 LoRA 训练，可以通过以下命令下载：</p>
 <pre data-language="Bash"><code>!modelscope download --dataset DiffSynth-Studio/diffsynth_example_dataset \
 --include "z_image/Z-Image-Turbo/*" \
 --local_dir ./data/diffsynth_example_dataset</code></pre>
 <p>下载完成后，样例数据会保存在<code>data/diffsynth_example_dataset/</code>。</p>
 <img src="../../assets/manuscript-20260914/c21-28a00ba2392742.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>DiffSynth采用统一的数据集格式。一个基本的图像训练数据集通常由训练图片和元数据文件组成。元数据文件metadata.csv记录训练图片及其对应的提示词，其中image表示图片文件，prompt表示图片对应的文本描述。训练时，DiffSynth会根据这些信息读取图片和提示词。数据集结构如下所示：</p>
+<p>DiffSynth 采用统一的数据集格式。一个基本的图像训练数据集通常由训练图片和元数据文件组成。元数据文件 metadata.csv 记录训练图片及其对应的提示词，其中 image 表示图片文件，prompt 表示图片对应的文本描述。训练时，DiffSynth 会根据这些信息读取图片和提示词。数据集结构如下所示：</p>
 <img src="../../assets/manuscript-20260914/c21-30072dfd2cc460.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>查看数据集可以发现，里面包含着同一只柯基犬在不同场景下的图片，下面展示其中一张训练图片。通过这些图片进行训练，可以让模型学习这只柯基犬的外观特征。</p>
 <img src="../../assets/manuscript-20260914/c21-2475b46a99ed23.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h3>配置训练参数</h3>
-<p>准备好模型和数据集后，需要配置LoRA训练参数。下面训练脚本中使用的主要参数如下：</p>
-<table><tr><td>参数</td><td>作用</td></tr><tr><td>dataset_base_path</td><td>训练数据所在目录</td></tr><tr><td>dataset_metadata_path</td><td>数据集元数据文件路径</td></tr><tr><td>max_pixels</td><td>训练图片允许的最大像素数</td></tr><tr><td>dataset_repeat</td><td>每轮训练中数据集重复使用的次数</td></tr><tr><td>model_id_with_origin_paths</td><td>基础模型及其模型文件路径</td></tr><tr><td>learning_rate</td><td>学习率，控制每次训练时参数更新的幅度</td></tr><tr><td>num_epochs</td><td>训练轮数</td></tr><tr><td>output_path</td><td>LoRA权重的保存目录</td></tr><tr><td>lora_base_model</td><td>指定LoRA训练的基础模块</td></tr><tr><td>lora_target_modules</td><td>指定需要添加LoRA的模型模块</td></tr><tr><td>lora_rank</td><td>LoRA的Rank，影响可训练参数量</td></tr><tr><td>use_gradient_checkpointing</td><td>启用Gradient Checkpointing，减少训练时的显存占用</td></tr><tr><td>dataset_num_workers</td><td>加载训练数据时使用的进程数量</td></tr></table>
-<p>训练时可以根据训练数据和GPU显存调整learning_rate、num_epochs、dataset_repeat、lora_rank和max_pixels等参数。</p>
-<h3>启动LoRA训练</h3>
-<p>配置好训练参数后，可以使用<code>accelerate launch</code>启动LoRA训练。DiffSynth针对不同模型提供了对应的训练脚本，本节使用Z-Image-Turbo的训练脚本，如下所示：</p>
+<p>准备好模型和数据集后，需要配置 LoRA 训练参数。下面训练脚本中使用的主要参数如下：</p>
+<table><tr><td>参数</td><td>作用</td></tr><tr><td>dataset_base_path</td><td>训练数据所在目录</td></tr><tr><td>dataset_metadata_path</td><td>数据集元数据文件路径</td></tr><tr><td>max_pixels</td><td>训练图片允许的最大像素数</td></tr><tr><td>dataset_repeat</td><td>每轮训练中数据集重复使用的次数</td></tr><tr><td>model_id_with_origin_paths</td><td>基础模型及其模型文件路径</td></tr><tr><td>learning_rate</td><td>学习率，控制每次训练时参数更新的幅度</td></tr><tr><td>num_epochs</td><td>训练轮数</td></tr><tr><td>output_path</td><td>LoRA 权重的保存目录</td></tr><tr><td>lora_base_model</td><td>指定 LoRA 训练的基础模块</td></tr><tr><td>lora_target_modules</td><td>指定需要添加 LoRA 的模型模块</td></tr><tr><td>lora_rank</td><td>LoRA 的 Rank，影响可训练参数量</td></tr><tr><td>use_gradient_checkpointing</td><td>启用 Gradient Checkpointing，减少训练时的显存占用</td></tr><tr><td>dataset_num_workers</td><td>加载训练数据时使用的进程数量</td></tr></table>
+<p>训练时可以根据训练数据和 GPU 显存调整 learning_rate、num_epochs、dataset_repeat、lora_rank 和 max_pixels 等参数。</p>
+<h3>启动 LoRA 训练</h3>
+<p>配置好训练参数后，可以使用<code>accelerate launch</code>启动 LoRA 训练。DiffSynth 针对不同模型提供了对应的训练脚本，本节使用 Z-Image-Turbo 的训练脚本，如下所示：</p>
 <pre data-language="SQL"><code>!accelerate launch examples/z_image/model_training/train.py \
   --dataset_base_path data/diffsynth_example_dataset/z_image/Z-Image-Turbo \
   --dataset_metadata_path data/diffsynth_example_dataset/z_image/Z-Image-Turbo/metadata.csv \
@@ -104,12 +104,12 @@
 <p>训练日志展示：</p>
 <img src="../../assets/manuscript-20260914/c21-623521a08f9dc6.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>训练过程中，需要关注程序是否正常运行，以及显存占用和模型保存情况。</p>
-<p>如果训练过程中出现显存不足，可以适当降低max_pixels或lora_rank等参数。当前命令启用了Gradient Checkpointing，可以减少训练时的显存占用。</p>
-<p>训练完成后，LoRA权重会保存到output_path指定的目录中：</p>
+<p>如果训练过程中出现显存不足，可以适当降低 max_pixels 或 lora_rank 等参数。当前命令启用了 Gradient Checkpointing，可以减少训练时的显存占用。</p>
+<p>训练完成后，LoRA 权重会保存到 output_path 指定的目录中：</p>
 <img src="../../assets/manuscript-20260914/c21-84491df0a7f172.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>后续生成图片时，需要加载这里保存的LoRA权重。</p>
-<h3>使用LoRA生成图片</h3>
-<p>完成训练后，需要加载基础模型和刚刚训练得到的LoRA进行图片生成。</p>
+<p>后续生成图片时，需要加载这里保存的 LoRA 权重。</p>
+<h3>使用 LoRA 生成图片</h3>
+<p>完成训练后，需要加载基础模型和刚刚训练得到的 LoRA 进行图片生成。</p>
 <p>针对训练目标，让模型生成一张柯基戴着墨镜站在雪地上的图片，观察生成图片里的小狗是否和训练图片中一致。</p>
 <pre data-language="Python"><code>from diffsynth.pipelines.z_image import ZImagePipeline, ModelConfig
 import torch
@@ -133,7 +133,7 @@ print("图片保存成功")</code></pre>
 <img src="../../assets/manuscript-20260914/c21-8170bdfd74ca38.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>生成图片如下：</p>
 <img src="../../assets/manuscript-20260914/c21-b3c54155322268.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>测试时可以修改提示词中的场景、构图或其他描述，多生成几张图片进行比较。如果生成结果能够体现训练数据中的目标特征，又可以根据提示词改变场景和构图，说明LoRA已经学习到了相应特征。</p>
+<p>测试时可以修改提示词中的场景、构图或其他描述，多生成几张图片进行比较。如果生成结果能够体现训练数据中的目标特征，又可以根据提示词改变场景和构图，说明 LoRA 已经学习到了相应特征。</p>
 <p />
 <p>本章代码及相关文件见：https://www.modelscope.cn/gallery/liucong/ba42f266-8a77-447c-aba3-b6d90a391791</p>
 <p />

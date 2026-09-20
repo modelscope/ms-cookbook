@@ -1,8 +1,8 @@
 <article>
-<h1>10个Case，带你看看AIGC的开源模型能做到什么地步</h1>
-<p>现在最强的生图、生视频模型应该是GPT Images 2.5 和 Seedance 2.5了，生图、生视频的上限又被往前推了一截。</p>
+<h1>10 个 Case，带你看看 AIGC 的开源模型能做到什么地步</h1>
+<p>现在最强的生图、生视频模型应该是 GPT Images 2.5 和 Seedance 2.5 了，生图、生视频的上限又被往前推了一截。</p>
 <p>那如果把它们当成闭源模型的第一梯队，那开源模型现在到底是什么水平？是玩具吗？是否能真正带来生产力？</p>
-<p>这篇直接看看大佬们，能把开源模型玩到什么地步，其中生图选择阿里的Z-Image，生视频选择MiniMax H3。</p>
+<p>这篇直接看看大佬们，能把开源模型玩到什么地步，其中生图选择阿里的 Z-Image，生视频选择 MiniMax H3。</p>
 <p />
 <h2><b>先介绍一下这两个模型</b></h2>
 <p>Z-Image 是做的 6B 生图模型，采用 Apache 2.0 许可证。完整的 Z-Image 是非蒸馏底模，支持 CFG、负面提示词和微调；社区里更常见的是 Z-Image-Turbo，只用 8 步，追求的就是一个快。</p>
@@ -13,7 +13,7 @@
 <p />
 <p>先看 @witcheer 做的一组本地测试。</p>
 <img src="../../assets/manuscript-20260914/c20-4e303a2853b092.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>他在 RTX 5090 上跑 Z-Image-Turbo，1024px 图片大约只要3.2 秒一张。提示词里要求商店招牌写出指定单词，再画出“正好三只鸭子”，结果文字和数量都对了。</p>
+<p>他在 RTX 5090 上跑 Z-Image-Turbo，1024px 图片大约只要 3.2 秒一张。提示词里要求商店招牌写出指定单词，再画出“正好三只鸭子”，结果文字和数量都对了。</p>
 <p>这两个任务看着幼稚，其实一直是扩散模型的老大难。字母容易糊，三只鸭子经常咔咔咔变成四五只。</p>
 <img src="../../assets/manuscript-20260914/c20-c027c81c79257c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <img src="../../assets/manuscript-20260914/c20-372f0213a6907c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
@@ -55,7 +55,7 @@
 <p>这条是在单张 RTX 5090 上跑的，243 帧用了 437 秒。速度谈不上非常快，但角色、时间和对白可以一起控制，已经很能打了。</p>
 <img src="../../assets/manuscript-20260914/c20-21399ea076ac36.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <img src="../../assets/manuscript-20260914/c20-66554ca06322ab.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<figure><a href="../../assets/manuscript-20260914/c20-7d9146c1b9d02e.mp4" class="attachment" download="案例6-H3双角色中文对白-完整10秒.mp4">案例6-H3双角色中文对白-完整10秒.mp4</a></figure>
+<figure><a href="../../assets/manuscript-20260914/c20-7d9146c1b9d02e.mp4" class="attachment" download="案例6-H3双角色中文对白-完整10秒.mp4">案例 6-H3 双角色中文对白-完整 10 秒.mp4</a></figure>
 <p>原帖：https://x.com/coolthor/status/2096779996320719307</p>
 <p />
 <p>另一条本地 case 来自 @Lumosous。</p>
@@ -63,28 +63,28 @@
 <p>这条最有用的地方，是它不只把画面做得“挺漂亮”。鼓点到了，画面真会跟着换；海边那条里，四个镜头、氛围和背景音能在一轮里一起出来。</p>
 <p>他的实测数据：4090 跑 15 秒、20 步的低分辨率视频要 200 多秒；升到 768p 就要 1000 多秒。开源可以让你反复改，但免费不等于没有成本，电费、显存和等待时间也是成本。</p>
 <img src="../../assets/manuscript-20260914/c20-145acd757537f0.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<figure><a href="../../assets/manuscript-20260914/c20-6bd384c463328e.mp4" class="attachment" download="案例7-H3本地工作流-演示节选22秒.mp4">案例7-H3本地工作流-演示节选22秒.mp4</a></figure>
+<figure><a href="../../assets/manuscript-20260914/c20-6bd384c463328e.mp4" class="attachment" download="案例7-H3本地工作流-演示节选22秒.mp4">案例 7-H3 本地工作流-演示节选 22 秒.mp4</a></figure>
 <p>原帖：https://x.com/Lumosous/status/2089351551361937490</p>
 <p />
 <p>@PixelAigc 做的 30 秒《简·爱》式英伦庄园片段更夸张。</p>
 <p>他的提示词直接把 30 秒拆成 4 个镜头。每段写清焦段、机位、人物站位、微表情、对白、呼吸、环境音和禁止项。人物情绪从试探、反驳一路走到动容，男女声线也分别约束。</p>
 <p>这条片子用的是本地 ComfyUI、H3 Turbo LoRA，先出 480p，再用 Topaz 超到 1080p。作者给出的时间是，25 秒大约要 13 到 15 分钟。它不能代表官方原版模型的裸跑效果，但能代表开源生态最有意思的地方：模型出来一个月，社区已经开始改速度、做长视频、接自动超分了。</p>
 <img src="../../assets/manuscript-20260914/c20-2fe3efcf3dbfde.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<figure><a href="../../assets/manuscript-20260914/c20-5139f6a635a7e1.mp4" class="attachment" download="案例8-H3英伦庄园多镜头对白-完整30秒.mp4">案例8-H3英伦庄园多镜头对白-完整30秒.mp4</a></figure>
+<figure><a href="../../assets/manuscript-20260914/c20-5139f6a635a7e1.mp4" class="attachment" download="案例8-H3英伦庄园多镜头对白-完整30秒.mp4">案例 8-H3 英伦庄园多镜头对白-完整 30 秒.mp4</a></figure>
 <p>原帖：https://x.com/PixelAigc/status/2093563293306929579</p>
 <p />
 <p>H3 官方单段上限是 15 秒，那更长的视频怎么做？</p>
 <p>@superalesha 用 4 张 RTX 3090 跑了一条 30 秒第一人称动作片。他把两个 15 秒片段串起来，前一段故意停在一个稳定画面，后一段从同一帧接着生成，再把重复帧剪掉，声音继续往后走。</p>
 <p>成片的接缝藏在第 15 秒，正常看很难发现。整条片从生成到完成用了 44 分钟。这个 case 的价值不在于 H3 突然突破了时长限制，而是有人把限制研究明白以后，用工作流绕过去了。</p>
 <img src="../../assets/manuscript-20260914/c20-2e30c4ea95fddb.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<figure><a href="../../assets/manuscript-20260914/c20-2b841bfdc3eae3.mp4" class="attachment" download="案例9-H3双段串联第一人称动作片-完整30秒.mp4">案例9-H3双段串联第一人称动作片-完整30秒.mp4</a></figure>
+<figure><a href="../../assets/manuscript-20260914/c20-2b841bfdc3eae3.mp4" class="attachment" download="案例9-H3双段串联第一人称动作片-完整30秒.mp4">案例 9-H3 双段串联第一人称动作片-完整 30 秒.mp4</a></figure>
 <p>原帖：https://x.com/superalesha/status/2086171185134686509</p>
 <p />
 <p>还有一个特别适合拿来研究“视频提示词到底该怎么写”的 case。</p>
 <p>@ou_zhen599 用本地 ComfyUI 做了一段 15 秒赛博飞船短片。画面里有三名女性角色，一人一直坐在左边，一人站在中间拿刀，一人站在右前方拿汽水罐。提示词不只写剧情，还规定谁在第几秒说话、没说话的人不能动嘴、汽水罐必须一直留在右手、红色追踪点什么时候出现在屏幕上，最后舷窗外的阴影再压过来。</p>
 <p>这种 case 最难的是空间别乱、道具别丢、台词别串、沉默的人真能闭嘴。H3 已经能把这么多约束塞进一条 15 秒短片里执行，开源视频的玩法明显变了。</p>
 <img src="../../assets/manuscript-20260914/c20-58907f0c3e3aa4.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<figure><a href="../../assets/manuscript-20260914/c20-7b0dbb64916194.mp4" class="attachment" download="案例10-H3赛博飞船多角色对白-完整15秒.mp4">案例10-H3赛博飞船多角色对白-完整15秒.mp4</a></figure>
+<figure><a href="../../assets/manuscript-20260914/c20-7b0dbb64916194.mp4" class="attachment" download="案例10-H3赛博飞船多角色对白-完整15秒.mp4">案例 10-H3 赛博飞船多角色对白-完整 15 秒.mp4</a></figure>
 <p>原帖：https://x.com/ou_zhen599/status/2097988690102390893</p>
 <p />
 <p />
