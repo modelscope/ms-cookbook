@@ -4,17 +4,17 @@
 <p />
 <p>我们都知道模型在训练的过程中，想要那个部分的能力提高，就针对性的找那类的数据，</p>
 <p>但很多数据，你直接互联网检索，很难找到，有一个数据的统一下载入口，对于模型训练者来说，会节省很大的精力。</p>
-<p>比如，我们当时开源的中文基于满血DeepSeek-R1蒸馏数据集，其中很多原始数据都是从魔搭上直接下载的，</p>
+<p>比如，我们当时开源的中文基于满血 DeepSeek-R1 蒸馏数据集，其中很多原始数据都是从魔搭上直接下载的，</p>
 <img src="../../assets/manuscript-20260914/c03-4de63a06f1d781.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>我们模型的微调，可以从一份现成的开源数据集开始，这样可以快速跑通整个流程。</p>
 <p />
 <h2>找数据，也要先知道自己准备做什么</h2>
-<p>魔搭整合了超过4万个开源数据集，平台支持数据集搜索和预览，提供字段说明及数据集版本。</p>
+<p>魔搭整合了超过 4 万个开源数据集，平台支持数据集搜索和预览，提供字段说明及数据集版本。</p>
 <p>魔搭支持根据关键词标签及任务类别搜索数据集，如，检索语言中文的二分类文本分类数据，</p>
 <img src="../../assets/manuscript-20260914/c03-d1a6f009d63cac.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p />
 <h2>下载之前，先翻几条数据看看</h2>
-<p>筛选出数据集后，选择感兴趣的数据集，点击“数据预览”可以在线查看样本内容与字段说明，辅助数据选型决策，如<a href="https://modelscope.cn/datasets/simpleai/HC3-Chinese" target="_blank" rel="noopener noreferrer">simpleai/HC3-Chinese</a>。</p>
+<p>筛选出数据集后，选择感兴趣的数据集，点击“数据预览”可以在线查看样本内容与字段说明，辅助数据选型决策，如 <a href="https://modelscope.cn/datasets/simpleai/HC3-Chinese" target="_blank" rel="noopener noreferrer">simpleai/HC3-Chinese</a>。</p>
 <img src="../../assets/manuscript-20260914/c03-5e43d34eec8f6c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>问题放在哪一列，答案放在哪一列，有没有标签，一条数据里是一段文字还是一组对话，这些都可以先看清楚。后面写处理代码时，就不用对着字段名猜了。</p>
 <p>以问答数据为例，人类回答和模型回答可能分别保存在不同字段里，准备拿它做什么任务，就要决定读取哪些字段、怎样整理，不能只看到问答两个字就直接开始训练。</p>
@@ -24,10 +24,10 @@
 <p>数据集的说明和许可证也值得一起看。能下载的数据，用于研究、训练或者商业产品时，可能有不同要求。</p>
 <p />
 <h2>先把数据读进来，再决定用哪一部分</h2>
-<p>魔搭提供了<code>MsDataset.load</code>接口，可以在Python里加载数据集。安装ModelScope后，就可以按数据集页面的使用说明操作。</p>
+<p>魔搭提供了<code>MsDataset.load</code>接口，可以在 Python 里加载数据集。安装 ModelScope 后，就可以按数据集页面的使用说明操作。</p>
 <p />
 <h3>先加载一份完整的数据</h3>
-<p>以<a href="https://modelscope.cn/datasets/DAMO_NLP/jd" target="_blank" rel="noopener noreferrer">DAMO_NLP/jd</a>为例，可以这样读取默认配置下的数据，</p>
+<p>以 <a href="https://modelscope.cn/datasets/DAMO_NLP/jd" target="_blank" rel="noopener noreferrer">DAMO_NLP/jd</a> 为例，可以这样读取默认配置下的数据，</p>
 <pre data-language="Python"><code>from modelscope.msdatasets import MsDataset
 
 ds = MsDataset.load(
@@ -40,7 +40,7 @@ print(ds)</code></pre>
 <h3>只需要其中一个子集，就把名字写清楚</h3>
 <p>有些数据集会把不同来源、领域或用途的数据分开保存。如果只关心其中一部分，就用<code>subset_name</code>指定子集。</p>
 <p />
-<p>例如，读取HC3-Chinese里的<code>baike</code>子集。</p>
+<p>例如，读取 HC3-Chinese 里的<code>baike</code>子集。</p>
 <pre data-language="Python"><code>from modelscope.msdatasets import MsDataset
 
 ds = MsDataset.load(
@@ -69,7 +69,7 @@ print(ds[0])</code></pre>
 <p>并不是每份数据都同时提供这三种划分，具体名称要看数据集说明。拿到训练集后，先打印一条样本，确认字段和内容都符合预期，再接后面的处理代码。</p>
 <p />
 <h3>想复现实验，记得把版本一起记下来</h3>
-<p>数据更新以后，同一段代码可能读取到不同内容。以HC3-Chinese的<code>v1</code>版本为例，可以通过<code>version</code>明确指定。</p>
+<p>数据更新以后，同一段代码可能读取到不同内容。以 HC3-Chinese 的<code>v1</code>版本为例，可以通过<code>version</code>明确指定。</p>
 <pre data-language="Python"><code>from modelscope.msdatasets import MsDataset
 
 ds = MsDataset.load(

@@ -1,16 +1,16 @@
 <!-- Generated from ../source-html/chapter-10.html; do not edit independently. -->
 
-# 把模型放到云端跑，用Notebook试试CPU和GPU
+# 把模型放到云端跑，用 Notebook 试试 CPU 和 GPU
 
 笔记本上的模型跑起来了，想试更大的模型，或者做一次图片生成，却不一定有合适的硬件。还可以把计算放到云端，让服务器来承担这些工作。
 
 <p></p>
 
-云服务器可以按需要配置。这里继续使用魔搭Notebook，直接在浏览器里选择CPU或GPU运行实例，下载模型并执行代码。页面开在自己的电脑上，模型运行在连接的云端实例里。
+云服务器可以按需要配置。这里继续使用魔搭 Notebook，直接在浏览器里选择 CPU 或 GPU 运行实例，下载模型并执行代码。页面开在自己的电脑上，模型运行在连接的云端实例里。
 
 <p></p>
 
-这一篇做两个实验。先用CPU运行0.5B级模型，判断一句评价的情感；再用GPU运行图像生成模型，把文字描述变成图片。分别展示两种资源下的使用方法，任务和模型都不同，不能用运行耗时直接比较CPU与GPU谁更快。
+这一篇做两个实验。先用 CPU 运行 0.5B 级模型，判断一句评价的情感；再用 GPU 运行图像生成模型，把文字描述变成图片。分别展示两种资源下的使用方法，任务和模型都不同，不能用运行耗时直接比较 CPU 与 GPU 谁更快。
 
 <p></p>
 
@@ -20,23 +20,23 @@
 
 <a id="c10-s1"></a>
 
-## 打开Notebook，选择这次要用的运行实例
+## 打开 Notebook，选择这次要用的运行实例
 
-从魔搭模型页面进入“Notebook快速开发”，再点击“连接运行时”。这次先选择CPU实例完成情感分析，再切换到GPU实例做图片生成。Notebook的页面操作可以参照【30分钟带你快速看到第一个结果】内容
+从魔搭模型页面进入“Notebook 快速开发”，再点击“连接运行时”。这次先选择 CPU 实例完成情感分析，再切换到 GPU 实例做图片生成。Notebook 的页面操作可以参照【30 分钟带你快速看到第一个结果】内容
 
 <p></p>
 
-切换实例后，原来的Python进程和已加载模型不会自动搬到新实例里，需要在当前环境重新检查依赖，并从头执行对应实验的代码。
+切换实例后，原来的 Python 进程和已加载模型不会自动搬到新实例里，需要在当前环境重新检查依赖，并从头执行对应实验的代码。
 
 <p></p>
 
 <a id="c10-s2"></a>
 
-## 先用CPU，判断一句评价是正面还是负面
+## 先用 CPU，判断一句评价是正面还是负面
 
-以[Qwen/Qwen2.5-0.5B-Instruct](<https://www.modelscope.cn/models/Qwen/Qwen2.5-0.5B-Instruct>)模型为例，介绍如何在CPU上使用0.5B级的模型做情感分析任务。
+以 [Qwen/Qwen2.5-0.5B-Instruct](<https://www.modelscope.cn/models/Qwen/Qwen2.5-0.5B-Instruct>) 模型为例，介绍如何在 CPU 上使用 0.5B 级的模型做情感分析任务。
 
-启动CPU实例后，进入notebook开发环境。模型加载及推理代码如下：
+启动 CPU 实例后，进入 notebook 开发环境。模型加载及推理代码如下：
 
 ```python
 from modelscope import AutoModelForCausalLM, AutoTokenizer
@@ -84,13 +84,13 @@ print("response: ", response )
 
 <a id="c10-s3"></a>
 
-## 换到GPU，把文字描述变成图片
+## 换到 GPU，把文字描述变成图片
 
-使用[Tongyi-MAI/Z-Image-Turbo](<https://www.modelscope.cn/models/Tongyi-MAI/Z-Image-Turbo>)模型演示如何在GPU上加载模型，完成图片生成任务。
+使用 [Tongyi-MAI/Z-Image-Turbo](<https://www.modelscope.cn/models/Tongyi-MAI/Z-Image-Turbo>) 模型演示如何在 GPU 上加载模型，完成图片生成任务。
 
-启动GPU实例后，进入notebook开发环境。
+启动 GPU 实例后，进入 notebook 开发环境。
 
-按照模型卡片，需要在终端安装最新版diffusers。
+按照模型卡片，需要在终端安装最新版 diffusers。
 
 ```text
 !pip3 install git+https://github.com/huggingface/diffusers

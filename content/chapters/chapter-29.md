@@ -1,6 +1,6 @@
 <!-- Generated from ../source-html/chapter-29.html; do not edit independently. -->
 
-# 快速使用Claude code
+# 快速使用 Claude Code
 
 这篇我们直接上手 Claude Code，从安装、登录、接入模型，一直用到自己的项目里。
 

@@ -1,6 +1,6 @@
 <!-- Generated from ../source-html/chapter-06.html; do not edit independently. -->
 
-# 先评再选：用EvalScope形成开源模型的第一份报告
+# 先评再选：用 EvalScope 形成开源模型的第一份报告
 
 这是一个真实且惨痛的教训。
 
@@ -28,7 +28,7 @@
 
 <p></p>
 
-模型评测的目的就是把不规范的评测标准，变成一套更加统一的测试方法，例如，准备500道固定的测试题，让Qwen、DeepSeek等候选模型分别回答，再使用相同的规则计算准确率。这样既可以比较不同模型的整体效果，也可以减少个人判断对结果的影响。
+模型评测的目的就是把不规范的评测标准，变成一套更加统一的测试方法，例如，准备 500 道固定的测试题，让 Qwen、DeepSeek 等候选模型分别回答，再使用相同的规则计算准确率。这样既可以比较不同模型的整体效果，也可以减少个人判断对结果的影响。
 
 通过模型评测，我们不仅可以看到模型最终得到多少分，还可以进一步分析模型哪些任务表现较好、哪些类型的问题容易出错，以及不同模型之间的差距有多大。这些结果可以帮助我们从多个候选模型中筛选出更加合适的模型，也可以为后续的业务数据测试、模型微调和部署提供参考。
 
@@ -38,31 +38,31 @@
 
 ## 榜单上的分数，到底测的是什么？
 
-为了方便比较不同模型，Benchmark中包含了不同类型的数据，例如，
+为了方便比较不同模型，Benchmark 中包含了不同类型的数据，例如，
 
-MMLU包含数学、历史、计算机、法律等多个学科的问题，主要用于观察模型的知识和推理能力；
+MMLU 包含数学、历史、计算机、法律等多个学科的问题，主要用于观察模型的知识和推理能力；
 
 ![正文配图](<../../assets/manuscript-20260914/c06-f4faad78672f50.webp>)
 
-C-Eval和CMMLU包含较多中文考试和知识类问题，可以用于测试模型的中文知识能力；
+C-Eval 和 CMMLU 包含较多中文考试和知识类问题，可以用于测试模型的中文知识能力；
 
-GSM8K主要由数学应用题组成，可以用于测试数学推理能力；
+GSM8K 主要由数学应用题组成，可以用于测试数学推理能力；
 
 ![正文配图](<../../assets/manuscript-20260914/c06-75145880db6223.webp>)
 
-HumanEval主要测试模型根据要求编写代码的能力；
+HumanEval 主要测试模型根据要求编写代码的能力；
 
-IFEval则重点测试模型能不能按照用户提出的要求完成任务。
+IFEval 则重点测试模型能不能按照用户提出的要求完成任务。
 
 ![正文配图](<../../assets/manuscript-20260914/c06-63d8b874dceff0.webp>)
 
 <p></p>
 
-在实际评测时，可以根据自身业务需求，选择更贴合自己的场景的数据进行评测。例如，如果场景是更加关注中文知识的问答效果，可以重点测试中文理解、知识和推理相关的数据集；如果模型主要用于数学推理，则可以重点测试GSM8K等数学数据集。
+在实际评测时，可以根据自身业务需求，选择更贴合自己的场景的数据进行评测。例如，如果场景是更加关注中文知识的问答效果，可以重点测试中文理解、知识和推理相关的数据集；如果模型主要用于数学推理，则可以重点测试 GSM8K 等数学数据集。
 
-通过这些公开Benchmark，可以比较不同模型在相同数据的效果，从中筛选出一些能力比较符合要求的模型。<strong>但是Benchmark分数高，并不代表模型在实际业务中一定好用。</strong>
+通过这些公开 Benchmark，可以比较不同模型在相同数据的效果，从中筛选出一些能力比较符合要求的模型。<strong>但是 Benchmark 分数高，并不代表模型在实际业务中一定好用。</strong>
 
-公开Benchmark里的数据都是通用数据，而真实业务中可能存在大量专业术语、内部规则，这些内容很难通过公开数据集测试出来。也就是说，我们再选择模型时，可以通过Benchmark 做一次模型初筛，选出效果不错的模型，但是具体场景的效果，还需要使用业务数据进行评测。
+公开 Benchmark 里的数据都是通用数据，而真实业务中可能存在大量专业术语、内部规则，这些内容很难通过公开数据集测试出来。也就是说，我们再选择模型时，可以通过 Benchmark 做一次模型初筛，选出效果不错的模型，但是具体场景的效果，还需要使用业务数据进行评测。
 
 <p></p>
 
@@ -82,9 +82,9 @@ IFEval则重点测试模型能不能按照用户提出的要求完成任务。
 
 <a id="c6-s4"></a>
 
-## 评测这件事，EvalScope能帮上什么忙？
+## 评测这件事，EvalScope 能帮上什么忙？
 
-EvalScope 是 ModelScope 社区推出的大模型评测框架，可以实现对不同模型的效果与推理性能进行统一评估与横向对比。EvalScope支持范围比较广，包括大语言模型、多模态模型，以及检索中常用的 Embedding 和 Reranker 等多种模型类型。EvalScope 的优势体现在以下几个方面：
+EvalScope 是 ModelScope 社区推出的大模型评测框架，可以实现对不同模型的效果与推理性能进行统一评估与横向对比。EvalScope 支持范围比较广，包括大语言模型、多模态模型，以及检索中常用的 Embedding 和 Reranker 等多种模型类型。EvalScope 的优势体现在以下几个方面：
 
 1）兼顾通用 Benchmark 与自定义业务评测
 
@@ -92,7 +92,7 @@ EvalScope 预置了 MMLU、GSM8K、HumanEval 等常见的公开基准数据集�
 
 2）支持多形态的模型接入与服务调用
 
-EvalScope框架既支持评测本地离线模型，也兼容标准 OpenAI 格式接口。对于通过 vLLM、SGLang 等主流推理引擎部署的模型服务，可以直接接入评测，适配不同的开发与部署环境。
+EvalScope 框架既支持评测本地离线模型，也兼容标准 OpenAI 格式接口。对于通过 vLLM、SGLang 等主流推理引擎部署的模型服务，可以直接接入评测，适配不同的开发与部署环境。
 
 3）具备推理性能压测能力
 
@@ -100,7 +100,7 @@ EvalScope框架既支持评测本地离线模型，也兼容标准 OpenAI 格式
 
 4）提供多维度的对比分析与报告可视化
 
-评测完成后，EvalScope框架支持自动生成统计报表与对比图表。
+评测完成后，EvalScope 框架支持自动生成统计报表与对比图表。
 
 <p></p>
 
@@ -108,21 +108,21 @@ EvalScope框架既支持评测本地离线模型，也兼容标准 OpenAI 格式
 
 ## 动手跑一次评测，看看模型的实际表现
 
-本实验ModelScope的Notebook进行实验，采用ubuntu22.04-cuda12.8.1-py312-torch2.10.0-1.39.0这个镜像
+本实验 ModelScope 的 Notebook 进行实验，采用 ubuntu22.04-cuda12.8.1-py312-torch2.10.0-1.39.0 这个镜像
 
 ![正文配图](<../../assets/manuscript-20260914/c06-776b3c96504c69.webp>)
 
-查看环境中是否已经安装evalscope
+查看环境中是否已经安装 evalscope
 
 ```text
 !pip3 list |grep evalscope
 ```
 
-终端中输出下面内容，说明已经安装了evalscope
+终端中输出下面内容，说明已经安装了 evalscope
 
 ![正文配图](<../../assets/manuscript-20260914/c06-d64df78b854d6f.webp>)
 
-如果没有安装，可以通过pip直接安装
+如果没有安装，可以通过 pip 直接安装
 
 ```text
 !pip3  install evalscope
@@ -137,7 +137,7 @@ EvalScope框架既支持评测本地离线模型，也兼容标准 OpenAI 格式
 
 ### <strong>先用公开题库，测一测基础能力</strong>
 
-安装完成后，我们可以使用一个公开数据进行评测，比如math&#95;500，模型采用Qwen3-0.6B，为了快速测试，我们可以只选择10条数据进行评测，评测命令如下：
+安装完成后，我们可以使用一个公开数据进行评测，比如 math&#95;500，模型采用 Qwen3-0.6B，为了快速测试，我们可以只选择 10 条数据进行评测，评测命令如下：
 
 ```text
 !evalscope eval --model Qwen/Qwen3-0.6B --datasets math_500 --limit 10
@@ -153,7 +153,7 @@ EvalScope框架既支持评测本地离线模型，也兼容标准 OpenAI 格式
 
 ![正文配图](<../../assets/manuscript-20260914/c06-1377e09547df87.webp>)
 
-我们可以在对应的目录下查看评测结果，`eval_log.log`记录了10条数据的评测结果。
+我们可以在对应的目录下查看评测结果，`eval_log.log`记录了 10 条数据的评测结果。
 
 ![正文配图](<../../assets/manuscript-20260914/c06-a8bb210e3c0a60.webp>)
 
@@ -173,15 +173,15 @@ retrieval_data1
    
 ```
 
-其中`corpus.jsonl`文档库数据，数据形式如下：包括`{"_id": "xxx", "text": "xxx"}`，&#95;id为语料库的id，text为语料库的文本。形式如下：
+其中`corpus.jsonl`文档库数据，数据形式如下：包括`{"_id": "xxx", "text": "xxx"}`，&#95;id 为语料库的 id，text 为语料库的文本。形式如下：
 
 ![正文配图](<../../assets/manuscript-20260914/c06-55127d99247885.webp>)
 
-`queries.jsonl`为查询文件，每行包括`{"_id": "xxx", "text": "xxx"}`，&#95;id为查询数据的id，text为语查询文本。形式如下：
+`queries.jsonl`为查询文件，每行包括`{"_id": "xxx", "text": "xxx"}`，&#95;id 为查询数据的 id，text 为语查询文本。形式如下：
 
 ![正文配图](<../../assets/manuscript-20260914/c06-ae7febb9ef1efc.webp>)
 
-`qrels.jsonl` 是标准答案文件，也就是这个问题对应的正确文档，每行包括`{"query-id": "xxx", "corpus-id": "xxx","score":1}`，`query-id`为查询数据的id，`corpus-id`为文档库id,`score`为相关性得分。形式如下：
+`qrels.jsonl` 是标准答案文件，也就是这个问题对应的正确文档，每行包括`{"query-id": "xxx", "corpus-id": "xxx","score":1}`，`query-id`为查询数据的 id，`corpus-id`为文档库 id,`score`为相关性得分。形式如下：
 
 ![正文配图](<../../assets/manuscript-20260914/c06-5f19142927756d.webp>)
 
@@ -207,7 +207,7 @@ retrieval_data1
 
 ![正文配图](<../../assets/manuscript-20260914/c06-1c64b252b9549f.webp>)
 
-接下来，我们可以评价Embedding的检索效果，代码如下：
+接下来，我们可以评价 Embedding 的检索效果，代码如下：
 
 ```python
 from evalscope.run import run_task
@@ -264,17 +264,17 @@ run_task(task_cfg=task_cfg)
 
 ### <strong>不仅能测效果，还能测试性能</strong>
 
-完成模型效果测试之后，还可以继续进行性能压测。如果模型已经通过vLLM等推理框架部署，可以使用EvalScope向模型服务发送不同并发量的请求。
+完成模型效果测试之后，还可以继续进行性能压测。如果模型已经通过 vLLM 等推理框架部署，可以使用 EvalScope 向模型服务发送不同并发量的请求。
 
-例如，可以分别设置1、10、50、100等不同并发量，观察并发增加之后模型的吞吐量、首Token延迟和请求成功率。EvalScope的性能测试结果能够统计RPS、输出吞吐量、平均延迟以及P50、P99等指标，并将结果保存为测试报告。
+例如，可以分别设置 1、10、50、100 等不同并发量，观察并发增加之后模型的吞吐量、首 Token 延迟和请求成功率。EvalScope 的性能测试结果能够统计 RPS、输出吞吐量、平均延迟以及 P50、P99 等指标，并将结果保存为测试报告。
 
-这个镜像下操作，默认安装包可能会报错，通过降低modelscope版本即可
+这个镜像下操作，默认安装包可能会报错，通过降低 modelscope 版本即可
 
 ```text
 !python -m pip install --no-cache-dir --force-reinstall "modelscope==1.37.1"
 ```
 
-打开Notebook，在终端中用vLLM启动Qwen3.5-2B
+打开 Notebook，在终端中用 vLLM 启动 Qwen3.5-2B
 
 ```text
 CUDA_VISIBLE_DEVICES=0 \
@@ -317,7 +317,7 @@ print(response.text)
 
 ![正文配图](<../../assets/manuscript-20260914/c06-f82a1385ef78e1.webp>)
 
-接下来，就是使用EvalScope评测性能，一般我们比较关注的指标就是首字出现的时间（TTFT）以及单 Token 输出耗时（TPOT）等指标。
+接下来，就是使用 EvalScope 评测性能，一般我们比较关注的指标就是首字出现的时间（TTFT）以及单 Token 输出耗时（TPOT）等指标。
 
 ```sql
 !evalscope perf \
@@ -337,7 +337,7 @@ print(response.text)
 
 其中，相关参数说明：
 
-- `--model qwen3.5-2b`：模型名称，需要和vllm推理服务中配置的模型名称保持一致
+- `--model qwen3.5-2b`：模型名称，需要和 vllm 推理服务中配置的模型名称保持一致
 - `--url` [http://127.0.0.1:8000/v1/chat/completions](<http://127.0.0.1:8000/v1/chat/completions>)：模型服务的实际接口地址
 - `--api-key sk-123456`：API 鉴权密钥。如果服务端要求鉴权则必须传入；若未配置，该参数可省略。
 - `--dataset random`：指定测试数据集为随机生成模式，无需准备本地测试文件。
@@ -353,7 +353,7 @@ print(response.text)
 
 ![正文配图](<../../assets/manuscript-20260914/c06-2dd7dcab8a21d7.webp>)
 
-EvalScope给我们提供了一种快速评测模型的方法，我们可以在对应的输出文件夹中看到相关html报告内容。更多EvalScope的用法，可以在https://evalscope.readthedocs.io/zh-cn/v1.6.1/get_started/introduction.html查看。
+EvalScope 给我们提供了一种快速评测模型的方法，我们可以在对应的输出文件夹中看到相关 html 报告内容。更多 EvalScope 的用法，可以在 https://evalscope.readthedocs.io/zh-cn/v1.6.1/get_started/introduction.html 查看。
 
 <p></p>
 

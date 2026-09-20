@@ -2,11 +2,11 @@
 
 # 开源模型还没用上，先卡在下载这一步？
 
-早在23年，我就写过一篇文章《大模型下载使我痛苦》，
+早在 23 年，我就写过一篇文章《大模型下载使我痛苦》，
 
 ![正文配图](<../../assets/manuscript-20260914/c02-df1f804f3c3e14.webp>)
 
-那时HF需要科学上网才能使用，模型少说十几G，流量有限，可能有一些镜像网站，但不一定全，也不一定稳定。
+那时 HF 需要科学上网才能使用，模型少说十几 G，流量有限，可能有一些镜像网站，但不一定全，也不一定稳定。
 
 <p></p>
 
@@ -38,9 +38,9 @@
 
 <a id="c2-s2"></a>
 
-## 开源模型的Model Card，值得多看两眼
+## 开源模型的 Model Card，值得多看两眼
 
-找到感兴趣的模型后，点进去看它的模型卡片。以[Qwen3-ASR-1.7B](<https://modelscope.cn/models/Qwen/Qwen3-ASR-1.7B>)为例，模型页面会把介绍、使用方法和效果评估放在一起。
+找到感兴趣的模型后，点进去看它的模型卡片。以 [Qwen3-ASR-1.7B](<https://modelscope.cn/models/Qwen/Qwen3-ASR-1.7B>) 为例，模型页面会把介绍、使用方法和效果评估放在一起。
 
 <p></p>
 
@@ -74,7 +74,7 @@
 
 ## 下载模型方式有很多，选一个喜欢的就行
 
-魔搭提供网页、命令行、Git和Python SDK等下载方式，下面继续用较小的`Qwen/Qwen3-0.6B`演示，方便第一次操作。
+魔搭提供网页、命令行、Git 和 Python SDK 等下载方式，下面继续用较小的`Qwen/Qwen3-0.6B`演示，方便第一次操作。
 
 <a id="c2-s4"></a>
 
@@ -90,7 +90,7 @@
 
 ### 在终端里，一条命令下载
 
-先安装最新版的ModelScope Python包，
+先安装最新版的 ModelScope Python 包，
 
 ```bash
 pip install -U modelscope
@@ -112,7 +112,7 @@ modelscope download --model Qwen/Qwen3-0.6B --local_dir ./Qwen3-0.6B
 
 <p></p>
 
-上面的命令在终端中运行，如果放进Notebook的Python代码单元格，安装时可以使用`%pip install -U modelscope`，执行命令时在`modelscope`前加一个`!`。
+上面的命令在终端中运行，如果放进 Notebook 的 Python 代码单元格，安装时可以使用`%pip install -U modelscope`，执行命令时在`modelscope`前加一个`!`。
 
 结果展示：
 
@@ -120,9 +120,9 @@ modelscope download --model Qwen/Qwen3-0.6B --local_dir ./Qwen3-0.6B
 
 <a id="c2-s6"></a>
 
-### 写进Python代码里，就用SDK
+### 写进 Python 代码里，就用 SDK
 
-在Python程序中，可以直接调用`snapshot_download`下载模型，比如，
+在 Python 程序中，可以直接调用`snapshot_download`下载模型，比如，
 
 ```python
 from modelscope import snapshot_download
@@ -134,28 +134,28 @@ model_dir = snapshot_download(
 print(model_dir)
 ```
 
-函数返回模型保存的位置，后续代码可以用这个路径加载模型。没有指定`local_dir`时，SDK会使用默认缓存目录。
+函数返回模型保存的位置，后续代码可以用这个路径加载模型。没有指定`local_dir`时，SDK 会使用默认缓存目录。
 
 ![正文配图](<../../assets/manuscript-20260914/c02-70ccc6e14bbd3c.webp>)
 
 <a id="c2-s7"></a>
 
-### 平时习惯用Git，也可以直接拉取
+### 平时习惯用 Git，也可以直接拉取
 
-模型文件通常较大，使用Git下载前，需要先安装Git和Git LFS。安装好Git LFS后，再执行下面的初始化和克隆命令。
+模型文件通常较大，使用 Git 下载前，需要先安装 Git 和 Git LFS。安装好 Git LFS 后，再执行下面的初始化和克隆命令。
 
 ```bash
 git lfs install
 git clone https://www.modelscope.cn/Qwen/Qwen3-0.6B.git
 ```
 
-`git lfs install`是在当前环境中初始化Git LFS，并不负责安装这个工具本身。如果提示没有`lfs`命令，需要先完成工具安装。
+`git lfs install`是在当前环境中初始化 Git LFS，并不负责安装这个工具本身。如果提示没有`lfs`命令，需要先完成工具安装。
 
 ![正文配图](<../../assets/manuscript-20260914/c02-973b14a709cdc5.webp>)
 
 <p></p>
 
-四种方式不用全部试一遍，临时拿几个文件就用网页，终端操作用命令行，Python项目用SDK，已有Git工作习惯就继续用Git。
+四种方式不用全部试一遍，临时拿几个文件就用网页，终端操作用命令行，Python 项目用 SDK，已有 Git 工作习惯就继续用 Git。
 
 模型下载完成后，打开它的使用示例，把模型路径换成本地目录，先跑通一次输入和输出。
 

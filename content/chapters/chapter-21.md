@@ -1,12 +1,12 @@
 <!-- Generated from ../source-html/chapter-21.html; do not edit independently. -->
 
-# 10个Case，带你看看AIGC的开源模型能做到什么地步
+# 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步
 
-现在最强的生图、生视频模型应该是GPT Images 2.5 和 Seedance 2.5了，生图、生视频的上限又被往前推了一截。
+现在最强的生图、生视频模型应该是 GPT Images 2.5 和 Seedance 2.5 了，生图、生视频的上限又被往前推了一截。
 
 那如果把它们当成闭源模型的第一梯队，那开源模型现在到底是什么水平？是玩具吗？是否能真正带来生产力？
 
-这篇直接看看大佬们，能把开源模型玩到什么地步，其中生图选择阿里的Z-Image，生视频选择MiniMax H3。
+这篇直接看看大佬们，能把开源模型玩到什么地步，其中生图选择阿里的 Z-Image，生视频选择 MiniMax H3。
 
 <p></p>
 
@@ -32,7 +32,7 @@ MiniMax H3 则是 33B 的音视频生成模型，可以输出 4 到 15 秒、24f
 
 ![正文配图](<../../assets/manuscript-20260914/c20-4e303a2853b092.webp>)
 
-他在 RTX 5090 上跑 Z-Image-Turbo，1024px 图片大约只要3.2 秒一张。提示词里要求商店招牌写出指定单词，再画出“正好三只鸭子”，结果文字和数量都对了。
+他在 RTX 5090 上跑 Z-Image-Turbo，1024px 图片大约只要 3.2 秒一张。提示词里要求商店招牌写出指定单词，再画出“正好三只鸭子”，结果文字和数量都对了。
 
 这两个任务看着幼稚，其实一直是扩散模型的老大难。字母容易糊，三只鸭子经常咔咔咔变成四五只。
 
@@ -118,7 +118,7 @@ H3 的 case 里，最值得先看的就是双角色一致性。
 
 ![正文配图](<../../assets/manuscript-20260914/c20-66554ca06322ab.webp>)
 
-[案例6-H3双角色中文对白-完整10秒.mp4](<../../assets/manuscript-20260914/c20-7d9146c1b9d02e.mp4>)
+[案例 6-H3 双角色中文对白-完整 10 秒.mp4](<../../assets/manuscript-20260914/c20-7d9146c1b9d02e.mp4>)
 
 原帖：https://x.com/coolthor/status/2096779996320719307
 
@@ -134,7 +134,7 @@ H3 的 case 里，最值得先看的就是双角色一致性。
 
 ![正文配图](<../../assets/manuscript-20260914/c20-145acd757537f0.webp>)
 
-[案例7-H3本地工作流-演示节选22秒.mp4](<../../assets/manuscript-20260914/c20-6bd384c463328e.mp4>)
+[案例 7-H3 本地工作流-演示节选 22 秒.mp4](<../../assets/manuscript-20260914/c20-6bd384c463328e.mp4>)
 
 原帖：https://x.com/Lumosous/status/2089351551361937490
 
@@ -148,7 +148,7 @@ H3 的 case 里，最值得先看的就是双角色一致性。
 
 ![正文配图](<../../assets/manuscript-20260914/c20-2fe3efcf3dbfde.webp>)
 
-[案例8-H3英伦庄园多镜头对白-完整30秒.mp4](<../../assets/manuscript-20260914/c20-5139f6a635a7e1.mp4>)
+[案例 8-H3 英伦庄园多镜头对白-完整 30 秒.mp4](<../../assets/manuscript-20260914/c20-5139f6a635a7e1.mp4>)
 
 原帖：https://x.com/PixelAigc/status/2093563293306929579
 
@@ -162,7 +162,7 @@ H3 官方单段上限是 15 秒，那更长的视频怎么做？
 
 ![正文配图](<../../assets/manuscript-20260914/c20-2e30c4ea95fddb.webp>)
 
-[案例9-H3双段串联第一人称动作片-完整30秒.mp4](<../../assets/manuscript-20260914/c20-2b841bfdc3eae3.mp4>)
+[案例 9-H3 双段串联第一人称动作片-完整 30 秒.mp4](<../../assets/manuscript-20260914/c20-2b841bfdc3eae3.mp4>)
 
 原帖：https://x.com/superalesha/status/2086171185134686509
 
@@ -176,7 +176,7 @@ H3 官方单段上限是 15 秒，那更长的视频怎么做？
 
 ![正文配图](<../../assets/manuscript-20260914/c20-58907f0c3e3aa4.webp>)
 
-[案例10-H3赛博飞船多角色对白-完整15秒.mp4](<../../assets/manuscript-20260914/c20-7b0dbb64916194.mp4>)
+[案例 10-H3 赛博飞船多角色对白-完整 15 秒.mp4](<../../assets/manuscript-20260914/c20-7b0dbb64916194.mp4>)
 
 原帖：https://x.com/ou_zhen599/status/2097988690102390893
 

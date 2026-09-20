@@ -10,7 +10,7 @@
 
 但很多数据，你直接互联网检索，很难找到，有一个数据的统一下载入口，对于模型训练者来说，会节省很大的精力。
 
-比如，我们当时开源的中文基于满血DeepSeek-R1蒸馏数据集，其中很多原始数据都是从魔搭上直接下载的，
+比如，我们当时开源的中文基于满血 DeepSeek-R1 蒸馏数据集，其中很多原始数据都是从魔搭上直接下载的，
 
 ![正文配图](<../../assets/manuscript-20260914/c03-4de63a06f1d781.webp>)
 
@@ -22,7 +22,7 @@
 
 ## 找数据，也要先知道自己准备做什么
 
-魔搭整合了超过4万个开源数据集，平台支持数据集搜索和预览，提供字段说明及数据集版本。
+魔搭整合了超过 4 万个开源数据集，平台支持数据集搜索和预览，提供字段说明及数据集版本。
 
 魔搭支持根据关键词标签及任务类别搜索数据集，如，检索语言中文的二分类文本分类数据，
 
@@ -34,7 +34,7 @@
 
 ## 下载之前，先翻几条数据看看
 
-筛选出数据集后，选择感兴趣的数据集，点击“数据预览”可以在线查看样本内容与字段说明，辅助数据选型决策，如[simpleai/HC3-Chinese](<https://modelscope.cn/datasets/simpleai/HC3-Chinese>)。
+筛选出数据集后，选择感兴趣的数据集，点击“数据预览”可以在线查看样本内容与字段说明，辅助数据选型决策，如 [simpleai/HC3-Chinese](<https://modelscope.cn/datasets/simpleai/HC3-Chinese>)。
 
 ![正文配图](<../../assets/manuscript-20260914/c03-5e43d34eec8f6c.webp>)
 
@@ -56,7 +56,7 @@
 
 ## 先把数据读进来，再决定用哪一部分
 
-魔搭提供了`MsDataset.load`接口，可以在Python里加载数据集。安装ModelScope后，就可以按数据集页面的使用说明操作。
+魔搭提供了`MsDataset.load`接口，可以在 Python 里加载数据集。安装 ModelScope 后，就可以按数据集页面的使用说明操作。
 
 <p></p>
 
@@ -64,7 +64,7 @@
 
 ### 先加载一份完整的数据
 
-以[DAMO&#95;NLP/jd](<https://modelscope.cn/datasets/DAMO_NLP/jd>)为例，可以这样读取默认配置下的数据，
+以 [DAMO&#95;NLP/jd](<https://modelscope.cn/datasets/DAMO_NLP/jd>) 为例，可以这样读取默认配置下的数据，
 
 ```python
 from modelscope.msdatasets import MsDataset
@@ -88,7 +88,7 @@ print(ds)
 
 <p></p>
 
-例如，读取HC3-Chinese里的`baike`子集。
+例如，读取 HC3-Chinese 里的`baike`子集。
 
 ```python
 from modelscope.msdatasets import MsDataset
@@ -139,7 +139,7 @@ print(ds[0])
 
 ### 想复现实验，记得把版本一起记下来
 
-数据更新以后，同一段代码可能读取到不同内容。以HC3-Chinese的`v1`版本为例，可以通过`version`明确指定。
+数据更新以后，同一段代码可能读取到不同内容。以 HC3-Chinese 的`v1`版本为例，可以通过`version`明确指定。
 
 ```python
 from modelscope.msdatasets import MsDataset

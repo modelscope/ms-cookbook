@@ -1,14 +1,14 @@
 <!-- Generated from ../source-html/chapter-09.html; do not edit independently. -->
 
-# 笔记本也能跑开源模型，先从Ollama开始
+# 笔记本也能跑开源模型，先从 Ollama 开始
 
 模型在本地或者云端部署，比如，本地设备包括笔记本、台式机，以及其他端侧设备等等，
 
-同时本地运行也有不同的工具选择，Ollama、以及vLLM、SGLang等框架。
+同时本地运行也有不同的工具选择，Ollama、以及 vLLM、SGLang 等框架。
 
 <p></p>
 
-本章，我们先把Ollama的基本用法讲清楚。<strong>其他端侧设备的适配，以及vLLM、SGLang等框架的使用，会在后续补充。</strong>
+本章，我们先把 Ollama 的基本用法讲清楚。<strong>其他端侧设备的适配，以及 vLLM、SGLang 等框架的使用，会在后续补充。</strong>
 
 <p></p>
 
@@ -34,35 +34,35 @@
 
 Ollama 是目前用起来比较顺手的工具之一，把模型下载、本地管理和接口服务都打包好了。用户不需要自己写代码去加载模型，只需几行命令就能直接启动模型。
 
-模型能否在本地顺利运行，很大程度上取决于计算机的硬件资源。Ollama对常见的硬件平台提供了较好的支持，支持Windows、Linux和macOS等常见操作系统。无论是普通CPU、GPU，还是搭载Apple Silicon的Mac电脑，都可以用来运行模型。
+模型能否在本地顺利运行，很大程度上取决于计算机的硬件资源。Ollama 对常见的硬件平台提供了较好的支持，支持 Windows、Linux 和 macOS 等常见操作系统。无论是普通 CPU、GPU，还是搭载 Apple Silicon 的 Mac 电脑，都可以用来运行模型。
 
-<strong>CPU运行，</strong>即使电脑没有独立显卡，也可以通过CPU运行模型。由于大模型推理需要进行大量计算，使用CPU时生成速度通常比较慢，因此更适合参数规模较小的模型，或者对响应速度要求不高的场景。
+<strong>CPU 运行，</strong>即使电脑没有独立显卡，也可以通过 CPU 运行模型。由于大模型推理需要进行大量计算，使用 CPU 时生成速度通常比较慢，因此更适合参数规模较小的模型，或者对响应速度要求不高的场景。
 
-<strong>GPU运行，</strong>这是目前比较常见的大模型运行方式。GPU具有较强的并行计算能力，可以明显提升模型的生成速度。模型越大，需要的显存通常也越多，因此选择模型时需要考虑显卡是否有足够的显存。
+<strong>GPU 运行，</strong>这是目前比较常见的大模型运行方式。GPU 具有较强的并行计算能力，可以明显提升模型的生成速度。模型越大，需要的显存通常也越多，因此选择模型时需要考虑显卡是否有足够的显存。
 
-<strong>Apple Silicon运行，</strong>苹果M系列芯片采用统一内存设计，CPU和GPU可以使用同一块内存。对于Mac用户来说，如果设备具有32GB、64GB或者更大的统一内存，就可以尝试运行一些参数规模较大的量化模型。
+<strong>Apple Silicon 运行，</strong>苹果 M 系列芯片采用统一内存设计，CPU 和 GPU 可以使用同一块内存。对于 Mac 用户来说，如果设备具有 32GB、64GB 或者更大的统一内存，就可以尝试运行一些参数规模较大的量化模型。
 
 <a id="c9-s3"></a>
 
-## 选自己的操作系统，安装Ollama
+## 选自己的操作系统，安装 Ollama
 
 <a id="c9-s4"></a>
 
-### Windows下安装Ollama
+### Windows 下安装 Ollama
 
-1）首先在在Ollama官网，[Download Ollama](<https://ollama.com/download>)下载对应的windows版本
+1）首先在在 Ollama 官网，[Download Ollama](<https://ollama.com/download>) 下载对应的 windows 版本
 
 ![正文配图](<../../assets/manuscript-20260914/c09-562fed6f376b07.webp>)
 
-2)下载完成后，直接点击安装，点击continue
+2)下载完成后，直接点击安装，点击 continue
 
 ![正文配图](<../../assets/manuscript-20260914/c09-84fbbdb032e197.webp>)
 
-3\) 安装完成后，显示，此时Ollama服务已经启动
+3\) 安装完成后，显示，此时 Ollama 服务已经启动
 
 ![正文配图](<../../assets/manuscript-20260914/c09-4a2c1cee33adac.webp>)
 
-4）在cmd中，启动想要加载的模型，比如：qwen3.5:2b，直接在终端中输入命令
+4）在 cmd 中，启动想要加载的模型，比如：qwen3.5:2b，直接在终端中输入命令
 
 ```text
 ollama run qwen3.5:2b
@@ -107,9 +107,9 @@ print(response.choices[0].message.content)
 
 <a id="c9-s5"></a>
 
-### ModelScope Notebook安装Ollama
+### ModelScope Notebook 安装 Ollama
 
-1）在Notebook中安装Ollama，首先下载安装包，执行下面命令
+1）在 Notebook 中安装 Ollama，首先下载安装包，执行下面命令
 
 ```text
 !modelscope download --model=modelscope/ollama-linux --local_dir ./ollama-linux  
@@ -132,33 +132,33 @@ sudo chmod 777 ./ollama-modelscope-install.sh
 ./ollama-modelscope-install.sh
 ```
 
-安装完成会显示API接口信息，默认127.0.0.1:11434，如果显示如下信息，说明安装完成。
+安装完成会显示 API 接口信息，默认 127.0.0.1:11434，如果显示如下信息，说明安装完成。
 
 ![正文配图](<../../assets/manuscript-20260914/c09-63cd320bae0306.webp>)
 
 <a id="c9-s6"></a>
 
-### Linux下安装Ollama
+### Linux 下安装 Ollama
 
-linux下的安装步骤和以上在ModelScope Notebook中安装Ollama的方式一样。
+linux 下的安装步骤和以上在 ModelScope Notebook 中安装 Ollama 的方式一样。
 
 <a id="c9-s7"></a>
 
-### MAC下安装Ollama
+### MAC 下安装 Ollama
 
-1）首先在在Ollama官网，[Download Ollama](<https://ollama.com/download>)下载对应的macOS版本
+1）首先在在 Ollama 官网，[Download Ollama](<https://ollama.com/download>) 下载对应的 macOS 版本
 
 ![正文配图](<../../assets/manuscript-20260914/c09-41a856385d9791.webp>)
 
-2)下载完成后，双击下载文件，将ollama拖入到applications中
+2)下载完成后，双击下载文件，将 ollama 拖入到 applications 中
 
 ![正文配图](<../../assets/manuscript-20260914/c09-94e39bfe8d6df6.webp>)
 
-3\) 安装完成后，显示，此时Ollama服务已经启动
+3\) 安装完成后，显示，此时 Ollama 服务已经启动
 
 ![正文配图](<../../assets/manuscript-20260914/c09-8f8ec60e9899c4.webp>)
 
-4）在cmd中，启动想要加载的模型，比如：qwen3.5:2b，直接在终端中输入命令
+4）在 cmd 中，启动想要加载的模型，比如：qwen3.5:2b，直接在终端中输入命令
 
 ```text
 ollama run qwen3.5:2b
@@ -168,7 +168,7 @@ ollama run qwen3.5:2b
 
 ![正文配图](<../../assets/manuscript-20260914/c09-60177d3b2d5627.webp>)
 
-在客户端也可以进行chat
+在客户端也可以进行 chat
 
 ![正文配图](<../../assets/manuscript-20260914/c09-9c52eab89512b0.webp>)
 
@@ -176,13 +176,13 @@ ollama run qwen3.5:2b
 
 <a id="c9-s8"></a>
 
-## 也可以从魔搭下载模型，用Ollama启动
+## 也可以从魔搭下载模型，用 Ollama 启动
 
-Ollama提供了很多模型库，我们可以在ModelScope中查找我们需要的模型，通过Ollama启动。
+Ollama 提供了很多模型库，我们可以在 ModelScope 中查找我们需要的模型，通过 Ollama 启动。
 
-1）启动Ollama服务
+1）启动 Ollama 服务
 
-这种常驻服务，Jupyter 的单个内核一次只能执行一个单元，所以导致后面的单元不太好执行，所以此部分在终端中执行，打开Notebook之后，直接进入工作区，下面有终端字样，点击即可。
+这种常驻服务，Jupyter 的单个内核一次只能执行一个单元，所以导致后面的单元不太好执行，所以此部分在终端中执行，打开 Notebook 之后，直接进入工作区，下面有终端字样，点击即可。
 
 ![正文配图](<../../assets/manuscript-20260914/c09-79e4a22935cf09.webp>)
 
