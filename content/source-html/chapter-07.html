@@ -1,24 +1,24 @@
 <article>
-<h1>30分钟带你快速看到第一个结果</h1>
-<p>开源模型下载下来，可以在自己的笔记本上跑，也可以租一台云服务器，按需要配置CPU、GPU和运行环境。设备不同，准备工作也不一样。</p>
+<h1>30 分钟带你快速看到第一个结果</h1>
+<p>开源模型下载下来，可以在自己的笔记本上跑，也可以租一台云服务器，按需要配置 CPU、GPU 和运行环境。设备不同，准备工作也不一样。</p>
 <p />
-<p>如果只是想先试一下模型能做什么，魔搭Notebook提供了一个免费的入口。打开浏览器，选择运行实例，就能在网页里写代码、下载模型并查看结果。</p>
+<p>如果只是想先试一下模型能做什么，魔搭 Notebook 提供了一个免费的入口。打开浏览器，选择运行实例，就能在网页里写代码、下载模型并查看结果。</p>
 <p />
-<p>这一篇从创建Notebook、检查环境到加载模型，跟着做完，就能看到第一个结果。</p>
-<h2>打开Notebook，先连上运行实例</h2>
-<p>进入模型库，找到Qwen/Qwen3-ASR-1.7B模型，点击右侧的“Notebook快速开发”即可创建魔搭Notebook。</p>
+<p>这一篇从创建 Notebook、检查环境到加载模型，跟着做完，就能看到第一个结果。</p>
+<h2>打开 Notebook，先连上运行实例</h2>
+<p>进入模型库，找到 Qwen/Qwen3-ASR-1.7B 模型，点击右侧的“Notebook 快速开发”即可创建魔搭 Notebook。</p>
 <p>模型链接：https://www.modelscope.cn/models/Qwen/Qwen3-ASR-1.7B</p>
 <img src="../../assets/manuscript-20260914/c07-24e3ac0b44038a.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>点击右上角的“连接运行时”选择实例，这里我们选择GPU进行演示，可以根据模型依赖选择合适的预装镜像。</p>
+<p>点击右上角的“连接运行时”选择实例，这里我们选择 GPU 进行演示，可以根据模型依赖选择合适的预装镜像。</p>
 <img src="../../assets/manuscript-20260914/c07-842702a8d17940.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h2>检查一下环境准备好了没有</h2>
-<p>加载实例后，首先需要检查当前环境，可以在notebook执行以下命令：</p>
-<p>1.查看python版本</p>
+<p>加载实例后，首先需要检查当前环境，可以在 notebook 执行以下命令：</p>
+<p>1.查看 python 版本</p>
 <pre data-language="Plain Text"><code>!python3 --version</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c07-0c22d724d88227.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>2.查看相关依赖</p>
-<p>不同模型的依赖不同，需要查看模型卡片了解信息，根据Qwen3-ASR-1.7B模型的模型卡片，了解到其推理依赖<code>qwen3-asr</code>。如果环境缺失qwen3-asr，需要自行安装</p>
+<p>不同模型的依赖不同，需要查看模型卡片了解信息，根据 Qwen3-ASR-1.7B 模型的模型卡片，了解到其推理依赖<code>qwen3-asr</code>。如果环境缺失 qwen3-asr，需要自行安装</p>
 <pre data-language="Plain Text"><code># 查询依赖
 !pip3 show qwen-asr
 # 安装qwen-asr(如缺失)
@@ -27,11 +27,11 @@
 <img src="../../assets/manuscript-20260914/c07-d57a19908cfa63.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>安装成功的查询结果：</p>
 <img src="../../assets/manuscript-20260914/c07-bb1099aa862cef.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>3.查看CPU配置</p>
+<p>3.查看 CPU 配置</p>
 <pre data-language="Plain Text"><code>!lscpu</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c07-cea051219a074d.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>4.查看GPU及显存</p>
+<p>4.查看 GPU 及显存</p>
 <pre data-language="Plain Text"><code>!nvidia-smi</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c07-cbdbb23a46f508.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
@@ -60,7 +60,7 @@ model = Qwen3ASRModel.from_pretrained(
 print("模型加载完成！")</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c07-654f63dcc5e91f.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>如果想要自己单独下载模型，可参考本书2.5节的模型下载方法。如将模型下载到目录：<code>/mnt/workspace/Qwen3-ASR-1.7B</code>，以命令行下载方式为例，在终端执行以下命令：</p>
+<p>如果想要自己单独下载模型，可参考本书 2.5 节的模型下载方法。如将模型下载到目录：<code>/mnt/workspace/Qwen3-ASR-1.7B</code>，以命令行下载方式为例，在终端执行以下命令：</p>
 <pre data-language="Plain Text"><code># 安装 ModelScope（如未安装）
 !pip3 install modelscope
 # 下载完整模型库
@@ -83,7 +83,7 @@ print("模型加载完成！")</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c07-f77df5d805f7ba.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <h2>传入一段音频，看看识别出了什么</h2>
-<p>模型加载后，即可传入音频文件进行模型推理。可将audio的值替换成你的音频文件路径。</p>
+<p>模型加载后，即可传入音频文件进行模型推理。可将 audio 的值替换成你的音频文件路径。</p>
 <pre data-language="SQL"><code>results = model.transcribe(
     audio="https://qianwen-res.oss-cn-beijing.aliyuncs.com/Qwen3-ASR-Repo/asr_en.wav",
     language=None, # set "English" to force the language
@@ -94,7 +94,7 @@ print(results[0].text)
 print("模型推理完成！")</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c07-eb17ac93b1fd85.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>可将audio的值替换成你的音频文件路径，进行模型推理。右击左侧工作区的“DSW-GPU”文件夹，点击“上传”，选择本地的音频文件，即可上传到Notebook环境的“DSW-GPU”文件夹下。</p>
+<p>可将 audio 的值替换成你的音频文件路径，进行模型推理。右击左侧工作区的“DSW-GPU”文件夹，点击“上传”，选择本地的音频文件，即可上传到 Notebook 环境的“DSW-GPU”文件夹下。</p>
 <img src="../../assets/manuscript-20260914/c07-3bebb1610065d9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>然后修改代码如下：</p>
 <pre data-language="SQL"><code>results = model.transcribe(

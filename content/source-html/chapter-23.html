@@ -11,16 +11,16 @@
 <p>目前开源社区已经提供了 Stable Diffusion、FLUX、Qwen-Image、Z-Image-Turbo 等多种图像生成模型。不同模型在画面质量、Prompt 理解、文字生成能力和硬件资源需求等方面存在差异</p>
 <p>本节选择 ModelScope 上的 Z-Image-Turbo 模型完成文生图实验。Turbo 版本重点优化了生成效率，可以通过较少的推理步数完成图片生成，因此比较适合个人开发者以及 GPU 资源有限的实验环境。</p>
 <p>1）安装环境</p>
-<p>我们使用DiffSynth-Studio框架进行文生图，下载DiffSynth-Studio</p>
+<p>我们使用 DiffSynth-Studio 框架进行文生图，下载 DiffSynth-Studio</p>
 <pre data-language="Plain Text"><code>!git clone https://github.com/modelscope/DiffSynth-Studio.git  </code></pre>
 <img src="../../assets/manuscript-20260914/c22-e33b489045b898.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>2）进入DiffSynth-Studio目录</p>
+<p>2）进入 DiffSynth-Studio 目录</p>
 <pre data-language="Plain Text"><code>%cd DiffSynth-Studio</code></pre>
 <img src="../../assets/manuscript-20260914/c22-9475639db44bdf.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>3) 安装</p>
 <pre data-language="Plain Text"><code>%pip install -e .</code></pre>
 <img src="../../assets/manuscript-20260914/c22-e472c79cee1dbe.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>4) 在Cell单元中输入下面代码，进行文生图。</p>
+<p>4) 在 Cell 单元中输入下面代码，进行文生图。</p>
 <pre data-language="Python"><code>import torch
 from modelscope import ZImagePipeline
 pipe = ZImagePipeline.from_pretrained(
@@ -49,12 +49,12 @@ image.save("summer_drink_poster.png")</code></pre>
 <img src="../../assets/manuscript-20260914/c22-875c2e48ff0c97.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>生成的图片效果如下：</p>
 <img src="../../assets/manuscript-20260914/c22-9c80bf9a063d2d.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>对于初学者来说，不需要一开始就编写非常复杂的Prompt。只要把需求描述清楚，再根据生成结果逐步增加细节即可。</p>
+<p>对于初学者来说，不需要一开始就编写非常复杂的 Prompt。只要把需求描述清楚，再根据生成结果逐步增加细节即可。</p>
 <h2>有了参考图，再加品牌和营销元素</h2>
 <p>文生图非常适合快速生成营销创意和背景方案，但它存在一个明显的问题：如果直接要求模型生成具体商品，商品包装、Logo 和文字可能与真实商品存在差异，在正式的商品营销场景中，还需要结合真实商品图片进一步处理。</p>
 <p>文生图主要依赖文字描述，而图生图（Image-to-Image）会同时输入参考图片和文字描述。模型可以参考原图中的商品主体、包装和构图，再根据 Prompt 对背景、光影和营销元素进行调整。</p>
 <p>本节选择 SenseNova-U1.5-8B-MoT 作为图像编辑模型。该模型支持文生图和图像编辑等任务，可以同时理解输入图片和文字指令，并根据 Prompt 对原图中的指定内容进行调整。相比仅根据文字生成图片，SenseNova-U1.5-8B-MoT 能够利用输入图片中的视觉信息，在保留原有主体和整体结构的基础上，对商品包装、背景、颜色和装饰元素等内容进行修改，因此比较适合商品营销图片的生成与编辑。</p>
-<p>实验部分继续使用上一节生成的夏日饮料图片作为输入，通过图生图模型对其进行编辑。在尽量保留饮料瓶主体和整体结构的基础上，为瓶身增加“FRESH DAY” 品牌Logo，并加入冰块、水花、柠檬等夏日元素，最终生成一张更加完整的商品营销宣传图，默认的SenseNova-U1.5-8B-MoT加载方式，会导致显存不足，本次代码中采用低显存加载方式，从而降低显存占用。</p>
+<p>实验部分继续使用上一节生成的夏日饮料图片作为输入，通过图生图模型对其进行编辑。在尽量保留饮料瓶主体和整体结构的基础上，为瓶身增加“FRESH DAY” 品牌 Logo，并加入冰块、水花、柠檬等夏日元素，最终生成一张更加完整的商品营销宣传图，默认的 SenseNova-U1.5-8B-MoT 加载方式，会导致显存不足，本次代码中采用低显存加载方式，从而降低显存占用。</p>
 <p>代码如下：</p>
 <pre data-language="Python"><code>from diffsynth.pipelines.sensenova_u1_image import (
     SenseNovaU1ImagePipeline,
@@ -194,7 +194,7 @@ print(
 <p>相比完全从文字生成，图生图能够利用原始图片中的视觉信息，更适合已经拥有商品素材或参考设计稿的场景。从上面生成的图中也可以看出，这个和真实想要的图还是有差距的，即使提供了真实商品图片，模型也可能重新绘制商品的部分内容。在实际使场景中还需要进一步考虑商品主体保持与局部编辑问题。</p>
 <h2>只想改一处，怎样尽量保住商品原样？</h2>
 <p>在商品营销图片的实际应用中，除了追求画面美观，还需要保证商品信息的准确性。饮料瓶的外观、包装结构、品牌 Logo 等内容通常属于商品的核心视觉信息，如果在图像编辑过程中发生明显变化，生成的图片就可能与实际商品不一致。在使用图像生成模型进行编辑时，需要明确区分需要保留的内容和允许修改的内容。例如，可以要求模型保持饮料瓶、品牌 Logo 和整体构图不变，只调整背景、装饰元素或局部物体。通过在 Prompt 中明确这些约束，可以减少模型对商品主体的重新生成，使编辑结果更加可控。</p>
-<p>本节继续使用上一节生成的 FRESH DAY 饮料营销图进行局部编辑。在保持饮料瓶主体、品牌 Logo、冰块、水花和整体构图基本不变的情况下，将画面右下角的黄色柠檬修改为绿色青柠。通过这一示例，可以进一步理解如何利用 Prompt实现更加可控的图像编辑。</p>
+<p>本节继续使用上一节生成的 FRESH DAY 饮料营销图进行局部编辑。在保持饮料瓶主体、品牌 Logo、冰块、水花和整体构图基本不变的情况下，将画面右下角的黄色柠檬修改为绿色青柠。通过这一示例，可以进一步理解如何利用 Prompt 实现更加可控的图像编辑。</p>
 <pre data-language="Python"><code>from diffsynth.pipelines.sensenova_u1_image import (
     SenseNovaU1ImagePipeline,
     ModelConfig
@@ -449,11 +449,11 @@ for name, (width, height) in platform_sizes.items():
 print("\n所有平台尺寸生成完成。")</code></pre>
 <p>代码执行结果如下：</p>
 <img src="../../assets/manuscript-20260914/c22-1b2439ea391bf2.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>最终生成的效果图如下，可以看出品牌log都是保持了，整体生成效果还不错。</p>
+<p>最终生成的效果图如下，可以看出品牌 log 都是保持了，整体生成效果还不错。</p>
 <img src="../../assets/manuscript-20260914/c22-341b9f5b1edc71.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h2>想让一组图片风格接近，再试试LoRA</h2>
+<h2>想让一组图片风格接近，再试试 LoRA</h2>
 <p>使用文生图和图生图模型，可以快速生成不同类型的营销图片，但由于每次生成都具有一定的随机性，即使使用相同或相似的 Prompt，不同批次生成的图片在色彩搭配、构图方式、光影效果和整体视觉风格上仍可能存在差异。</p>
-<p>对于企业营销而言，通常希望不同宣传素材保持相对统一的品牌视觉风格。本节引入 LoRA微调，通过准备一组具有统一视觉风格的营销图片对模型进行训练，使模型进一步学习特定的色彩、构图和画面风格，从而在后续生成过程中更稳定地呈现所需的品牌视觉特征。</p>
+<p>对于企业营销而言，通常希望不同宣传素材保持相对统一的品牌视觉风格。本节引入 LoRA 微调，通过准备一组具有统一视觉风格的营销图片对模型进行训练，使模型进一步学习特定的色彩、构图和画面风格，从而在后续生成过程中更稳定地呈现所需的品牌视觉特征。</p>
 <p>本实验选择对 Z-Image-Turbo 进行 LoRA 微调。主要原因是该模型能够满足前面文生图实验的需求，同时相比本章图生图部分使用的 SenseNova-U1.5-8B-MoT，训练所需的显存资源更低，更适合在 24 GB 显存的单卡环境中完成 LoRA 微调实验。如果具备更充足的 GPU 显存和计算资源，也可以进一步尝试对 SenseNova-U1.5-8B-MoT 进行 LoRA 微调。</p>
 <pre data-language="SQL"><code>!accelerate launch examples/z_image/model_training/train.py \
   --dataset_base_path /mnt/workspace/train_data \
@@ -497,7 +497,7 @@ image.save("/mnt/workspace/drink_gen.png")
 print("图片保存成功")</code></pre>
 <p>代码输出结果如下：</p>
 <img src="../../assets/manuscript-20260914/c22-1b27cb7e7f357c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>生成的图片如下，整体来说和prompt要求很接近，但是由于显存的原因，图片分辨率并不是特别高。</p>
+<p>生成的图片如下，整体来说和 prompt 要求很接近，但是由于显存的原因，图片分辨率并不是特别高。</p>
 <img src="../../assets/manuscript-20260914/c22-85e859f818d78f.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>具体实验数据以及代码，可参考：https://modelscope.cn/gallery/liucong/45785011-5e64-485c-883b-92a8b2d52ab7</p>
 </article>

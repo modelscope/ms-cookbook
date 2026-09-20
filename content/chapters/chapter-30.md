@@ -1,6 +1,6 @@
 <!-- Generated from ../source-html/chapter-30.html; do not edit independently. -->
 
-# 快速使用PI
+# 快速使用 PI
 
 Pi 的核心是 Agent Loop、模型调用、工具和终端界面。你需要 Skills、Prompt Templates、Extensions 和 Packages ，配上就行。
 
@@ -39,13 +39,13 @@ Pi 默认交给模型的核心工具只有四个：`read`、`write`、`edit` 和
 
 新版 CLI 里还能按需开放 `grep`、`find`、`ls`，Windows 也有可选的 PowerShell 工具。
 
-看起来东西不多，但Agent底层无非就是读、写、改、执行。很多更复杂的能力，其实都可以从这几个原语长出来。
+看起来东西不多，但 Agent 底层无非就是读、写、改、执行。很多更复杂的能力，其实都可以从这几个原语长出来。
 
 ![正文配图](<../../assets/manuscript-20260914/c28-f3d9d1eae668f1.webp>)
 
 很多 Agent 产品会把计划、子 Agent、MCP、权限审批和任务列表全部做好，用户只需要设置一下就行。
 
-Pi 是给你一个能跑的Agent骨架，可以自定义Agent。想要计划模式，就用文件写或者装扩展；想要子 Agent，就用 tmux 拉起多个 Pi，或者自己写 Extension；想接 MCP，也可以装对应扩展。
+Pi 是给你一个能跑的 Agent 骨架，可以自定义 Agent。想要计划模式，就用文件写或者装扩展；想要子 Agent，就用 tmux 拉起多个 Pi，或者自己写 Extension；想接 MCP，也可以装对应扩展。
 
 它更像一套已经通水通电的毛坯房。住得舒不舒服，取决于你后面怎么装修。
 
@@ -264,7 +264,7 @@ pi
 
 <p></p>
 
-<strong>先记住这些Pi的常用命令</strong>
+<strong>先记住这些 Pi 的常用命令</strong>
 
 - `/login`：登录或切换模型提供商；
 - `/model`：换模型；
@@ -283,7 +283,7 @@ pi
 
 比如让 Agent 重构代码，跑到一半如果发现路线不对，直接回到“开始重构”之前，再换个方案，这样就不用把前面的上下文全喂一遍。特别是长任务里，这个功能非常实用。
 
-pi的会话默认按工作目录保存在：
+pi 的会话默认按工作目录保存在：
 
 ```text
 ~/.pi/agent/sessions/
@@ -324,13 +324,13 @@ RPC 模式通过标准输入输出接收 JSONL，适合把 Pi 嵌进非 Node.js 
 pi --mode rpc
 ```
 
-Pi还有 SDK。开发者可以直接在 TypeScript 项目里创建 Agent Session，把 Pi 当成自己的 Agent Runtime。
+Pi 还有 SDK。开发者可以直接在 TypeScript 项目里创建 Agent Session，把 Pi 当成自己的 Agent Runtime。
 
 所以你看到的是同一套内核，但在终端、脚本、服务和自己的产品里都能用。
 
 <a id="c30-s6"></a>
 
-## <strong>三个官方案例，更了解Pi</strong>
+## <strong>三个官方案例，更了解 Pi</strong>
 
 下面三个案例来自 Pi 官方公开页面。主要是想让大家更清楚这套 Harness 到底怎么用。
 
@@ -412,7 +412,7 @@ Skills 会以渐进式方式加载。启动时只把名称和描述放进上下�
 /skill:skill-name
 ```
 
-这个设计和现在的 Agent Skills 标准是对齐的。你过去给 Codex、Claude Code 做的很多Skill能力包，都可以复用。
+这个设计和现在的 Agent Skills 标准是对齐的。你过去给 Codex、Claude Code 做的很多 Skill 能力包，都可以复用。
 
 <a id="c30-s11"></a>
 
@@ -445,9 +445,9 @@ Pi 默认不会像一些桌面 Agent 那样，删文件、跑命令之前弹一�
 
 但是这不算隐藏 Bug，官方首页就把“No permission popups”写得很明白。
 
-对熟悉终端的人，这代表yolo模式，也就是任务不会频繁被打断。
+对熟悉终端的人，这代表 YOLO 模式，也就是任务不会频繁被打断。
 
-但对小白来说，可能一句写得不够严谨的 Prompt，真有可能让 Agent 干坏事，比如清空你的C盘啥的。。。
+但对小白来说，可能一句写得不够严谨的 Prompt，真有可能让 Agent 干坏事，比如清空你的 C 盘啥的。。。
 
 小白第一次使用，一定要注意以下几点：
 

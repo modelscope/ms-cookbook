@@ -1,5 +1,5 @@
 <article>
-<h1>智能客服质检：AI能从一通客服电话中分析出什么？</h1>
+<h1>智能客服质检：AI 能从一通客服电话中分析出什么？</h1>
 <p>一通客服电话结束了，用户的问题有没有解决，客服有没有漏掉重要条件，录音少的时候，可以逐条听；录音多了，人工抽听就很难顾及每一通电话。</p>
 <p />
 <p>传统客服质检主要依靠人工抽听，不仅需要投入较多时间，也很难覆盖全部通话。利用语音识别和音频多模态模型，可以从电话录音中分析通话内容、说话人、情绪、服务语气和双方互动，再由大语言模型按照质检规则完成评分并生成质检报告。</p>
@@ -27,11 +27,11 @@
 <p />
 <h3>整理通话内容，也听听语气和互动</h3>
 <p>电话录音输入系统后，需要先统一音频格式，将采样率和声道转换为后续模型能够处理的形式。</p>
-<p>处理后的音频使用FSMN-VAD检测有效语音区域，并结合CAM++区分不同说话人，得到每个说话人的发言时间。此时得到的是<code>spk0</code>、<code>spk1</code>等说话人编号，还不能直接确定其身份。</p>
-<p>语音识别使用Qwen3-ASR-0.6B完成。模型将录音转换为文本，并通过时间戳记录每段文本对应的时间。将语音识别结果与说话人分析结果按照时间进行对齐，可以得到带有说话人编号和时间信息的通话文本。随后，根据不同说话人的对话内容，使用参数量较小的Qwen3-4B判断其在本次电话中的角色，并将说话人编号转换为“客服”和“客户”。最终可以得到带有角色和时间信息的完整通话文本，例如：</p>
+<p>处理后的音频使用 FSMN-VAD 检测有效语音区域，并结合 CAM++区分不同说话人，得到每个说话人的发言时间。此时得到的是<code>spk0</code>、<code>spk1</code>等说话人编号，还不能直接确定其身份。</p>
+<p>语音识别使用 Qwen3-ASR-0.6B 完成。模型将录音转换为文本，并通过时间戳记录每段文本对应的时间。将语音识别结果与说话人分析结果按照时间进行对齐，可以得到带有说话人编号和时间信息的通话文本。随后，根据不同说话人的对话内容，使用参数量较小的 Qwen3-4B 判断其在本次电话中的角色，并将说话人编号转换为“客服”和“客户”。最终可以得到带有角色和时间信息的完整通话文本，例如：</p>
 <pre data-language="Plain Text"><code>第1轮 [客服] 0.00-4.82秒：……
 第2轮 [客户] 5.10-10.36秒：……</code></pre>
-<p>电话中的声音还包含文本无法直接反映的信息，例如客服的情绪和服务语气、客户的情绪变化以及双方的互动情况。使用Qwen2.5-Omni-3B对电话录音进行分析，并结合通话文本判断客服是否存在不耐烦、敷衍、责怪或语气生硬等情况，客户是否出现明显负面情绪以及客服是否进行了适当回应，同时分析通话过程中是否存在明显抢话或打断客户等问题。</p>
+<p>电话中的声音还包含文本无法直接反映的信息，例如客服的情绪和服务语气、客户的情绪变化以及双方的互动情况。使用 Qwen2.5-Omni-3B 对电话录音进行分析，并结合通话文本判断客服是否存在不耐烦、敷衍、责怪或语气生硬等情况，客户是否出现明显负面情绪以及客服是否进行了适当回应，同时分析通话过程中是否存在明显抢话或打断客户等问题。</p>
 <p>主要分析模块如下表所示。</p>
 <table><tr><td>分析任务</td><td>模型或组件</td><td>主要输出</td></tr><tr><td>语音识别</td><td>Qwen3-ASR-0.6B</td><td>带时间信息的识别文本</td></tr><tr><td>说话人分析</td><td>FSMN-VAD、CAM++</td><td>不同说话人及说话时间</td></tr><tr><td>说话人角色识别</td><td>Qwen3-4B</td><td>客服、客户角色</td></tr><tr><td>语音综合分析</td><td>Qwen2.5-Omni-3B</td><td>客服情绪与服务语气、客户情绪与客服应对、通话互动</td></tr></table>
 <p>这些分析结果需要整理为统一格式，便于后续大语言模型直接读取。例如：</p>
@@ -64,9 +64,9 @@
 <p>规范化结果中保留完整通话文本、说话人角色以及语音综合分析结果。客户需求、回答完整性、问题解决、承诺和合规等业务内容不再提前单独分析，而是在后面的综合质检中由大语言模型结合完整通话内容统一判断。</p>
 <p />
 <h3>按规则评分，让每个判断都有依据</h3>
-<p>完成电话数据分析后，将20.1.2节制定的客服质检规则和规范化分析结果一起输入Qwen3-8B。模型根据完整通话文本判断客户提出了哪些需求、客服如何回应以及问题是否得到处理，并结合客服情绪与服务语气、客户情绪与客服应对、通话互动等信息，对各项质检规则进行判断和评分。</p>
+<p>完成电话数据分析后，将 20.1.2 节制定的客服质检规则和规范化分析结果一起输入 Qwen3-8B。模型根据完整通话文本判断客户提出了哪些需求、客服如何回应以及问题是否得到处理，并结合客服情绪与服务语气、客户情绪与客服应对、通话互动等信息，对各项质检规则进行判断和评分。</p>
 <p>对于课程时间、请假规则等需要企业业务规则才能验证的信息，如果没有提供相应的业务标准，只判断客服是否进行了明确回应，不直接判断其内容是否正确，并在报告中注明“现有信息无法核验”。</p>
-<p>质检时按照20.1.2节的规则逐项评分。每个质检项除了给出得分，还需要说明判断结果和主要依据。发现问题时，可以引用对应的通话轮次、客服原话或语音综合分析结果作为证据，避免只给出“服务态度较差”“问题处理不到位”等缺少依据的结论。</p>
+<p>质检时按照 20.1.2 节的规则逐项评分。每个质检项除了给出得分，还需要说明判断结果和主要依据。发现问题时，可以引用对应的通话轮次、客服原话或语音综合分析结果作为证据，避免只给出“服务态度较差”“问题处理不到位”等缺少依据的结论。</p>
 <p>最终生成的客服质检报告可以采用如下格式：</p>
 <pre data-language="Plain Text"><code>客服质检报告
 
@@ -159,7 +159,7 @@ from qwen_omni_utils import process_mm_info</code></pre>
 <p>测试音频文件：</p>
 <figure><a href="../../assets/manuscript-20260914/c17-11cc32fc941475.wav" class="attachment" download="客服通话记录.wav">客服通话记录.wav</a></figure>
 <h3>音频预处理</h3>
-<p>将输入录音统一转换为16 kHz单声道WAV音频。</p>
+<p>将输入录音统一转换为 16 kHz 单声道 WAV 音频。</p>
 <pre data-language="Python"><code>def preprocess_audio(audio_path, output_path="./customer_service/preprocessed.wav",
                      target_sr=16000):
     audio, sr = sf.read(audio_path)
@@ -179,7 +179,7 @@ from qwen_omni_utils import process_mm_info</code></pre>
 
     return output_path</code></pre>
 <h3>说话人分析</h3>
-<p>使用FunASR组合FSMN-VAD和CAM++获得不同说话人的语音片段及时间信息。</p>
+<p>使用 FunASR 组合 FSMN-VAD 和 CAM++获得不同说话人的语音片段及时间信息。</p>
 <pre data-language="Python"><code>def analyze_speakers(audio_path):
     model = AutoModel(
         model="paraformer-zh",
@@ -211,7 +211,7 @@ from qwen_omni_utils import process_mm_info</code></pre>
 
     return segments</code></pre>
 <h3>语音识别</h3>
-<p>使用Qwen3-ASR-0.6B识别整段录音，并通过ForcedAligner获得识别文本对应的时间戳。</p>
+<p>使用 Qwen3-ASR-0.6B 识别整段录音，并通过 ForcedAligner 获得识别文本对应的时间戳。</p>
 <pre data-language="Python"><code>def analyze_asr(audio_path, language="Chinese"):
     model_path = "Qwen/Qwen3-ASR-0.6B"
     aligner_path = "Qwen/Qwen3-ForcedAligner-0.6B"
@@ -245,7 +245,7 @@ from qwen_omni_utils import process_mm_info</code></pre>
     torch.cuda.empty_cache()
     return output</code></pre>
 <h3>说话人角色识别</h3>
-<p>使用Qwen3-4B根据不同说话人的对话内容判断其角色，并将说话人编号转换为“客服”和“客户”。</p>
+<p>使用 Qwen3-4B 根据不同说话人的对话内容判断其角色，并将说话人编号转换为“客服”和“客户”。</p>
 <pre data-language="Python"><code>def identify_speaker_roles(segments):
     speaker_texts = {}
     for seg in segments:
@@ -289,8 +289,8 @@ from qwen_omni_utils import process_mm_info</code></pre>
     torch.cuda.empty_cache()
     return segments</code></pre>
 <h3>语音综合分析</h3>
-<p>前面已经获得了带有角色和时间信息的通话文本，接下来使用Qwen2.5-Omni-3B结合电话录音，进一步分析客服情绪与服务语气、客户情绪与客服应对以及双方互动情况。</p>
-<p>对于较长的电话录音，直接将完整音频一次输入模型会占用较多显存。根据前面得到的通话轮次对音频进行切分，不按照固定时间直接截断，而是在片段达到指定长度后，等待客服当前一轮发言结束再进行切分，使每个片段尽量保持完整的会话内容。Qwen2.5-Omni-3B只加载一次，依次分析各个音频片段，最后将结果按照对应的时间范围进行整理。</p>
+<p>前面已经获得了带有角色和时间信息的通话文本，接下来使用 Qwen2.5-Omni-3B 结合电话录音，进一步分析客服情绪与服务语气、客户情绪与客服应对以及双方互动情况。</p>
+<p>对于较长的电话录音，直接将完整音频一次输入模型会占用较多显存。根据前面得到的通话轮次对音频进行切分，不按照固定时间直接截断，而是在片段达到指定长度后，等待客服当前一轮发言结束再进行切分，使每个片段尽量保持完整的会话内容。Qwen2.5-Omni-3B 只加载一次，依次分析各个音频片段，最后将结果按照对应的时间范围进行整理。</p>
 <p>实现代码如下：</p>
 <pre data-language="Python"><code>def split_audio_by_conversation(
     audio_path,
@@ -498,7 +498,7 @@ def analyze_audio(audio_path, segments, max_seconds=30):
 """
     return result.strip()</code></pre>
 <h3>大模型综合质检</h3>
-<p>将规范化分析结果与20.1.2节制定的客服质检规则一起输入Qwen3-8B，由模型综合分析通话内容和各项分析结果，完成质检评分并生成报告。</p>
+<p>将规范化分析结果与 20.1.2 节制定的客服质检规则一起输入 Qwen3-8B，由模型综合分析通话内容和各项分析结果，完成质检评分并生成报告。</p>
 <pre data-language="Markdown"><code>def generate_qc_report(analysis_text, qc_rules):
     model_name = "Qwen/Qwen3-8B"
 
@@ -625,7 +625,7 @@ def analyze_audio(audio_path, segments, max_seconds=30):
 
     return report</code></pre>
 <h3>完整质检流程</h3>
-<p>主程序还需要定义几个辅助函数，用于根据时间将ASR文本与说话人片段对齐、生成完整通话文本以及保存质检报告。</p>
+<p>主程序还需要定义几个辅助函数，用于根据时间将 ASR 文本与说话人片段对齐、生成完整通话文本以及保存质检报告。</p>
 <pre data-language="Python"><code>def merge_asr_speakers(asr_segments, speaker_segments):
     results = [{"turn_id": i + 1, "speaker": seg["speaker"], "start": seg["start"], "end": seg["end"], "texts": []} for i, seg in enumerate(speaker_segments)]
 

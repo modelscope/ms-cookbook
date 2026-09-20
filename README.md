@@ -84,42 +84,42 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | [04 · 没有资源也能玩开源模型，因为这里资源免费](content/chapters/chapter-04.md) | Model and compute resources |
 | **Part 2 · From a problem to a model task** | |
 | [05 · 要把业务问题转换成模型任务问题](content/chapters/chapter-05.md) | Tasks, inputs, outputs, and evaluation criteria |
-| [06 · 先评再选：用EvalScope形成开源模型的第一份报告](content/chapters/chapter-06.md) | Model-selection baselines with EvalScope |
+| [06 · 先评再选：用 EvalScope 形成开源模型的第一份报告](content/chapters/chapter-06.md) | Model-selection baselines with EvalScope |
 | **Part 3 · Running your first models** | |
-| [07 · 30分钟带你快速看到第一个结果](content/chapters/chapter-07.md) | A first inference run |
+| [07 · 30 分钟带你快速看到第一个结果](content/chapters/chapter-07.md) | A first inference run |
 | [08 · 多大模型，选择什么样的服务器配置](content/chapters/chapter-08.md) | Model size, memory, and server selection |
-| [09 · 笔记本也能跑开源模型，先从Ollama开始](content/chapters/chapter-09.md) | Local inference with Ollama |
-| [10 · 把模型放到云端跑，用Notebook试试CPU和GPU](content/chapters/chapter-10.md) | CPU and GPU inference in cloud notebooks |
+| [09 · 笔记本也能跑开源模型，先从 Ollama 开始](content/chapters/chapter-09.md) | Local inference with Ollama |
+| [10 · 把模型放到云端跑，用 Notebook 试试 CPU 和 GPU](content/chapters/chapter-10.md) | CPU and GPU inference in cloud notebooks |
 | [11 · 模型需要资源太多，量化能帮上什么忙？](content/chapters/chapter-11.md) | Quantization and resource trade-offs |
 | **Part 4 · Fine-tuning and evaluation** | |
 | [12 · 业务素材这么多，怎么变成能训练的数据？](content/chapters/chapter-12.md) | Turning business materials into training data |
-| [13 · 快速用ms-swift，完成开源模型的轻量微调](content/chapters/chapter-13.md) | Lightweight fine-tuning with ms-swift |
+| [13 · 快速用 ms-swift，完成开源模型的轻量微调](content/chapters/chapter-13.md) | Lightweight fine-tuning with ms-swift |
 | [14 · 模型已经会回答了，为什么还要做偏好对齐？](content/chapters/chapter-14.md) | Goals and methods of preference alignment |
 | [15 · 微调有没有用，测才知道？](content/chapters/chapter-15.md) | Comparing baseline and fine-tuned models |
 | **Part 5 · Application systems** | |
-| [16 · AI健身教练：跟着视频练，让AI指出动作不标准的地方](content/chapters/chapter-16.md) | Pose estimation and movement comparison |
-| [17 · 智能客服质检：AI能从一通客服电话中分析出什么？](content/chapters/chapter-17.md) | Call transcription and quality analysis |
+| [16 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-16.md) | Pose estimation and movement comparison |
+| [17 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-17.md) | Call transcription and quality analysis |
 | [18 · 搭建一个能听也能说的语音助手](content/chapters/chapter-18.md) | Speech recognition, Q&A, and synthesis |
 | [19 · 实现一个企业知识问答助手](content/chapters/chapter-19.md) | Knowledge retrieval and RAG |
 | [20 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-20.md) | Invitation to contribute reproducible application tutorials |
 | **Part 6 · Generative AI** | |
-| [21 · 10个Case，带你看看AIGC的开源模型能做到什么地步](content/chapters/chapter-21.md) | Open generative-model use cases |
-| [22 · 定制？使用DiffSynth训练图像LoRA](content/chapters/chapter-22.md) | Image LoRA customization with DiffSynth |
+| [21 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-21.md) | Open generative-model use cases |
+| [22 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-22.md) | Image LoRA customization with DiffSynth |
 | [23 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-23.md) | Product-image generation and editing |
-| [24 · 开源模型也能做出像样的AI视频吗？](content/chapters/chapter-24.md) | MiniMax H3 deployment tutorial pending |
-| [25 · 补充：AIGC理论知识](content/chapters/chapter-25.md) | Image and video generation fundamentals |
+| [24 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-24.md) | MiniMax H3 deployment tutorial pending |
+| [25 · 补充：AIGC 理论知识](content/chapters/chapter-25.md) | Image and video generation fundamentals |
 | **Part 7 · Agents** | |
-| [26 · Agent是什么，它能做什么事？](content/chapters/chapter-26.md) | Agent components, execution loop, and use cases |
+| [26 · Agent 是什么，它能做什么事？](content/chapters/chapter-26.md) | Agent components, execution loop, and use cases |
 | [27 · MCP：让模型连接外部工具](content/chapters/chapter-27.md) | Connecting models to external tools |
 | [28 · Skill：把任务方法封装成能力](content/chapters/chapter-28.md) | Reusable task methods and workflows |
-| [29 · 快速使用Claude code](content/chapters/chapter-29.md) | Getting started with Claude Code |
-| [30 · 快速使用PI](content/chapters/chapter-30.md) | Getting started with PI |
-| [31 · 快速使用DeepSeek Harness](content/chapters/chapter-31.md) | Getting started with DeepSeek Harness |
-| [32 · 补充：Agent框架知识](content/chapters/chapter-32.md) | Agent framework fundamentals |
+| [29 · 快速使用 Claude Code](content/chapters/chapter-29.md) | Getting started with Claude Code |
+| [30 · 快速使用 PI](content/chapters/chapter-30.md) | Getting started with PI |
+| [31 · 快速使用 DeepSeek Harness](content/chapters/chapter-31.md) | Getting started with DeepSeek Harness |
+| [32 · 补充：Agent 框架知识](content/chapters/chapter-32.md) | Agent framework fundamentals |
 | [33 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-33.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
 | **Part 8 · Supplementary fundamentals** | |
 | [34 · 补充：大模型基础知识](content/chapters/chapter-34.md) | Model architecture, training, inference, and limitations |
-| [35 · 主流LLM评测](content/chapters/chapter-35.md) | Invitation to contribute evaluations of mainstream models |
+| [35 · 主流 LLM 评测](content/chapters/chapter-35.md) | Invitation to contribute evaluations of mainstream models |
 
 ## Application examples
 

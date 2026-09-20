@@ -7,14 +7,14 @@
 <p>所以，关键点是我们如何把所有的素材变成模型可用的训练数据。</p>
 <p />
 <p>同时数据的清洗、去重和脱敏也是必不可少的，我们可能蒸馏了数据，但是需要适配我们想要的结果，</p>
-<p>就好比，训练一个模型，如果自我认知数据都没有训练好的话，可能它会回答它是ChatGPT模型、是Claude模型等等。</p>
+<p>就好比，训练一个模型，如果自我认知数据都没有训练好的话，可能它会回答它是 ChatGPT 模型、是 Claude 模型等等。</p>
 <p />
 <p>数据是一切的基础，这一章我们从数据来源开始，看看这些零散资料怎样经过合成、清洗、去重和脱敏，最后变成可以交给模型训练的数据。</p>
 <p />
 <h2>业务要学，通用能力也得保留</h2>
 <p>从头采集和标注训练数据需要投入较多时间和成本。对于文本分类、问答、文本生成等常见任务，可以寻找合适的公开数据集加入训练。</p>
 <p>常见的公开数据集包括：</p>
-<ul><li>文本分类与推理：GLUE、SuperGLUE、CLUE等；</li><li>阅读理解与问答：SQuAD、CMRC等；</li><li>文本摘要：CNN/DailyMail等；</li><li>对话与指令微调：Alpaca、ShareGPT、OpenOrca等；</li><li>多模态任务：COCO等图文数据集。</li></ul>
+<ul><li>文本分类与推理：GLUE、SuperGLUE、CLUE 等；</li><li>阅读理解与问答：SQuAD、CMRC 等；</li><li>文本摘要：CNN/DailyMail 等；</li><li>对话与指令微调：Alpaca、ShareGPT、OpenOrca 等；</li><li>多模态任务：COCO 等图文数据集。</li></ul>
 <p>除了从数据集官方网站获取数据，还可以通过魔搭 Dataset Hub 查找和使用开源数据集。Dataset Hub 提供了数据集搜索、在线预览和下载等功能，部分数据集还可以通过 ModelScope SDK 直接加载，方便后续处理和训练。具体数据集下载方法见【数据，是你要做开源模型微调的基石】章节内容。</p>
 <img src="../../assets/manuscript-20260914/c12-999c072626454b.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>选择开源数据集时，不仅要看数据内容是否与训练任务匹配，还需要检查数据集的样本数量、字段格式、标签类型和数据质量，判断是否满足训练要求。魔搭提供的数据预览功能可以帮助快速查看数据集的字段和样本内容，样例如下：</p>
@@ -95,7 +95,7 @@ print("判断结果：", result)</code></pre>
 <h3>原文没写的，别让模型自己编</h3>
 <p>大模型生成数据时，可能会产生原始资料中不存在的信息，这类问题通常称为幻觉。例如，生成不存在的产品名称、产品参数或业务流程。</p>
 <p>例如，原始资料：</p>
-<blockquote><p>产品最大支持100GB存储空间。</p></blockquote>
+<blockquote><p>产品最大支持 100GB 存储空间。</p></blockquote>
 <p>生成数据：</p>
 <blockquote><p>问：产品是否支持自动扩容？</p><p>答：支持，当存储空间不足时，系统会自动扩容</p></blockquote>
 <p>原始资料中没有说明产品是否支持自动扩容，因此生成答案缺少资料依据，属于虚构内容。</p>
@@ -166,7 +166,7 @@ print("判断结果：", result)</code></pre>
 <p>对于缺少必要信息的数据，可以在采集过程中进行补充。比如为分类数据补充类别标签，或者为问答数据整理参考答案。</p>
 <h3><b>数据需要先清理一遍</b></h3>
 <p>原始数据中可能会包含一些无效或错误内容，需要在训练前进行清洗。</p>
-<p>常见的处理包括：删除空白数据和无效记录、去除多余的HTML标签和特殊字符、统一文本编码和格式，以及修正明显的 OCR 识别错误等。</p>
+<p>常见的处理包括：删除空白数据和无效记录、去除多余的 HTML 标签和特殊字符、统一文本编码和格式，以及修正明显的 OCR 识别错误等。</p>
 <p>数据清洗并不是删除所有特殊内容。代码、公式、单位和标点符号可能本身就是训练内容的一部分，需要根据具体任务决定是否保留。</p>
 <p>以 FAQ 数据集为例，原始数据：</p>
 <pre data-language="Plain Text"><code>faq_data = [
@@ -228,7 +228,7 @@ print("清洗结果：", clean_data)</code></pre>
 <img src="../../assets/manuscript-20260914/c12-395abc84ea2168.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
 <p>实际业务中的清洗规则需要根据数据特点决定。</p>
 <h3><b>重复的数据，有必要都留着吗？</b></h3>
-<p>从不同来源采集的数据汇总后，可能出现内容相同或相似的数据。同一个FAQ可能同时出现在公开数据集、产品手册和客服知识库中，合成数据也可能与已有数据内容相似。如果重复数据过多，会降低训练数据的多样性，使模型过度学习某些知识或表达方式，需要在训练前对数据进行统一去重。</p>
+<p>从不同来源采集的数据汇总后，可能出现内容相同或相似的数据。同一个 FAQ 可能同时出现在公开数据集、产品手册和客服知识库中，合成数据也可能与已有数据内容相似。如果重复数据过多，会降低训练数据的多样性，使模型过度学习某些知识或表达方式，需要在训练前对数据进行统一去重。</p>
 <p>根据数据的重复程度，数据去重可以分为相同数据去重和相似数据去重：</p>
 <p>相同数据去重：判断两条数据的内容是否完全一致，可以通过文本匹配或哈希值进行去重。</p>
 <p>相似数据去重：判断两条数据虽然文字不同，但内容是否高度接近，可以使用 MinHash、SimHash 或向量相似度等方法检测。</p>
@@ -306,17 +306,17 @@ print("去重结果：", result)</code></pre>
         "answer": "进入订单页面，选择发票申请并提交信息。"
     }
 ]</code></pre>
-<p>前两条FAQ的问题和答案在文字上存在差异，但整体表达的内容比较接近。对于这类数据，可以使用 MinHash、SimHash 或向量相似度进行检测。</p>
+<p>前两条 FAQ 的问题和答案在文字上存在差异，但整体表达的内容比较接近。对于这类数据，可以使用 MinHash、SimHash 或向量相似度进行检测。</p>
 <p><b>（1）MinHash</b></p>
-<p>MinHash 主要根据文本中词或字符的重合程度判断相似性，更适合检测字面相似的数据。对于FAQ数据，可以先将问题和答案组合成一条文本，再将文本拆分成词、字符或字符片段进行计算。</p>
+<p>MinHash 主要根据文本中词或字符的重合程度判断相似性，更适合检测字面相似的数据。对于 FAQ 数据，可以先将问题和答案组合成一条文本，再将文本拆分成词、字符或字符片段进行计算。</p>
 <p>MinHash 通常用于近似计算 Jaccard 相似度：</p>
 <p><span class="arithmatex display-math">\(J(A,B)=\frac{|A\cap B|}{|A\cup B|}
 
 \)</span></p>
-<p>其中，A和B表示两段文本包含的词或字符集合，<span class="arithmatex display-math">\(A\cap B
+<p>其中，A 和 B 表示两段文本包含的词或字符集合，<span class="arithmatex display-math">\(A\cap B
 \)</span>表示两者共同包含的内容，<span class="arithmatex display-math">\(A\cup B
-\)</span>表示两者包含的全部内容。计算结果在0到1之间，越接近1，表示两段文本越相似。</p>
-<p>Python中可以使用<code>datasketch</code>库实现MinHash：</p>
+\)</span>表示两者包含的全部内容。计算结果在 0 到 1 之间，越接近 1，表示两段文本越相似。</p>
+<p>Python 中可以使用<code>datasketch</code>库实现 MinHash：</p>
 <pre data-language="Plain Text"><code>!pip install datasketch</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c12-b0f0b64f52c822.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
@@ -353,8 +353,8 @@ print("去重结果：", result)</code></pre>
 <p />
 <p><b>（2）SimHash</b></p>
 <p><code>SimHash</code>会根据文本内容生成一个固定长度的指纹，再通过指纹之间的汉明距离判断文本是否相似。</p>
-<p>与普通Hash不同，普通Hash主要用于判断内容是否完全相同，而<code>SimHash</code>可以用于检测内容相近的文本。两个SimHash指纹之间的汉明距离越小，通常表示文本越相似。</p>
-<p>需要安装simhash：</p>
+<p>与普通 Hash 不同，普通 Hash 主要用于判断内容是否完全相同，而<code>SimHash</code>可以用于检测内容相近的文本。两个 SimHash 指纹之间的汉明距离越小，通常表示文本越相似。</p>
+<p>需要安装 simhash：</p>
 <pre data-language="Plain Text"><code>!pip install simhash</code></pre>
 <p>结果展示：</p>
 <img src="../../assets/manuscript-20260914/c12-629cbf0dcc86a6.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
@@ -388,11 +388,11 @@ print("去重结果：", result)</code></pre>
 <p />
 <p><b>（3）向量相似度</b></p>
 <p>如果两条数据使用的文字不同，但表达的语义比较接近，可以使用文本向量模型进行判断。</p>
-<p>文本向量模型可以将文本转换成一组数值组成的向量。对于FAQ数据，将问题和答案组合成一条文本，再计算两条文本向量之间的余弦相似度：</p>
+<p>文本向量模型可以将文本转换成一组数值组成的向量。对于 FAQ 数据，将问题和答案组合成一条文本，再计算两条文本向量之间的余弦相似度：</p>
 <p><span class="arithmatex display-math">\(\operatorname{sim}(A,B) = \frac{A\cdot B}{\|A\|\|B\|}
 \)</span></p>
-<p>其中，A和B表示两条FAQ对应的文本向量。余弦相似度越高，两条FAQ的语义越接近。</p>
-<p>下面使用<a href="https://www.modelscope.cn/models/BAAI/bge-small-zh-v1.5" target="_blank" rel="noopener noreferrer"><code>BAAI/bge-small-zh-v1.5</code></a>模型进行计算。该模型面向中文文本向量任务，模型规模约为24M，输出向量维度为512，模型规模较小，速度快。</p>
+<p>其中，A 和 B 表示两条 FAQ 对应的文本向量。余弦相似度越高，两条 FAQ 的语义越接近。</p>
+<p>下面使用<a href="https://www.modelscope.cn/models/BAAI/bge-small-zh-v1.5" target="_blank" rel="noopener noreferrer"><code>BAAI/bge-small-zh-v1.5</code></a>模型进行计算。该模型面向中文文本向量任务，模型规模约为 24M，输出向量维度为 512，模型规模较小，速度快。</p>
 <p>模型下载命令：</p>
 <pre data-language="Plain Text"><code>!modelscope download --model BAAI/bge-small-zh-v1.5 --local_dir /mnt/workspace/bge-small-zh-v1.5</code></pre>
 <p>结果展示：</p>
@@ -756,7 +756,7 @@ print("脱敏后：",data)</code></pre>
 <p>指令微调（Instruction Tuning）是大语言模型常用的微调方式。训练数据包含用户的指令以及模型期望生成的回答，让模型学习如何按照指令完成任务。</p>
 <p>不同训练框架使用的数据字段可能不同。常见的指令数据格式主要包括 Alpaca、ShareGPT 和 Messages 等。</p>
 <h3>Alpaca 格式</h3>
-<p>Alpaca格式结构简单，通常使用 instruction、input 和 output 三个字段，适合单轮指令数据。</p>
+<p>Alpaca 格式结构简单，通常使用 instruction、input 和 output 三个字段，适合单轮指令数据。</p>
 <pre data-language="Plain Text"><code>{
   "instruction": "将下面这段中文翻译成英文",
   "input": "今天天气很好。",
@@ -857,8 +857,8 @@ print("脱敏后：",data)</code></pre>
 <h3>如何选择数据格式</h3>
 <p>Alpaca、Messages 和 ShareGPT 格式本质上都是在描述模型的输入和期望输出，只是字段组织方式不同。</p>
 <p>可以根据任务类型和训练框架进行选择：</p>
-<table><tr><td>数据格式</td><td>主要特点</td><td>适合场景</td></tr><tr><td>Alpaca</td><td>使用instruction、input和output组织数据</td><td>单轮指令、问答、分类</td></tr><tr><td>Messages</td><td>使用messages保存对话，通过role区分角色</td><td>单轮或多轮对话</td></tr><tr><td>ShareGPT</td><td>使用conversations保存对话，通过from区分角色</td><td>单轮或多轮对话</td></tr></table>
-<p>不同格式之间通常可以相互转换。例如，一条Alpaca数据可以转换成一组user和assistant消息，ShareGPT中的human和gpt也可以分别转换成user和assistant。实际训练时，应先确认训练框架支持的数据格式和模型模板，再按照相应要求整理数据。</p>
+<table><tr><td>数据格式</td><td>主要特点</td><td>适合场景</td></tr><tr><td>Alpaca</td><td>使用 instruction、input 和 output 组织数据</td><td>单轮指令、问答、分类</td></tr><tr><td>Messages</td><td>使用 messages 保存对话，通过 role 区分角色</td><td>单轮或多轮对话</td></tr><tr><td>ShareGPT</td><td>使用 conversations 保存对话，通过 from 区分角色</td><td>单轮或多轮对话</td></tr></table>
+<p>不同格式之间通常可以相互转换。例如，一条 Alpaca 数据可以转换成一组 user 和 assistant 消息，ShareGPT 中的 human 和 gpt 也可以分别转换成 user 和 assistant。实际训练时，应先确认训练框架支持的数据格式和模型模板，再按照相应要求整理数据。</p>
 <p />
 <p />
 <p>模型代码及相关文件见：https://www.modelscope.cn/gallery/liucong/b41e2395-f795-400f-bafd-e53ed7f5c8ca</p>

@@ -23,11 +23,11 @@
       "shortTitle": "业务系统实践"
     },
     {
-      "title": "第六篇　AIGC特別篇",
+      "title": "第六篇　AIGC 特別篇",
       "shortTitle": "AIGC 特别篇"
     },
     {
-      "title": "第七篇　Agent特别篇",
+      "title": "第七篇　Agent 特别篇",
       "shortTitle": "Agent 特别篇"
     },
     {
@@ -78,7 +78,7 @@
     },
     {
       "number": 6,
-      "title": "先评再选：用EvalScope形成开源模型的第一份报告",
+      "title": "先评再选：用 EvalScope 形成开源模型的第一份报告",
       "partIndex": 1,
       "file": "source-html/chapter-06.html",
       "status": "ready",
@@ -86,7 +86,7 @@
     },
     {
       "number": 7,
-      "title": "30分钟带你快速看到第一个结果",
+      "title": "30 分钟带你快速看到第一个结果",
       "partIndex": 2,
       "file": "source-html/chapter-07.html",
       "status": "ready",
@@ -102,7 +102,7 @@
     },
     {
       "number": 9,
-      "title": "笔记本也能跑开源模型，先从Ollama开始",
+      "title": "笔记本也能跑开源模型，先从 Ollama 开始",
       "partIndex": 2,
       "file": "source-html/chapter-09.html",
       "status": "ready",
@@ -110,7 +110,7 @@
     },
     {
       "number": 10,
-      "title": "把模型放到云端跑，用Notebook试试CPU和GPU",
+      "title": "把模型放到云端跑，用 Notebook 试试 CPU 和 GPU",
       "partIndex": 2,
       "file": "source-html/chapter-10.html",
       "status": "ready",
@@ -134,7 +134,7 @@
     },
     {
       "number": 13,
-      "title": "快速用ms-swift，完成开源模型的轻量微调",
+      "title": "快速用 ms-swift，完成开源模型的轻量微调",
       "partIndex": 3,
       "file": "source-html/chapter-13.html",
       "status": "ready",
@@ -158,7 +158,7 @@
     },
     {
       "number": 16,
-      "title": "AI健身教练：跟着视频练，让AI指出动作不标准的地方",
+      "title": "AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方",
       "partIndex": 4,
       "file": "source-html/chapter-16.html",
       "status": "ready",
@@ -166,7 +166,7 @@
     },
     {
       "number": 17,
-      "title": "智能客服质检：AI能从一通客服电话中分析出什么？",
+      "title": "智能客服质检：AI 能从一通客服电话中分析出什么？",
       "partIndex": 4,
       "file": "source-html/chapter-17.html",
       "status": "ready",
@@ -198,7 +198,7 @@
     },
     {
       "number": 21,
-      "title": "10个Case，带你看看AIGC的开源模型能做到什么地步",
+      "title": "10 个 Case，带你看看 AIGC 的开源模型能做到什么地步",
       "partIndex": 5,
       "file": "source-html/chapter-21.html",
       "status": "ready",
@@ -206,7 +206,7 @@
     },
     {
       "number": 22,
-      "title": "定制？使用DiffSynth训练图像LoRA",
+      "title": "定制？使用 DiffSynth 训练图像 LoRA",
       "partIndex": 5,
       "file": "source-html/chapter-22.html",
       "status": "ready",
@@ -222,7 +222,7 @@
     },
     {
       "number": 24,
-      "title": "开源模型也能做出像样的AI视频吗？",
+      "title": "开源模型也能做出像样的 AI 视频吗？",
       "partIndex": 5,
       "file": "source-html/chapter-24.html",
       "status": "pending",
@@ -230,7 +230,7 @@
     },
     {
       "number": 25,
-      "title": "补充：AIGC理论知识",
+      "title": "补充：AIGC 理论知识",
       "partIndex": 5,
       "file": "source-html/chapter-25.html",
       "status": "ready",
@@ -238,7 +238,7 @@
     },
     {
       "number": 26,
-      "title": "Agent是什么，它能做什么事？",
+      "title": "Agent 是什么，它能做什么事？",
       "partIndex": 6,
       "file": "source-html/chapter-26.html",
       "status": "ready",
@@ -262,7 +262,7 @@
     },
     {
       "number": 29,
-      "title": "快速使用Claude code",
+      "title": "快速使用 Claude Code",
       "partIndex": 6,
       "file": "source-html/chapter-29.html",
       "status": "ready",
@@ -270,7 +270,7 @@
     },
     {
       "number": 30,
-      "title": "快速使用PI",
+      "title": "快速使用 PI",
       "partIndex": 6,
       "file": "source-html/chapter-30.html",
       "status": "ready",
@@ -278,7 +278,7 @@
     },
     {
       "number": 31,
-      "title": "快速使用DeepSeek Harness",
+      "title": "快速使用 DeepSeek Harness",
       "partIndex": 6,
       "file": "source-html/chapter-31.html",
       "status": "ready",
@@ -286,7 +286,7 @@
     },
     {
       "number": 32,
-      "title": "补充：Agent框架知识",
+      "title": "补充：Agent 框架知识",
       "partIndex": 6,
       "file": "source-html/chapter-32.html",
       "status": "ready",
@@ -310,7 +310,7 @@
     },
     {
       "number": 35,
-      "title": "主流LLM评测",
+      "title": "主流 LLM 评测",
       "partIndex": 7,
       "file": "source-html/chapter-35.html",
       "status": "ready",
