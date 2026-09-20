@@ -14,13 +14,9 @@
 
 ![图 1：来电后输送带未恢复，人工与 Agent 的处理流程示意。](<../../assets/penguin-harness/figure-01.png>)
 
-<em>图 1：来电后输送带未恢复，人工与 Agent 的处理流程示意。</em>
-
 不过，开发这样的 Agent 仍需要完成应用开发和效果验证，并在运行后持续优化。Penguin Harness 是一个用于自动化开发和优化 Agent 的框架，可以大大减少这些工作所需的人工投入。使用者提供业务需求、示例、规范和相关接口，Penguin Harness 据此开发 Agent 及配套网页应用，并结合评测反馈持续改进 Agent 的任务表现。具体流程如下图所示：
 
 ![图 2：Penguin Harness 开发与优化产线巡检 Agent。](<../../assets/penguin-harness/figure-02.png>)
-
-<em>图 2：Penguin Harness 开发与优化产线巡检 Agent。</em>
 
 本文以产线巡检为例，展示如何使用 Penguin Harness 开发和优化 Agent 应用。在本例中，Agent 负责分析设备异常和调用设备工具，配套网页供用户上传资料、发起任务和查看结果。
 
@@ -38,13 +34,9 @@
 
 ![图 3：客户端下载页：按操作系统选择安装包。](<../../assets/penguin-harness/figure-03.png>)
 
-<em>图 3：客户端下载页：按操作系统选择安装包。</em>
-
 安装完成后，打开客户端。在主界面左侧点击“模型库”，即可配置接下来要使用的模型。
 
 ![图 4：Penguin Harness 主界面，左侧为“模型库”入口。](<../../assets/penguin-harness/figure-04.png>)
-
-<em>图 4：Penguin Harness 主界面，左侧为“模型库”入口。</em>
 
 <a id="c33-s4"></a>
 
@@ -56,8 +48,6 @@ Penguin Harness 通过模型 API 完成分析和任务执行。使用 DeepSeek �
 
 ![图 5：DeepSeek Flash 模型配置：填写 API Key、API 地址和模型 ID。密钥已遮挡。](<../../assets/penguin-harness/figure-05.png>)
 
-<em>图 5：DeepSeek Flash 模型配置：填写 API Key、API 地址和模型 ID。密钥已遮挡。</em>
-
 <a id="c33-s5"></a>
 
 ### 2.3 选择 DeepSeek 模型
@@ -66,13 +56,9 @@ Penguin Harness 通过模型 API 完成分析和任务执行。使用 DeepSeek �
 
 ![图 6：模型库中的 DeepSeek Flash；“默认”标签表示当前默认模型。](<../../assets/penguin-harness/figure-06.png>)
 
-<em>图 6：模型库中的 DeepSeek Flash；“默认”标签表示当前默认模型。</em>
-
 点击左侧“新建对话”，在输入框右下方打开模型列表，选择 DeepSeek Flash。列表中的勾选标记表示本次任务将使用该模型。
 
 ![图 7：在输入框右下方选择本次任务使用的模型。](<../../assets/penguin-harness/figure-07.png>)
-
-<em>图 7：在输入框右下方选择本次任务使用的模型。</em>
 
 <a id="c33-s6"></a>
 
@@ -88,13 +74,9 @@ git clone https://github.com/rank-Yu/line-recovery-starter.git
 
 ![图 8：选择项目文件夹后，点击“使用此目录”。](<../../assets/penguin-harness/figure-08.png>)
 
-<em>图 8：选择项目文件夹后，点击“使用此目录”。</em>
-
 输入框下方的“技能”菜单列出了当前可用的技能，它们为特定任务提供操作说明。可以先熟悉这个入口，开发或评测时再选择相应技能；本次读取项目的简单任务无需额外选择。
 
 ![图 9：输入框下方的“技能”菜单，列出当前可用技能。](<../../assets/penguin-harness/figure-09.png>)
-
-<em>图 9：输入框下方的“技能”菜单，列出当前可用技能。</em>
 
 准备好后，在会话输入框中发送一条简单指令，让 Penguin Harness 先了解工作区：
 
@@ -103,13 +85,9 @@ git clone https://github.com/rank-Yu/line-recovery-starter.git
 
 ![图 10：选定工作区并输入指令后，点击右侧箭头发送。](<../../assets/penguin-harness/figure-10.png>)
 
-<em>图 10：选定工作区并输入指令后，点击右侧箭头发送。</em>
-
 发送后，可以在对话中查看回复，并展开工具调用记录，了解它读取了哪些文件。得到与工作区内容相符的介绍后，就完成了首次交互。
 
 ![图 11：任务完成后的项目介绍与文件读取记录。](<../../assets/penguin-harness/figure-11.png>)
-
-<em>图 11：任务完成后的项目介绍与文件读取记录。</em>
 
 接下来，我们以产线巡检为例，准备业务材料，并让 Penguin Harness 开发 Agent 及配套网页应用。
 
@@ -242,13 +220,9 @@ Agent 分析出停机原因后，还需要查询设备当前的状态，并执�
 
 ![图 12：选择 line-recovery-starter 目录作为开发工作区。](<../../assets/penguin-harness/figure-12.png>)
 
-<em>图 12：选择 line-recovery-starter 目录作为开发工作区。</em>
-
 打开输入框下方的“技能”菜单，选择 agent-initialization 技能。
 
 ![图 13：在技能菜单中选择 agent-initialization。](<../../assets/penguin-harness/figure-13.png>)
-
-<em>图 13：在技能菜单中选择 agent-initialization。</em>
 
 接着，将 README 中的开发指令发送给 Penguin Harness，让它根据仓库中的已有材料开发产线巡检 Agent 与配套网页。
 
@@ -257,13 +231,9 @@ Agent 分析出停机原因后，还需要查询设备当前的状态，并执�
 
 ![图 14：确认工作区、技能和模型后，发送完整开发指令。](<../../assets/penguin-harness/figure-14.png>)
 
-<em>图 14：确认工作区、技能和模型后，发送完整开发指令。</em>
-
 收到指令后，Penguin Harness 开始读取材料，开发产线巡检 Agent 和配套网页。展开运行记录，可以查看具体的运行记录。
 
 ![图 15：Penguin Harness 开发过程中读取项目资料。](<../../assets/penguin-harness/figure-15.png>)
-
-<em>图 15：Penguin Harness 开发过程中读取项目资料。</em>
 
 开发用时约 20 分钟，完成后给出了以下交付说明：
 
@@ -315,15 +285,11 @@ npm start
 
 ![图 17：产线恢复助手初始界面。](<../../assets/penguin-harness/figure-17.png>)
 
-<em>图 17：产线恢复助手初始界面。</em>
-
 下面我们以 lr&#95;101 产线资料包为例，演示供电恢复后输送带仍未运行时的分析和恢复过程。所有设备操作都在模拟环境中进行。
 
 打开应用后，左侧是案例列表和“上传资料包”入口，右侧展示当前案例。下图是已载入示例数据包的首页，红框标出了资料上传入口。
 
 ![图 18：产线恢复助手首页，红框为资料上传入口。](<../../assets/penguin-harness/figure-18.png>)
-
-<em>图 18：产线恢复助手首页，红框为资料上传入口。</em>
 
 本次使用[产线巡检示例数据包（lr&#95;101）](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/data/dataset/optimization/lr_101>)，包含模拟工位的图片、运行记录和日志。下面的截图与结果来自已开发完成应用对该案例的一次运行；另外，line-recovery-starter 仓库自带的示例数据包对应的也是 lr&#95;001 数据包。
 
@@ -333,27 +299,19 @@ npm start
 
 ![图 19：查看案例中的工位图片。](<../../assets/penguin-harness/figure-19.png>)
 
-<em>图 19：查看案例中的工位图片。</em>
-
 接着切换到“时序数据”页签，查看供电和带速的变化。如下图所示，供电已经恢复，但带速仍为零，产出计数也没有增加。
 
 ![图 20：供电已经恢复，但带速仍为零。](<../../assets/penguin-harness/figure-20.png>)
 
-<em>图 20：供电已经恢复，但带速仍为零。</em>
-
 切换到“诊断与证据”页签，点击“开始诊断”；已有报告时，按钮显示为“重新诊断”。完成后，页面会展示 Agent 的分析结论和对应证据。
 
 ![图 21：Agent 的停机分析与对应证据。](<../../assets/penguin-harness/figure-21.png>)
-
-<em>图 21：Agent 的停机分析与对应证据。</em>
 
 从上图中可以看到，Agent 判断输送带因供电中断而停机。虽然供电已经恢复、驱动已经就绪，但设备没有收到新的运行请求，因此仍未启动。本次停机与温度无关，无需开启风机。
 
 诊断结束后，切换到“动作与反馈”页签，可以查看 Agent 的操作记录：通过 MCP 查询当前设备状态，确认可以启动后恢复输送，再读取带速和产出反馈。
 
 ![图 22：恢复输送后，带速和产出计数发生变化。](<../../assets/penguin-harness/figure-22.png>)
-
-<em>图 22：恢复输送后，带速和产出计数发生变化。</em>
 
 上图中的执行反馈显示，带速恢复到 0.397 m/s，出口累计计数从 1813 增至 1816，说明模拟输送带已经重新运行，并有新的纸箱通过。应用将这些结果和分析结论一起记录在报告中。
 
@@ -365,8 +323,6 @@ npm start
 
 ![图 23：Penguin Harness 评测与优化 Agent 应用。](<../../assets/penguin-harness/figure-23.png>)
 
-<em>图 23：Penguin Harness 评测与优化 Agent 应用。</em>
-
 <a id="c33-s13"></a>
 
 ### 4.1 准备并发起评测与优化任务
@@ -374,8 +330,6 @@ npm start
 在 Penguin Harness 中新建对话，选择上一节已克隆到本地的 [line-recovery 仓库](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd>)作为工作区，再点击“使用此目录”，如下图所示。
 
 ![图 24：选择 line-recovery 根目录，点击“使用此目录”。](<../../assets/penguin-harness/figure-24.png>)
-
-<em>图 24：选择 line-recovery 根目录，点击“使用此目录”。</em>
 
 本次任务使用 [10 份案例](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/data/dataset/optimization>)作为训练集，用于指导优化，另外用 [7 份案例](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/data/gate-set-7>)作为测试集，检查优化后的表现。
 
@@ -385,8 +339,6 @@ npm start
 
 ![图 25：选中 agent-evaluation 和 agent-optimization，菜单中两项均显示勾选。](<../../assets/penguin-harness/figure-25.png>)
 
-<em>图 25：选中 agent-evaluation 和 agent-optimization，菜单中两项均显示勾选。</em>
-
 接下来，将下面的指令填入输入框，让 Penguin Harness 评测初版、根据训练集中的问题修改 Agent，再用测试集检查效果。
 
 ```text
@@ -395,13 +347,9 @@ npm start
 
 ![图 26：填好优化指令后的待发送状态；红框为发送按钮，本次截图未启动任务。](<../../assets/penguin-harness/figure-26.png>)
 
-<em>图 26：填好优化指令后的待发送状态；红框为发送按钮，本次截图未启动任务。</em>
-
 点击图中红框标出的发送按钮。展开运行记录，可以看到 Penguin Harness 读取评测说明和相关技能，准备评测与优化任务，如下图所示。
 
 ![图 27：评测与优化任务启动后的工具调用记录。](<../../assets/penguin-harness/figure-27.png>)
-
-<em>图 27：评测与优化任务启动后的工具调用记录。</em>
 
 任务完成后，Penguin Harness 会给出报告的保存位置。下面结合仓库中已保存的完整实验报告，查看优化结果。
 
