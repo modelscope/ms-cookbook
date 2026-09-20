@@ -36,11 +36,12 @@
     if(text)node.textContent=text;return node;
   }
 
-  function renderChart(rows) {
-    const svg=$('#trendChart');svg.replaceChildren();
+  function renderChart(rows,{target='#trendChart',label=row=>row.day.slice(5).replace('-','/'),showPoints=false}={}) {
+    const svg=$(target);svg.replaceChildren();
     const width=800,height=280,left=54,right=22,top=18,bottom=42;
     const plotWidth=width-left-right,plotHeight=height-top-bottom;
-    const maximum=Math.max(1,...rows.flatMap(row=>[row.pv,row.uv]));
+    const values=rows.flatMap(row=>[row.pv,row.uv]).filter(Number.isFinite);
+    const maximum=Math.max(1,...values);
     for(let i=0;i<=4;i++) {
       const y=top+plotHeight*i/4,value=Math.round(maximum*(4-i)/4);
       svg.append(svgElement('line',{x1:left,y1:y,x2:width-right,y2:y,class:'chart-grid'}));
@@ -48,14 +49,22 @@
     }
     const x=index=>left+(rows.length===1?plotWidth/2:plotWidth*index/(rows.length-1));
     const y=value=>top+plotHeight-(value/maximum)*plotHeight;
-    const points=key=>rows.map((row,index)=>`${x(index)},${y(row[key])}`).join(' ');
-    svg.append(svgElement('polyline',{points:points('pv'),class:'chart-pv'}));
-    svg.append(svgElement('polyline',{points:points('uv'),class:'chart-uv'}));
-    if(rows.length<=14)for(const [key,cls] of [['pv','chart-pv-point'],['uv','chart-uv-point']])rows.forEach((row,index)=>svg.append(svgElement('circle',{cx:x(index),cy:y(row[key]),r:3.5,class:cls})));
+    const points=key=>rows.map((row,index)=>({row,index})).filter(item=>Number.isFinite(item.row[key])).map(item=>`${x(item.index)},${y(item.row[key])}`).join(' ');
+    for(const [key,lineClass,pointClass,name] of [['pv','chart-pv','chart-pv-point','PV'],['uv','chart-uv','chart-uv-point','UV']]) {
+      const linePoints=points(key);
+      if(linePoints)svg.append(svgElement('polyline',{points:linePoints,class:lineClass}));
+      if(showPoints||rows.length<=14)rows.forEach((row,index)=>{
+        if(!Number.isFinite(row[key]))return;
+        const point=svgElement('circle',{cx:x(index),cy:y(row[key]),r:3.5,class:pointClass});
+        const summary=`${label(row)} · PV ${number.format(row.pv)} · UV ${number.format(row.uv)}`;
+        point.setAttribute('tabindex','0');point.setAttribute('aria-label',summary);point.dataset.summary=summary;
+        point.append(svgElement('title',{},`${label(row)} ${name}：${number.format(row[key])}`));svg.append(point);
+      });
+    }
     const step=Math.max(1,Math.ceil(rows.length/7));
     rows.forEach((row,index)=>{
       if(index%step&&index!==rows.length-1)return;
-      svg.append(svgElement('text',{x:x(index),y:height-16,'text-anchor':'middle',class:'chart-axis'},row.day.slice(5).replace('-','/')));
+      svg.append(svgElement('text',{x:x(index),y:height-16,'text-anchor':'middle',class:'chart-axis'},label(row)));
     });
   }
 
@@ -101,11 +110,52 @@
     renderChart(data.daily);renderPages(data.pages);
   }
 
+  function shiftShanghaiDay(offset) {
+    const value=new Date(`${todayInShanghai()}T00:00:00Z`);value.setUTCDate(value.getUTCDate()+offset);
+    return value.toISOString().slice(0,10);
+  }
+
+  function renderHourly(data) {
+    $('#hourlyDate').value=data.date;
+    const today=todayInShanghai(),yesterday=shiftShanghaiDay(-1);
+    document.querySelectorAll('[data-hour-offset]').forEach(button=>{
+      const value=button.dataset.hourOffset==='0'?today:yesterday;
+      button.classList.toggle('active',data.date===value);
+    });
+    $('#hourlyMeta').textContent=`${data.date.replaceAll('-','/')} · PV ${number.format(data.totals.pv)} · UV ${number.format(data.totals.uv)}`;
+    if(!data.availableSince) {
+      $('#hourlyNote').textContent='小时数据将在产生新访问后开始记录。';
+    } else {
+      const since=data.availableSince.slice(0,16).replace('T',' ');
+      const firstDay=data.availableSince.slice(0,10);
+      const startsAtMidnight=data.availableSince.slice(11,13)==='00';
+      $('#hourlyNote').textContent=data.date<firstDay
+        ?`小时统计自 ${since} 起记录，该日期没有小时明细。`
+        :data.date===firstDay&&!startsAtMidnight?`小时统计自 ${since} 起记录，本日早些时段没有小时明细。`:'每小时 UV 在各小时内独立去重，所选日期 UV 按全天访客去重。';
+    }
+    renderChart(data.hours,{target:'#hourlyChart',label:row=>row.hour,showPoints:true});
+    const detail=$('#hourlyDetail');detail.textContent='悬停、点击或聚焦数据点，可查看该小时的准确 PV/UV。';
+    document.querySelectorAll('#hourlyChart circle').forEach(point=>{
+      const show=()=>{detail.textContent=point.dataset.summary;};
+      point.addEventListener('pointerenter',show);point.addEventListener('click',show);point.addEventListener('focus',show);
+    });
+  }
+
   async function loadSummary(query='days=7') {
     $('#dashboardStatus').textContent='';
     try {
       const data=await request('/api/analytics/summary?'+query);
       render(data);
+    } catch(error) {
+      $('#dashboardStatus').textContent=error.message;
+    }
+  }
+
+  async function loadHourly(date=todayInShanghai()) {
+    $('#dashboardStatus').textContent='';
+    try {
+      const data=await request('/api/analytics/hourly?date='+encodeURIComponent(date));
+      renderHourly(data);
     } catch(error) {
       $('#dashboardStatus').textContent=error.message;
     }
@@ -121,7 +171,17 @@
     document.querySelectorAll('[data-days]').forEach(item=>item.classList.remove('active'));
     loadSummary('start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end));
   });
+  $('.hourly-buttons').addEventListener('click',event=>{
+    const button=event.target.closest('[data-hour-offset]');if(!button)return;
+    loadHourly(shiftShanghaiDay(Number(button.dataset.hourOffset)));
+  });
+  $('#applyHourlyDate').addEventListener('click',()=>{
+    const date=$('#hourlyDate').value;
+    if(!date){$('#dashboardStatus').textContent='请选择小时统计日期';return;}
+    loadHourly(date);
+  });
   const today=todayInShanghai();
   for(const input of [$('#rangeStart'),$('#rangeEnd')])input.max=today;
-  loadSummary();
+  $('#hourlyDate').max=today;$('#hourlyDate').min=shiftShanghaiDay(-89);
+  loadSummary();loadHourly();
 })();

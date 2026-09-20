@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#6b48e8">
   <meta name="robots" content="noindex,nofollow">
   <link rel="icon" href="assets/brand/book-mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/analytics.css?v=1108727da9b2">
+  <link rel="stylesheet" href="assets/analytics.css?v=c9ba86246885">
   <title>访问统计｜魔搭紫皮书</title>
 </head>
 <body>
@@ -34,8 +34,19 @@
         <article><span id="rangeUvLabel">近 7 天 UV</span><strong id="rangeUv">—</strong><small id="rangeUvCompare">正在计算</small></article>
       </section>
 
+      <section class="panel hourly-panel" aria-labelledby="hourlyTitle">
+        <header><div><h2 id="hourlyTitle">每小时访问趋势</h2><p id="hourlyMeta">正在加载小时数据…</p></div><div class="legend"><span class="pv-dot">PV</span><span class="uv-dot">UV</span></div></header>
+        <div class="hourly-toolbar" aria-label="小时统计日期">
+          <div class="hourly-buttons"><button type="button" data-hour-offset="0" class="active">今天</button><button type="button" data-hour-offset="-1">昨天</button></div>
+          <label>指定日期<input id="hourlyDate" type="date"></label><button type="button" id="applyHourlyDate">查看</button>
+        </div>
+        <p class="hourly-note" id="hourlyNote"></p>
+        <div class="chart-wrap"><svg id="hourlyChart" viewBox="0 0 800 280" role="img" aria-label="每小时 PV 和 UV 趋势"></svg></div>
+        <p class="hourly-detail" id="hourlyDetail" aria-live="polite">悬停、点击或聚焦数据点，可查看该小时的准确 PV/UV。</p>
+      </section>
+
       <section class="panel trend-panel" aria-labelledby="trendTitle">
-        <header><div><h2 id="trendTitle">访问趋势</h2><p id="trendRange"></p></div><div class="legend"><span class="pv-dot">PV</span><span class="uv-dot">UV</span></div></header>
+        <header><div><h2 id="trendTitle">每日访问趋势</h2><p id="trendRange"></p></div><div class="legend"><span class="pv-dot">PV</span><span class="uv-dot">UV</span></div></header>
         <div class="chart-wrap"><svg id="trendChart" viewBox="0 0 800 280" role="img" aria-label="每日 PV 和 UV 趋势"></svg></div>
       </section>
 
@@ -44,9 +55,9 @@
         <div class="table-wrap"><table><thead><tr><th>页面</th><th>PV</th><th>UV</th><th>PV 占比</th></tr></thead><tbody id="pagesBody"></tbody></table></div>
         <p class="empty-pages" id="emptyPages" hidden>所选时间范围内还没有访问数据。</p>
       </section>
-      <footer>累计指标持续增长 · 今日指标每日 0 点重新计算 · 近 N 天为滚动窗口 · UV 为匿名浏览器标识的估算结果 · 统计时区：Asia/Shanghai</footer>
+      <footer>累计指标持续增长 · 今日指标每日 0 点重新计算 · 小时明细保留 90 天 · 近 N 天为滚动窗口 · UV 为匿名浏览器标识的估算结果 · 统计时区：Asia/Shanghai</footer>
     </main>
   </div>
-  <script src="assets/analytics-dashboard.js?v=f25ab92a5302"></script>
+  <script src="assets/analytics-dashboard.js?v=8c6cda54ad5e"></script>
 </body>
 </html>
