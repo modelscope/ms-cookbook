@@ -141,9 +141,8 @@
 <p><img src="../../assets/penguin-harness/figure-14.png" alt="图 14：确认工作区、技能和模型后，发送完整开发指令。" class="article-image" loading="lazy" decoding="async" /></p>
 <p>收到指令后，Penguin Harness 开始读取材料，开发产线巡检 Agent 和配套网页。展开运行记录，可以查看具体的运行记录。</p>
 <p><img src="../../assets/penguin-harness/figure-15.png" alt="图 15：Penguin Harness 开发过程中读取项目资料。" class="article-image" loading="lazy" decoding="async" /></p>
-<p>开发用时约 20 分钟，完成后给出了以下交付说明：</p>
+<p>开发用时约 20 分钟，完成后 Penguin Harness 给出了以下交付说明：</p>
 <p><img src="../../assets/penguin-harness/figure-16.png" alt="图 16：原项目的初始交付说明：应用框架先交付，设备接口随后继续接通。" class="article-image" loading="lazy" decoding="async" /></p>
-<p class="image-caption"><em>图 16：原项目的初始交付说明：应用框架先交付，设备接口随后继续接通。</em></p>
 <p>本例已完成的应用保存在 <a href="https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/app">line-recovery 仓库的 app/ 目录</a>中，主要文件结构如下：</p>
 <pre class="plaintext" data-language="text"><code class="language-text">app/
 ├── agent/                 # Agent 的角色说明与技能
@@ -205,7 +204,6 @@ cp -n .env.example .env</code></pre>
 <p>我们在 <a href="https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/reports/experiments">line-recovery 仓库</a>中保存了已完成的评测与优化报告，下面看看优化后的表现。</p>
 <p>如下图所示，训练集平均分从 69.23 提高到 100.00，七例测试的历史汇总均分从 86.65 提高到 98.57。</p>
 <p><img src="../../assets/penguin-harness/figure-28.png" alt="图 28：优化前后成绩。训练集来自 round1；七例测试来自 gate-set-7，先取每例历史运行均分，再对七例求平均，各案例和版本的运行次数不完全相同。" class="article-image" loading="lazy" decoding="async" /></p>
-<p class="image-caption"><em>图 28：优化前后成绩。训练集来自 round1；七例测试来自 gate-set-7，先取每例历史运行均分，再对七例求平均，各案例和版本的运行次数不完全相同。</em></p>
 <p>从 <a href="https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/reports/experiments">line-recovery 仓库中已保存的报告</a>可以看到，在设备状态不明确的案例中，优化后的 Agent 不再贸然请求操作；在过热停机的案例中，它能在降温后继续恢复输送，并确认产出是否恢复。因此，评测分数提升和具体案例分析两方面都说明，Penguin Harness 优化后的产线巡检 Agent，在异常判断和恢复操作上都有了更好的表现。</p>
 <h2>5. 投入与运行成本</h2>
 <p>除了任务表现，开发和使用 Agent 的成本也是落地时需要考虑的问题。下面分别介绍开发与优化阶段、日常运行阶段的成本。</p>

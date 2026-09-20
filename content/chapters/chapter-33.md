@@ -235,11 +235,9 @@ Agent 分析出停机原因后，还需要查询设备当前的状态，并执�
 
 ![图 15：Penguin Harness 开发过程中读取项目资料。](<../../assets/penguin-harness/figure-15.png>)
 
-开发用时约 20 分钟，完成后给出了以下交付说明：
+开发用时约 20 分钟，完成后 Penguin Harness 给出了以下交付说明：
 
 ![图 16：原项目的初始交付说明：应用框架先交付，设备接口随后继续接通。](<../../assets/penguin-harness/figure-16.png>)
-
-<em>图 16：原项目的初始交付说明：应用框架先交付，设备接口随后继续接通。</em>
 
 本例已完成的应用保存在 [line-recovery 仓库的 app/ 目录](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/app>)中，主要文件结构如下：
 
@@ -362,8 +360,6 @@ npm start
 如下图所示，训练集平均分从 69.23 提高到 100.00，七例测试的历史汇总均分从 86.65 提高到 98.57。
 
 ![图 28：优化前后成绩。训练集来自 round1；七例测试来自 gate-set-7，先取每例历史运行均分，再对七例求平均，各案例和版本的运行次数不完全相同。](<../../assets/penguin-harness/figure-28.png>)
-
-<em>图 28：优化前后成绩。训练集来自 round1；七例测试来自 gate-set-7，先取每例历史运行均分，再对七例求平均，各案例和版本的运行次数不完全相同。</em>
 
 从 [line-recovery 仓库中已保存的报告](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/reports/experiments>)可以看到，在设备状态不明确的案例中，优化后的 Agent 不再贸然请求操作；在过热停机的案例中，它能在降温后继续恢复输送，并确认产出是否恢复。因此，评测分数提升和具体案例分析两方面都说明，Penguin Harness 优化后的产线巡检 Agent，在异常判断和恢复操作上都有了更好的表现。
 
