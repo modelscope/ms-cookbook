@@ -30,9 +30,13 @@
 
 ### 2.1 下载并打开客户端
 
+<strong>第 1 步：下载并安装客户端</strong>
+
 打开 [Penguin Harness 客户端下载页面](<https://penguin.ooo/download>)，选择与自己电脑系统对应的安装包，下载后按提示安装。
 
 ![图 3：客户端下载页：按操作系统选择安装包。](<../../assets/penguin-harness/figure-03.png>)
+
+<strong>第 2 步：打开客户端</strong>
 
 安装完成后，打开客户端。在主界面左侧点击“模型库”，即可配置接下来要使用的模型。
 
@@ -42,7 +46,11 @@
 
 ### 2.2 接入模型 API
 
+<strong>第 1 步：获取 API Key</strong>
+
 Penguin Harness 通过模型 API 完成分析和任务执行。使用 DeepSeek 时，先在 [DeepSeek 开放平台](<https://platform.deepseek.com/>)创建 API Key，再将它填入客户端。API Key 用于验证模型调用身份。
+
+<strong>第 2 步：填写并保存模型配置</strong>
 
 在“模型库”中展开 DeepSeek 分组，打开 DeepSeek Flash 的模型配置，填入自己的 API Key，点击“确认”保存。通过官方服务接入时，API 地址为 [[https://api.deepseek.com](<https://api.deepseek.com>)](<https://api.deepseek.com>)，模型 ID 为 deepseek-flash。下图标出了对应位置。
 
@@ -52,9 +60,13 @@ Penguin Harness 通过模型 API 完成分析和任务执行。使用 DeepSeek �
 
 ### 2.3 选择 DeepSeek 模型
 
+<strong>第 1 步：确认模型已保存</strong>
+
 保存后，DeepSeek Flash 会显示在模型库中。下图中的“默认”标签表示它已设为默认模型；也可以在每次任务开始前单独选择模型。
 
 ![图 6：模型库中的 DeepSeek Flash；“默认”标签表示当前默认模型。](<../../assets/penguin-harness/figure-06.png>)
+
+<strong>第 2 步：选择本次任务使用的模型</strong>
 
 点击左侧“新建对话”，在输入框右下方打开模型列表，选择 DeepSeek Flash。列表中的勾选标记表示本次任务将使用该模型。
 
@@ -64,19 +76,27 @@ Penguin Harness 通过模型 API 完成分析和任务执行。使用 DeepSeek �
 
 ### 2.4 开始一次任务
 
+<strong>第 1 步：克隆示例仓库</strong>
+
 为了跟着本文从零开发，可以先将 [line-recovery-starter 仓库](<https://github.com/rank-Yu/line-recovery-starter>)克隆到本地。仓库只提供业务需求、数据契约、示例数据包和模拟设备服务。在已安装 Git 的电脑上，打开终端，运行：
 
 ```text
 git clone https://github.com/rank-Yu/line-recovery-starter.git
 ```
 
+<strong>第 2 步：选择工作区</strong>
+
 命令完成后，当前目录下会生成 line-recovery-starter 文件夹。回到 Penguin Harness，点击输入框下方的工作区入口，选择这个文件夹，再点击“使用此目录”。后续任务就可以读取其中的项目材料。
 
 ![图 8：选择项目文件夹后，点击“使用此目录”。](<../../assets/penguin-harness/figure-08.png>)
 
+<strong>第 3 步：了解技能入口</strong>
+
 输入框下方的“技能”菜单列出了当前可用的技能，它们为特定任务提供操作说明。可以先熟悉这个入口，开发或评测时再选择相应技能；本次读取项目的简单任务无需额外选择。
 
 ![图 9：输入框下方的“技能”菜单，列出当前可用技能。](<../../assets/penguin-harness/figure-09.png>)
+
+<strong>第 4 步：发送首次任务</strong>
 
 准备好后，在会话输入框中发送一条简单指令，让 Penguin Harness 先了解工作区：
 
@@ -84,6 +104,8 @@ git clone https://github.com/rank-Yu/line-recovery-starter.git
 > 请查看当前工作区的 README.md，简要介绍项目用途，以及 contracts、examples、interfaces 三个目录的作用，控制在 150 字以内。只读取文件，不修改或运行项目。
 
 ![图 10：选定工作区并输入指令后，点击右侧箭头发送。](<../../assets/penguin-harness/figure-10.png>)
+
+<strong>第 5 步：查看任务回复</strong>
 
 发送后，可以在对话中查看回复，并展开工具调用记录，了解它读取了哪些文件。得到与工作区内容相符的介绍后，就完成了首次交互。
 
@@ -100,6 +122,8 @@ git clone https://github.com/rank-Yu/line-recovery-starter.git
 ### 3.1 准备业务规范文件与输入示例
 
 第二章已经将 [line-recovery-starter 仓库](<https://github.com/rank-Yu/line-recovery-starter>)克隆到本地。这个仓库保留了原项目的业务规范文件、输入示例、数据契约和两个模拟设备 MCP 服务，尚未包含生成后的 Agent 应用。本章从这份材料出发，介绍开发、启动和结果核查步骤。
+
+<strong>第 1 步：阅读业务需求</strong>
 
 先看仓库根目录的 [README.md](<https://github.com/rank-Yu/line-recovery-starter/blob/main/README.md>)。它是交给 Penguin Harness 的需求文档，下面概括业务场景和交付要求，完整内容以仓库原文为准：
 
@@ -120,6 +144,8 @@ git clone https://github.com/rank-Yu/line-recovery-starter.git
 接入已有的两个 MCP 服务，展示证据、动作记录和结果。
 工具未连接时明确提示，不伪造动作成功。
 ```
+
+<strong>第 2 步：了解工作区材料</strong>
 
 业务说明之外，Penguin Harness 还需要知道应用将收到哪些资料，以及应该输出什么格式。仓库中的材料分别承担以下作用：
 
@@ -149,6 +175,8 @@ git clone https://github.com/rank-Yu/line-recovery-starter.git
 </tr>
 </tbody>
 </table>
+
+<strong>第 3 步：查看输入示例</strong>
 
 打开 [examples/input/](<https://github.com/rank-Yu/line-recovery-starter/tree/main/examples/input>)，可以看到这份示例数据包，主要文件如下：
 
@@ -216,13 +244,19 @@ Agent 分析出停机原因后，还需要查询设备当前的状态，并执�
 
 ### 3.3 开发并启动 Agent 应用
 
+<strong>第 1 步：选择工作区</strong>
+
 回到 Penguin Harness，新建对话，确认工作区选中 line-recovery-starter。
 
 ![图 12：选择 line-recovery-starter 目录作为开发工作区。](<../../assets/penguin-harness/figure-12.png>)
 
+<strong>第 2 步：选择开发技能</strong>
+
 打开输入框下方的“技能”菜单，选择 agent-initialization 技能。
 
 ![图 13：在技能菜单中选择 agent-initialization。](<../../assets/penguin-harness/figure-13.png>)
+
+<strong>第 3 步：发送开发指令</strong>
 
 接着，将 README 中的开发指令发送给 Penguin Harness，让它根据仓库中的已有材料开发产线巡检 Agent 与配套网页。
 
@@ -234,6 +268,8 @@ Agent 分析出停机原因后，还需要查询设备当前的状态，并执�
 收到指令后，Penguin Harness 开始读取材料，开发产线巡检 Agent 和配套网页。展开运行记录，可以查看具体的运行记录。
 
 ![图 15：Penguin Harness 开发过程中读取项目资料。](<../../assets/penguin-harness/figure-15.png>)
+
+<strong>第 4 步：查看开发结果</strong>
 
 开发用时约 20 分钟，完成后 Penguin Harness 给出了以下交付说明：
 
@@ -260,6 +296,8 @@ app/
 
 Penguin Harness 每次开发出的应用，页面和文件结构可能有所不同。下面使用我们已经开发好的产线恢复助手进行演示。
 
+<strong>第 1 步：安装并初始化应用</strong>
+
 准备好 Node.js 和 Python ，将 [line-recovery 仓库](<https://github.com/lzh368/line-recovery>)克隆到本地，切换到本文演示的版本，再安装并初始化应用：
 
 ```text
@@ -273,6 +311,8 @@ npm run setup
 cp -n .env.example .env
 ```
 
+<strong>第 2 步：配置模型并启动应用</strong>
+
 在 app/.env 中填入 DEEPSEEK&#95;API&#95;KEY，随后在当前 app/ 目录启动应用：
 
 ```text
@@ -282,6 +322,8 @@ npm start
 在浏览器打开终端显示的本地地址，即可进入产线恢复助手。详细配置见 [app/README.md](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/app/README.md>)。下图为创空间演示版尚未载入资料时的初始界面。
 
 ![图 17：产线恢复助手初始界面。](<../../assets/penguin-harness/figure-17.png>)
+
+<strong>第 3 步：加载案例资料</strong>
 
 下面我们以 lr&#95;101 产线资料包为例，演示供电恢复后输送带仍未运行时的分析和恢复过程。所有设备操作都在模拟环境中进行。
 
@@ -293,19 +335,27 @@ npm start
 
 点击“载入 example”，即可加载 lr&#95;101 示例资料。也可以下载 [lr&#95;101.zip](<https://github.com/lzh368/line-recovery/raw/refs/heads/main/docs/penguin-harness/attachments/lr_101.zip>)，在左侧选择文件，点击“上传并解析”，再从案例列表中选中它。
 
+<strong>第 4 步：查看工位图片</strong>
+
 加载后，点击右侧“工位图片”页签，查看工位和纸箱的分布。
 
 ![图 19：查看案例中的工位图片。](<../../assets/penguin-harness/figure-19.png>)
 
+<strong>第 5 步：查看时序数据</strong>
+
 接着切换到“时序数据”页签，查看供电和带速的变化。如下图所示，供电已经恢复，但带速仍为零，产出计数也没有增加。
 
 ![图 20：供电已经恢复，但带速仍为零。](<../../assets/penguin-harness/figure-20.png>)
+
+<strong>第 6 步：发起诊断并查看证据</strong>
 
 切换到“诊断与证据”页签，点击“开始诊断”；已有报告时，按钮显示为“重新诊断”。完成后，页面会展示 Agent 的分析结论和对应证据。
 
 ![图 21：Agent 的停机分析与对应证据。](<../../assets/penguin-harness/figure-21.png>)
 
 从上图中可以看到，Agent 判断输送带因供电中断而停机。虽然供电已经恢复、驱动已经就绪，但设备没有收到新的运行请求，因此仍未启动。本次停机与温度无关，无需开启风机。
+
+<strong>第 7 步：核查动作与反馈</strong>
 
 诊断结束后，切换到“动作与反馈”页签，可以查看 Agent 的操作记录：通过 MCP 查询当前设备状态，确认可以启动后恢复输送，再读取带速和产出反馈。
 
@@ -325,17 +375,25 @@ npm start
 
 ### 4.1 准备并发起评测与优化任务
 
+<strong>第 1 步：选择评测工作区</strong>
+
 在 Penguin Harness 中新建对话，选择上一节已克隆到本地的 [line-recovery 仓库](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd>)作为工作区，再点击“使用此目录”，如下图所示。
 
 ![图 24：选择 line-recovery 根目录，点击“使用此目录”。](<../../assets/penguin-harness/figure-24.png>)
+
+<strong>第 2 步：确认数据集与评分方式</strong>
 
 本次任务使用 [10 份案例](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/data/dataset/optimization>)作为训练集，用于指导优化，另外用 [7 份案例](<https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/data/gate-set-7>)作为测试集，检查优化后的表现。
 
 每份案例都准备了参考答案。评测时，对照答案检查 Agent 是否判断正确、操作得当，并取得预期结果，逐项评分后计算平均分。
 
+<strong>第 3 步：选择评测与优化技能</strong>
+
 我们选中 agent-evaluation 和 agent-optimization 技能，如下图所示。前者负责组织评测，后者根据评测结果优化 Agent。
 
 ![图 25：选中 agent-evaluation 和 agent-optimization，菜单中两项均显示勾选。](<../../assets/penguin-harness/figure-25.png>)
+
+<strong>第 4 步：填写并发送任务指令</strong>
 
 接下来，将下面的指令填入输入框，让 Penguin Harness 评测初版、根据训练集中的问题修改 Agent，再用测试集检查效果。
 
@@ -348,6 +406,8 @@ npm start
 点击图中红框标出的发送按钮。展开运行记录，可以看到 Penguin Harness 读取评测说明和相关技能，准备评测与优化任务，如下图所示。
 
 ![图 27：评测与优化任务启动后的工具调用记录。](<../../assets/penguin-harness/figure-27.png>)
+
+<strong>第 5 步：查看报告位置</strong>
 
 任务完成后，Penguin Harness 会给出报告的保存位置。下面结合仓库中已保存的完整实验报告，查看优化结果。
 
