@@ -34,7 +34,7 @@ A useful model application starts with practical decisions: which model fits the
 
 The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, and product-image creation.
 
-> **8 parts · 34 chapters · 33 available to read**
+> **8 parts · 35 chapters · 34 available to read**
 
 ## Start reading
 
@@ -116,9 +116,10 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | [30 · 快速使用PI](content/chapters/chapter-30.md) | Getting started with PI |
 | [31 · 快速使用DeepSeek Harness](content/chapters/chapter-31.md) | Getting started with DeepSeek Harness |
 | [32 · 补充：Agent框架知识](content/chapters/chapter-32.md) | Agent framework fundamentals |
+| [33 · 用 Penguin Harness 快速开发并优化产线巡检 Agent 应用](content/chapters/chapter-33.md) | Develop, evaluate, and optimize a production-line inspection Agent |
 | **Part 8 · Supplementary fundamentals** | |
-| [33 · 补充：大模型基础知识](content/chapters/chapter-33.md) | Model architecture, training, inference, and limitations |
-| [34 · 主流LLM评测](content/chapters/chapter-34.md) | Invitation to contribute evaluations of mainstream models |
+| [34 · 补充：大模型基础知识](content/chapters/chapter-34.md) | Model architecture, training, inference, and limitations |
+| [35 · 主流LLM评测](content/chapters/chapter-35.md) | Invitation to contribute evaluations of mainstream models |
 
 ## Application examples
 

@@ -34,7 +34,7 @@
 
 项目希望帮助读者建立**从任务定义到效果验证的实践能力**：先跑通一个结果，再理解运行条件与方法边界，逐步构建能够复现、评测和改进的应用。书中案例覆盖企业知识问答、语音助手、客服质检、AI 健身教练和商品营销图等场景。
 
-> **8 篇主题 · 34 个章节 · 33 章可读**
+> **8 篇主题 · 35 个章节 · 34 章可读**
 
 ## 开始阅读
 
@@ -116,9 +116,10 @@ python3 -m http.server 4173 --bind 127.0.0.1
 | [30 · 快速使用PI](content/chapters/chapter-30.md) | PI 入门 |
 | [31 · 快速使用DeepSeek Harness](content/chapters/chapter-31.md) | DeepSeek Harness 入门 |
 | [32 · 补充：Agent框架知识](content/chapters/chapter-32.md) | Agent 框架基础 |
+| [33 · 用 Penguin Harness 快速开发并优化产线巡检 Agent 应用](content/chapters/chapter-33.md) | 开发产线巡检 Agent 应用，并通过评测与优化改进表现 |
 | **第八篇 补充内容** | |
-| [33 · 补充：大模型基础知识](content/chapters/chapter-33.md) | 模型结构、训练、推理与局限 |
-| [34 · 主流LLM评测](content/chapters/chapter-34.md) | 主流模型评测的共建邀请 |
+| [34 · 补充：大模型基础知识](content/chapters/chapter-34.md) | 模型结构、训练、推理与局限 |
+| [35 · 主流LLM评测](content/chapters/chapter-35.md) | 主流模型评测的共建邀请 |
 
 ## 场景实践
 
