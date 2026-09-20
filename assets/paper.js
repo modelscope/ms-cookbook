@@ -26,7 +26,6 @@
     {id:23,title:'商品营销图',desc:'从图像生成到修改，完成商品视觉创作。',type:'AIGC',art:'product'},
     {id:33,title:'产线巡检与恢复',desc:'用 Penguin Harness 开发巡检 Agent，接入设备工具，并通过评测优化任务表现。',type:'Agent',art:'cubes'}
   ];
-  $('#homeTaskCount').innerHTML = `${scenes.length}<span> 个</span>`;
   let currentChapter = null;
   let currentView = '';
   let currentPathKey = '';
