@@ -24,7 +24,7 @@
     {id:18,title:'能听也能说的语音助手',desc:'串联语音识别、模型问答与语音合成。',type:'语音',art:'speech'},
     {id:19,title:'企业知识问答助手',desc:'结合知识库，让回答有据可查。',type:'RAG',art:'knowledge'},
     {id:23,title:'商品营销图',desc:'从图像生成到修改，完成商品视觉创作。',type:'AIGC',art:'product'},
-    {id:33,title:'产线巡检与恢复',desc:'用 Penguin Harness 开发巡检 Agent，并通过评测优化任务表现。',type:'Agent',art:'cubes'}
+    {id:33,title:'产线巡检',desc:'用 Penguin Harness 开发产线巡检 Agent，并通过评测优化任务表现。',type:'Agent',art:'cubes'}
   ];
   let currentChapter = null;
   let currentView = '';
