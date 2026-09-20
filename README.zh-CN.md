@@ -32,7 +32,7 @@
 
 从“模型可以下载”到“模型真正用起来”，中间还有一系列具体问题：业务需求该选哪类模型？现有硬件能跑多大规模？如何用自己的数据微调？效果提升该怎样验证？本书结合 **EvalScope、ms-swift、DiffSynth、Ollama** 等工具，以及 RAG 与 Agent 工作流，把这些选择与动手操作衔接起来。
 
-项目希望帮助读者建立**从任务定义到效果验证的实践能力**：先跑通一个结果，再理解运行条件与方法边界，逐步构建能够复现、评测和改进的应用。书中案例覆盖企业知识问答、语音助手、客服质检、AI 健身教练和商品营销图等场景。
+项目希望帮助读者建立**从任务定义到效果验证的实践能力**：先跑通一个结果，再理解运行条件与方法边界，逐步构建能够复现、评测和改进的应用。书中案例覆盖企业知识问答、语音助手、客服质检、AI 健身教练、商品营销图和产线巡检等场景。
 
 > **8 篇主题 · 35 个章节 · 34 章可读**
 
@@ -116,7 +116,7 @@ python3 -m http.server 4173 --bind 127.0.0.1
 | [30 · 快速使用PI](content/chapters/chapter-30.md) | PI 入门 |
 | [31 · 快速使用DeepSeek Harness](content/chapters/chapter-31.md) | DeepSeek Harness 入门 |
 | [32 · 补充：Agent框架知识](content/chapters/chapter-32.md) | Agent 框架基础 |
-| [33 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-33.md) | 开发产线巡检 Agent 应用，并通过评测与优化改进表现 |
+| [33 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-33.md) | 用 Penguin Harness 开发产线巡检 Agent，并通过评测优化 |
 | **第八篇 补充内容** | |
 | [34 · 补充：大模型基础知识](content/chapters/chapter-34.md) | 模型结构、训练、推理与局限 |
 | [35 · 主流LLM评测](content/chapters/chapter-35.md) | 主流模型评测的共建邀请 |
@@ -130,6 +130,7 @@ python3 -m http.server 4173 --bind 127.0.0.1
 | 语音助手 | 串联语音识别、模型问答与语音合成 | [18](content/chapters/chapter-18.md) |
 | 企业知识问答 | 检索知识库，为回答提供参考依据 | [19](content/chapters/chapter-19.md) |
 | 商品营销图 | 完成商品图像生成与编辑 | [23](content/chapters/chapter-23.md) |
+| 产线巡检 | 用 Penguin Harness 开发产线巡检 Agent，并通过评测优化 | [33](content/chapters/chapter-33.md) |
 
 ## 读者社区
 
