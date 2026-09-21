@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS analytics_page_daily(day TEXT NOT NULL, page TEXT NOT
 CREATE TABLE IF NOT EXISTS analytics_visitor_daily(day TEXT NOT NULL, page TEXT NOT NULL, visitor_hash TEXT NOT NULL, PRIMARY KEY(day, page, visitor_hash));
 CREATE INDEX IF NOT EXISTS analytics_visitors_page_day ON analytics_visitor_daily(page, day);
 CREATE TABLE IF NOT EXISTS analytics_visitor_all_time(visitor_hash TEXT PRIMARY KEY, first_day TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS analytics_site_hourly(hour TEXT PRIMARY KEY, pv INTEGER NOT NULL DEFAULT 0 CHECK(pv >= 0));
+CREATE TABLE IF NOT EXISTS analytics_visitor_hourly(hour TEXT NOT NULL, visitor_hash TEXT NOT NULL, PRIMARY KEY(hour, visitor_hash));
+CREATE INDEX IF NOT EXISTS analytics_visitors_hour ON analytics_visitor_hourly(hour);
 '''
 
 class Entry(BaseModel):
@@ -352,8 +355,10 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
     def record_analytics_view(view: AnalyticsView, request: Request):
         require_same_origin(request)
         if view.page not in analytics_pages: raise HTTPException(422,'页面不存在')
-        today=datetime.now(analytics_timezone).date()
+        current=datetime.now(analytics_timezone)
+        today=current.date()
         day=today.isoformat()
+        hour=current.strftime('%Y-%m-%dT%H')
         visitor_hash=hmac.new(session_secret.encode(),view.visitor.encode(),hashlib.sha256).hexdigest()
         def write_view():
             with analytics_db() as conn:
@@ -362,12 +367,17 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
                 conn.execute('INSERT OR IGNORE INTO analytics_visitor_daily(day,page,visitor_hash) VALUES (?,?,?)',(day,view.page,visitor_hash))
                 conn.execute('INSERT OR IGNORE INTO analytics_visitor_daily(day,page,visitor_hash) VALUES (?,?,?)',(day,'__site__',visitor_hash))
                 conn.execute('INSERT OR IGNORE INTO analytics_visitor_all_time(visitor_hash,first_day) VALUES (?,?)',(visitor_hash,day))
+                conn.execute('INSERT INTO analytics_site_hourly(hour,pv) VALUES (?,1) ON CONFLICT(hour) DO UPDATE SET pv=pv+1',(hour,))
+                conn.execute('INSERT OR IGNORE INTO analytics_visitor_hourly(hour,visitor_hash) VALUES (?,?)',(hour,visitor_hash))
                 with analytics_lock:
                     cleanup=analytics_cleanup_day['value']!=day
                     if cleanup: analytics_cleanup_day['value']=day
                 if cleanup:
                     cutoff=(today-timedelta(days=179)).isoformat()
                     conn.execute('DELETE FROM analytics_visitor_daily WHERE day<?',(cutoff,))
+                    hourly_cutoff=f'{(today-timedelta(days=89)).isoformat()}T00'
+                    conn.execute('DELETE FROM analytics_site_hourly WHERE hour<?',(hourly_cutoff,))
+                    conn.execute('DELETE FROM analytics_visitor_hourly WHERE hour<?',(hourly_cutoff,))
         use_analytics_database(write_view)
         mark_analytics_dirty()
         return Response(status_code=204)
@@ -403,6 +413,44 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
             value=cursor.isoformat();daily.append({'day':value,'pv':pv_rows.get(value,0),'uv':uv_rows.get(value,0)});cursor+=timedelta(days=1)
         pages=[{'page':page,'title':analytics_titles.get(page,page),'pv':pv,'uv':page_uv.get(page,0),'share':round(pv*100/selected['pv'],1) if selected['pv'] else 0} for page,pv in page_pv.items()]
         return {'range':{'start':first_text,'end':last_text,'days':span,'timezone':'Asia/Shanghai'},'lifetime':lifetime,'today':today_totals,'totals':selected,'previous':previous,'daily':daily,'pages':pages,'updatedAt':datetime.now(analytics_timezone).isoformat(timespec='seconds')}
+
+    @app.get('/api/analytics/hourly')
+    def analytics_hourly(date: str = ''):
+        current=datetime.now(analytics_timezone)
+        today=current.date()
+        try:
+            selected=datetime.strptime(date,'%Y-%m-%d').date() if date else today
+        except ValueError as error:
+            raise HTTPException(422,'日期格式应为 YYYY-MM-DD') from error
+        earliest=today-timedelta(days=89)
+        if selected>today: raise HTTPException(422,'不能查询未来日期')
+        if selected<earliest: raise HTTPException(422,'小时数据仅保留最近 90 天')
+        day=selected.isoformat()
+        first_hour=f'{day}T00';last_hour=f'{day}T23'
+        def read_hourly():
+            with analytics_db() as conn:
+                pv_rows={row['hour']:row['pv'] for row in conn.execute('SELECT hour,pv FROM analytics_site_hourly WHERE hour BETWEEN ? AND ?',(first_hour,last_hour))}
+                uv_rows={row['hour']:row['total'] for row in conn.execute('SELECT hour,COUNT(*) total FROM analytics_visitor_hourly WHERE hour BETWEEN ? AND ? GROUP BY hour',(first_hour,last_hour))}
+                total_pv=conn.execute('SELECT COALESCE(SUM(pv),0) total FROM analytics_site_hourly WHERE hour BETWEEN ? AND ?',(first_hour,last_hour)).fetchone()['total']
+                total_uv=conn.execute('SELECT COUNT(DISTINCT visitor_hash) total FROM analytics_visitor_hourly WHERE hour BETWEEN ? AND ?',(first_hour,last_hour)).fetchone()['total']
+                available_since=conn.execute('SELECT MIN(hour) first_hour FROM analytics_site_hourly').fetchone()['first_hour']
+            return pv_rows,uv_rows,total_pv,total_uv,available_since
+        pv_rows,uv_rows,total_pv,total_uv,available_since=use_analytics_database(read_hourly)
+        current_hour=current.strftime('%Y-%m-%dT%H')
+        hours=[]
+        for value in range(24):
+            key=f'{day}T{value:02d}'
+            available=bool(available_since and key>=available_since and key<=current_hour)
+            hours.append({'hour':f'{value:02d}:00','pv':pv_rows.get(key,0) if available else None,'uv':uv_rows.get(key,0) if available else None})
+        return {
+            'date':day,
+            'timezone':'Asia/Shanghai',
+            'retentionDays':90,
+            'availableSince':f'{available_since}:00:00+08:00' if available_since else None,
+            'totals':{'pv':total_pv,'uv':total_uv},
+            'hours':hours,
+            'updatedAt':current.isoformat(timespec='seconds'),
+        }
 
     @app.get('/auth/login')
     async def login(request: Request, return_to: str = '#home'):

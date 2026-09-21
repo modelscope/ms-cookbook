@@ -81,7 +81,7 @@ def test_analytics_uses_an_isolated_database(analytics_site):
     with app.state.analytics_db() as db:
         tables={row['name'] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         journal=db.execute('PRAGMA journal_mode').fetchone()[0]
-    assert {'analytics_page_daily','analytics_visitor_daily','analytics_visitor_all_time'} <= tables
+    assert {'analytics_page_daily','analytics_visitor_daily','analytics_visitor_all_time','analytics_site_hourly','analytics_visitor_hourly'} <= tables
     assert journal=='wal'
     assert app.state.analytics_path != app.state.persistent_analytics_path
     assert app.state.persistent_analytics_path.exists()
@@ -120,6 +120,55 @@ def test_analytics_snapshot_survives_a_new_runtime(tmp_path,monkeypatch):
     assert summary['today']=={'pv':2,'uv':2}
     assert summary['lifetime']['pv']==2
     assert summary['lifetime']['uv']==2
+
+
+def test_hourly_tracking_counts_pv_and_deduplicates_uv(analytics_site):
+    _,client=analytics_site
+    visitor_a='visitor_aaaaaaaaaaaaaaaa'
+    visitor_b='visitor_bbbbbbbbbbbbbbbb'
+    for visitor in (visitor_a,visitor_a,visitor_b):
+        assert client.post('/api/analytics/view',json={'page':'home','visitor':visitor}).status_code==204
+    current=datetime.now(ZoneInfo('Asia/Shanghai'))
+    data=client.get(f'/api/analytics/hourly?date={current.date().isoformat()}').json()
+    hour=data['hours'][current.hour]
+    assert hour=={'hour':f'{current.hour:02d}:00','pv':3,'uv':2}
+    assert data['totals']=={'pv':3,'uv':2}
+    assert data['retentionDays']==90
+    assert data['timezone']=='Asia/Shanghai'
+
+
+def test_hourly_uv_is_per_hour_and_day_total_is_deduplicated(analytics_site):
+    app,client=analytics_site
+    selected=datetime.now(ZoneInfo('Asia/Shanghai')).date()-timedelta(days=1)
+    prefix=selected.isoformat()
+    with app.state.analytics_db() as db:
+        db.execute('INSERT INTO analytics_site_hourly VALUES (?,?)',(f'{prefix}T08',2))
+        db.execute('INSERT INTO analytics_site_hourly VALUES (?,?)',(f'{prefix}T09',1))
+        db.execute('INSERT INTO analytics_visitor_hourly VALUES (?,?)',(f'{prefix}T08','same-visitor'))
+        db.execute('INSERT INTO analytics_visitor_hourly VALUES (?,?)',(f'{prefix}T08','other-visitor'))
+        db.execute('INSERT INTO analytics_visitor_hourly VALUES (?,?)',(f'{prefix}T09','same-visitor'))
+    data=client.get(f'/api/analytics/hourly?date={prefix}').json()
+    assert data['totals']=={'pv':3,'uv':2}
+    assert data['hours'][8]=={'hour':'08:00','pv':2,'uv':2}
+    assert data['hours'][9]=={'hour':'09:00','pv':1,'uv':1}
+    assert data['hours'][0]=={'hour':'00:00','pv':None,'uv':None}
+    assert data['hours'][10]=={'hour':'10:00','pv':0,'uv':0}
+
+
+def test_hourly_tracking_rejects_old_dates_and_cleans_expired_rows(analytics_site):
+    app,client=analytics_site
+    today=datetime.now(ZoneInfo('Asia/Shanghai')).date()
+    expired=f'{(today-timedelta(days=90)).isoformat()}T23'
+    with app.state.analytics_db() as db:
+        db.execute('INSERT INTO analytics_site_hourly VALUES (?,?)',(expired,1))
+        db.execute('INSERT INTO analytics_visitor_hourly VALUES (?,?)',(expired,'old-visitor'))
+    body={'page':'home','visitor':'visitor_aaaaaaaaaaaaaaaa'}
+    assert client.post('/api/analytics/view',json=body).status_code==204
+    with app.state.analytics_db() as db:
+        assert db.execute('SELECT COUNT(*) total FROM analytics_site_hourly WHERE hour=?',(expired,)).fetchone()['total']==0
+        assert db.execute('SELECT COUNT(*) total FROM analytics_visitor_hourly WHERE hour=?',(expired,)).fetchone()['total']==0
+    old_date=(today-timedelta(days=90)).isoformat()
+    assert client.get(f'/api/analytics/hourly?date={old_date}').status_code==422
 
 
 def test_corrupted_current_snapshot_falls_back_to_previous(tmp_path,monkeypatch):
