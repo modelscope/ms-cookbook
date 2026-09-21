@@ -1,6 +1,6 @@
 {
   "title": "魔搭紫皮书",
-  "sourceUpdated": "2026-09-16",
+  "sourceUpdated": "2026-09-20",
   "parts": [
     {
       "title": "第一篇　认识开源模型",
@@ -294,17 +294,25 @@
     },
     {
       "number": 33,
+      "title": "产线巡检 Agent：用 Penguin Harness 快速开发与优化",
+      "partIndex": 6,
+      "file": "source-html/chapter-33.html",
+      "status": "ready",
+      "discussionId": "penguin-harness-line-inspection"
+    },
+    {
+      "number": 34,
       "title": "补充：大模型基础知识",
       "partIndex": 7,
-      "file": "source-html/chapter-33.html",
+      "file": "source-html/chapter-34.html",
       "status": "ready",
       "discussionId": "chapter-31"
     },
     {
-      "number": 34,
+      "number": 35,
       "title": "主流 LLM 评测",
       "partIndex": 7,
-      "file": "source-html/chapter-34.html",
+      "file": "source-html/chapter-35.html",
       "status": "ready",
       "discussionId": "chapter-34"
     }

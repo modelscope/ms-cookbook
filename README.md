@@ -32,9 +32,9 @@
 
 A useful model application starts with practical decisions: which model fits the task, what hardware it needs, how to adapt it to your data, and how to judge the result. The cookbook connects these decisions to runnable examples, using tools such as **EvalScope, ms-swift, DiffSynth, and Ollama**, alongside RAG and Agent workflows.
 
-The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, and product-image creation.
+The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, product-image creation, and production-line inspection.
 
-> **8 parts · 34 chapters · 33 available to read**
+> **8 parts · 35 chapters · 34 available to read**
 
 ## Start reading
 
@@ -116,9 +116,10 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | [30 · 快速使用 PI](content/chapters/chapter-30.md) | Getting started with PI |
 | [31 · 快速使用 DeepSeek Harness](content/chapters/chapter-31.md) | Getting started with DeepSeek Harness |
 | [32 · 补充：Agent 框架知识](content/chapters/chapter-32.md) | Agent framework fundamentals |
+| [33 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-33.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
 | **Part 8 · Supplementary fundamentals** | |
-| [33 · 补充：大模型基础知识](content/chapters/chapter-33.md) | Model architecture, training, inference, and limitations |
-| [34 · 主流 LLM 评测](content/chapters/chapter-34.md) | Invitation to contribute evaluations of mainstream models |
+| [34 · 补充：大模型基础知识](content/chapters/chapter-34.md) | Model architecture, training, inference, and limitations |
+| [35 · 主流 LLM 评测](content/chapters/chapter-35.md) | Invitation to contribute evaluations of mainstream models |
 
 ## Application examples
 
@@ -129,6 +130,7 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | Speech assistant | Connect speech recognition, model responses, and speech synthesis | [18](content/chapters/chapter-18.md) |
 | Enterprise knowledge assistant | Retrieve reference material for grounded answers | [19](content/chapters/chapter-19.md) |
 | Product marketing visuals | Generate and edit product images | [23](content/chapters/chapter-23.md) |
+| Production-line inspection | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation | [33](content/chapters/chapter-33.md) |
 
 ## Community
 

@@ -1,194 +1,226 @@
 <article>
-<h1>补充：大模型基础知识</h1>
-<p>第一次准备下载大模型时，模型页面上的 7B、32B、128K 和 INT4 很容易让人困惑：7B 表示模型有多大，128K 是不是可以直接放入一本书，INT4 为什么能让模型占用更少显存？</p>
-<p>真正开始使用以后，还会遇到会议记录放不下、长对话忘记前文、模型回答没有依据、同一个模型换种量化方式效果发生变化等问题。</p>
-<p>要判断一个模型适不适合当前任务，需要先了解文字怎样进入模型、模型的能力怎样训练出来，以及模型运行时为什么会占用内存和显存。</p>
-<p>这些知识可以分成三条主线，第一条从 Transformer 总体结构出发，再看 Token、Embedding 和 Attention，说明一段文字怎样进入模型并被处理；第二条是预训练、指令微调和后训练，说明模型的能力怎样形成；第三条是上下文长度、KV Cache、量化和硬件，决定模型能不能在目标设备上稳定运行。</p>
-<p>本章内容是对前面相关章节内容的基础知识提炼，例如本次所提及的模型推理相关例如可以参考第六章和第七章的内容；针对模型 SFT 可以参考第九章所介绍的魔搭自带的 ms-swift 微调框架；针对后训练相关内容，也可以参考第十章中介绍的关于偏好对齐与强化学习的内容。针对领域模型的应用和幻觉问题等，也可以参考第十三章介绍的 RAG 方法，利用外部知识即提升大模型在领域类的问答下效果也能进一步降低模型的幻觉。</p>
-<h2><b>18.1　Transformer 基本结构</b></h2>
-<p>Transformer 是目前大多数大型语言模型采用的基础架构。与早期循环神经网络按顺序处理文本不同，Transformer 在训练和输入处理阶段可以并行计算多个位置，并通过 Attention 建立不同位置之间的联系。经典 Transformer 由编码器和解码器组成。每个 Transformer 层通常包含 Attention 和前馈网络。前馈网络也叫 FFN 或 MLP，它会对每个位置的向量进行非线性变换。层中还会使用残差连接和层归一化，帮助信息稳定地通过深层网络。大量相似层堆叠起来后，模型才能逐步形成复杂的文本表示和生成能力。Transformer 的整体架构如下图所示，图中左侧是编码器（Encoder），右侧是解码器（Decoder）。图中的<code>N×</code>表示同类模块会重复堆叠多层，实际层数会根据模型架构和参数规模变化。</p>
-<img src="../../assets/manuscript-20260914/c31-5a97057c9d1670.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>在模型进行推理时，当用户输入一段文字后，模型内部会经过下面的处理过程：大模型在处理文本时，首先会通过 Tokenizer 将原始文字切分成一个个 Token，并转换成对应的 Token ID；随后，Embedding 层会把这些离散的 Token ID 映射成连续的向量表示，同时加入位置信息，让模型知道各个 Token 在句子中的先后顺序。接下来，这些向量会经过多层 Transformer 反复处理，其中 Attention 机制负责让不同 Token 之间相互关注、交换上下文信息，前馈网络则进一步加工每个位置上的特征。经过多层计算后，模型会得到对当前上下文的综合表示，并据此计算下一个 Token 的概率分布，选择或采样出下一个 Token，再将其加入上下文继续重复这一过程，直到完成整段内容的生成。</p>
-<p>原始 Transformer 中的三个部分各有不同作用：</p>
-<p>- <b>编码器（Encoder-only）结构：</b>主要负责理解输入，可以同时参考输入序列中的不同位置，适合分类、抽取和语义表示等任务；</p>
-<p>- <b>解码器（Decoder-only）结构：</b>主要负责生成输出，生成当前位置时只能查看已经出现的内容；</p>
-<p>- <b>编码器—解码器（Encoder-Decoder）结构：</b>先理解输入，再逐步生成输出，常见于翻译和摘要等序列转换任务。</p>
-<p>现代大模型不一定同时使用完整的编码器和解码器。在此基础之上，衍生了基于 Transformer 多种架构，比如，GPT 类生成模型通常采用 Decoder-only 结构，BERT 类模型主要使用 Encoder-only，T5 类模型则保留 Encoder-Decoder 结构。</p>
-<h2><b>18.2　Token：模型处理文本的基本单位</b></h2>
-<p>词元（Token）是模型读取和生成文本时使用的基本单位。它可能是一个汉字、一个词、词的一部分、标点符号，也可能是空格或特殊控制标记。例如，同一句话在不同 Tokenizer 中可能得到不同结果：</p>
-<pre data-language="Plain Text"><code>原文：大型语言模型正在改变办公方式。
+<h1>产线巡检 Agent：用 Penguin Harness 快速开发与优化</h1>
+<h2>1. 背景</h2>
+<p>当前，制造业正持续推进自动化与智能化转型，生产现场对设备运行管理和异常响应效率也提出了更高要求。让 Agent 技术更深入地参与日常巡检与异常处理，成为提升生产运维效率的一个重要方向。</p>
+<p>在生产运维中，产线的稳定运行离不开日常巡检和异常处理。现场人员需要结合设备状态与生产信息判断问题，并协调后续处置。例如，部分产线在供电恢复后仍需人工重启，响应不及时就会延长停机时间，影响生产。因此，如何减轻重复工作、提高异常响应效率，是产线运维中的一个实际需求。</p>
+<p>目前，Agent 为这类工作提供了一种新的实现方式：将业务信息和工具调用结合起来，协助完成从发现问题到执行处理的工作流程。在这类场景中，Agent 可以结合运行资料和设备当前状态分析停机原因（例如停电），并在确认具备运行条件后调用相应工具恢复产线。下面以供电恢复后输送带仍未运行的情况为例，对比人工与 Agent 的处理流程：</p>
+<img src="../../assets/penguin-harness/figure-01.png" alt="图 1：来电后输送带未恢复，人工与 Agent 的处理流程示意。" class="article-image" loading="lazy" decoding="async" />
+<p>然而，人工构建这种 Agent 耗时耗力，还需要花时间编写前后端代码，并进行效果调优。好在，Penguin Harness 是一个用于自动化开发和优化 Agent 的框架，可以大大减少这些工作所需的人工投入。使用者提供业务需求、输入示例、格式规范和 MCP 工具，Penguin Harness 据此开发 Agent 及配套网页应用，并结合评测反馈持续改进 Agent 的任务表现。具体流程如下图所示：</p>
+<img src="../../assets/penguin-harness/figure-02.png" alt="图 2：Penguin Harness 开发与优化产线巡检 Agent。" class="article-image" loading="lazy" decoding="async" />
+<p>本文将以工业生产中的产线巡检场景为例，展示如何使用 Penguin Harness 开发和优化 Agent 应用。</p>
+<h2>2. Penguin Harness 的基础使用</h2>
+<p>在开始开发之前，我们需要先安装 Penguin Harness 客户端、接入模型，并完成一次简单交互。下面以桌面客户端和 DeepSeek Flash 为例，介绍后文会用到的基础操作。</p>
+<h3>2.1 下载并打开客户端</h3>
+<p>我们先安装 Penguin Harness 桌面客户端，后续任务都在客户端中完成。</p>
+<p><strong>第 1 步：下载并安装客户端</strong></p>
+<p>打开 <a href="https://penguin.ooo/download">Penguin Harness 客户端下载页面</a>，选择与自己电脑系统对应的安装包，下载后按提示安装。</p>
+<img src="../../assets/penguin-harness/figure-03.png" alt="图 3：客户端下载页：按操作系统选择安装包。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 2 步：打开客户端</strong></p>
+<p>安装完成后，打开客户端。在主界面左侧点击“模型库”，即可配置接下来要使用的模型。</p>
+<img src="../../assets/penguin-harness/figure-04.png" alt="图 4：Penguin Harness 主界面，左侧为“模型库”入口。" class="article-image" loading="lazy" decoding="async" />
+<h3>2.2 接入模型 API</h3>
+<p>打开客户端后，还需要接入模型服务，Penguin Harness 才能开始处理任务。下面以 DeepSeek 为例，完成 API Key 的获取和模型配置。</p>
+<p><strong>第 1 步：获取 API Key</strong></p>
+<p>先打开 <a href="https://platform.deepseek.com/">DeepSeek 开放平台</a>，创建 API Key，再将 API Key 填入客户端，用于验证模型调用身份。</p>
+<p><strong>第 2 步：填写并保存模型配置</strong></p>
+<p>在“模型库”中展开 DeepSeek 分组，打开 DeepSeek Flash 的模型配置，填入自己的 API Key，点击“确认”保存。通过官方服务接入时，API 地址为 https://api.deepseek.com，模型 ID 为 deepseek-flash。下图标出了对应位置。</p>
+<img src="../../assets/penguin-harness/figure-05.png" alt="图 5：DeepSeek Flash 模型配置：填写 API Key、API 地址和模型 ID。密钥已遮挡。" class="article-image" loading="lazy" decoding="async" />
+<h3>2.3 选择 DeepSeek 模型</h3>
+<p>配置保存后，我们再确认模型是否已显示在模型库中，并为接下来的任务选择 DeepSeek Flash。</p>
+<p><strong>第 1 步：确认模型已保存</strong></p>
+<p>保存后，DeepSeek Flash 会显示在模型库中。下图中的“默认”标签表示它已设为默认模型；也可以在每次任务开始前单独选择模型。</p>
+<img src="../../assets/penguin-harness/figure-06.png" alt="图 6：模型库中的 DeepSeek Flash；“默认”标签表示当前默认模型。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 2 步：选择本次任务使用的模型</strong></p>
+<p>点击左侧“新建对话”，在输入框右下方打开模型列表，选择 DeepSeek Flash。列表中的勾选标记表示本次任务将使用该模型。</p>
+<img src="../../assets/penguin-harness/figure-07.png" alt="图 7：在输入框右下方选择本次任务使用的模型。" class="article-image" loading="lazy" decoding="async" />
+<h3>2.4 开始一次任务</h3>
+<p>模型配置完成后，让我们先用一个简单任务体验一下 Penguin Harness。</p>
+<p><strong>第 1 步：克隆示例仓库</strong></p>
+<p>为了跟着本文从零开发，可以先将 <a href="https://github.com/rank-Yu/line-recovery-starter">line-recovery-starter 仓库</a>克隆到本地（这个仓库在之后的章节也会用到）。在已安装 Git 的电脑上，打开终端，运行：</p>
+<pre data-language="bash"><code class="language-bash">git clone https://github.com/rank-Yu/line-recovery-starter.git</code></pre>
+<p><strong>第 2 步：选择工作区</strong></p>
+<p>命令完成后，当前目录下会生成 line-recovery-starter 文件夹。回到 Penguin Harness，点击输入框下方的工作区入口，选择这个文件夹，再点击“使用此目录”。Penguin Harness 就可以在这个文件夹下工作。</p>
+<img src="../../assets/penguin-harness/figure-08.png" alt="图 8：选择项目文件夹后，点击“使用此目录”。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 3 步：了解技能入口</strong></p>
+<p>输入框下方的“技能”菜单列出了当前可用的技能，它们为特定任务提供操作说明。可以先熟悉这个入口，开发或评测时再选择相应技能；这次的简单任务不需要选择技能。</p>
+<img src="../../assets/penguin-harness/figure-09.png" alt="图 9：输入框下方的“技能”菜单，列出当前可用技能。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 4 步：发送首次任务</strong></p>
+<p>准备好后，在会话输入框中发送一条简单指令，让 Penguin Harness 先了解工作区：</p>
+<blockquote><p>请查看当前工作区的 README.md，简要介绍项目用途，以及 contracts、examples、interfaces 三个目录的作用，控制在 150 字以内。只读取文件，不修改或运行项目。</p></blockquote>
+<img src="../../assets/penguin-harness/figure-10.png" alt="图 10：选定工作区并输入指令后，点击右侧箭头发送。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 5 步：查看任务回复</strong></p>
+<p>发送后，Penguin Harness 会读取项目文件并回复项目介绍，我们就完成了这个简单任务。</p>
+<img src="../../assets/penguin-harness/figure-11.png" alt="图 11：任务完成后的项目介绍与文件读取记录。" class="article-image" loading="lazy" decoding="async" />
+<h3>2.5 本章小结</h3>
+<p>本章介绍了 Penguin Harness 的基础使用：从安装客户端、配置模型 API，到选择 DeepSeek Flash、设置工作区并完成首次交互。这些操作为后续的应用开发和评测优化做好了准备。</p>
+<h2>3. 用 Penguin Harness 从零开发产线巡检 Agent 应用</h2>
+<p>在上一章中，我们完成了 Penguin Harness 的基础配置。在这一章中，我们将用 Penguin Harness 开发产线巡检 Agent 及其配套前端和后端，以下统称为“Agent 应用”。</p>
+<h3>3.1 准备业务材料</h3>
+<p>在 2.4 节中，我们已经将 <a href="https://github.com/rank-Yu/line-recovery-starter">line-recovery-starter 仓库</a>克隆到本地。下表列出了工作区中的主要材料及其用途。</p>
+<table><colgroup><col width="165" /><col width="531" /></colgroup><thead><tr><th><p>工作区材料</p></th><th><p>用途</p></th></tr></thead><tbody><tr><td><p><code>README.md</code></p></td><td><p>业务需求与交付要求</p></td></tr><tr><td><p><code>contracts/</code></p></td><td><p>输入数据、设备状态、操作和报告的格式规范</p></td></tr><tr><td><p><code>examples/</code></p></td><td><p>提供给 Agent 应用的示例输入数据包</p></td></tr><tr><td><p><code>interfaces/</code></p></td><td><p>两个 MCP 服务及其初始化和接入说明</p></td></tr><tr><td><p><code>evaluation/</code></p></td><td><p>后续评测与优化所需的文件</p></td></tr></tbody></table>
+<p><code>README.md</code> 是交给 Penguin Harness 的任务文档，它介绍了我们这个开发任务具体要干什么，要怎么干。下面是文档内容的简要概括：</p>
+<pre data-language="text"><code class="language-text">目标：制作中文产线恢复助手，支持上传 ZIP 或加载示例。
 
-分词器A：大型 / 语言 / 模型 / 正在 / 改变 / 办公 / 方式 / 。
-分词器B：大 / 型 / 语言 / 模型 / 正 / 在 / 改变 / 办公 / 方式 / 。</code></pre>
-<p>两个结果表达的是同一句话，但 Token 数量并不相同。模型实际接收的是每个 Token 对应的数字编号，也就是 Token ID。以整理会议纪要为例，模型看到的不是一篇完整的会议记录，而是一串 Token ID。会议名称、发言内容、时间、标点和输出要求都会占用 Token；模型生成的摘要、结论和行动项同样会继续占用 Token。因此，同一份材料要求输出得越详细，留给原始记录的空间就可能越少。</p>
-<p>如果完全按字符切分，词表可以比较小，但序列会变长；如果完全按完整单词切分，词表会非常庞大，还会不断遇到新词、缩写和拼写变化。大模型通常采用子词分词，在字符和完整单词之间寻找平衡。BPE、WordPiece、Unigram 和 SentencePiece 都是常见方法。</p>
-<p />
-<h2><b>18.3　Embedding：把内容转换为向量</b></h2>
-<p>通常，模型不能直接对文字或图片进行矩阵运算，需要先把内容转换为数字向量。这个过程称为叫嵌入或向量表示（Embedding）。对于文本，分词器（Tokenizer）先把文字转换为 Token ID，Embedding 层再根据 ID 找到对应向量。向量中的单个数通常没有直观含义，但整个向量可以表示该 Token 在模型内部的特征。以 Token 为“会议”为例，对应的 Token ID 可以是某个整数编号，例如“15872”，而该 Token 对应的表征即 Embedding，可以是：[0.12, -0.37, 0.08, ……]，这样一组向量。Embedding 会在训练过程中不断调整，出现在相似上下文中的 Token，其向量往往会形成某些相近特征。由于模型结构和训练的过程不同，同一个词经过多层 Transformer 处理后，还会根据上下文形成不同表示。</p>
-<p>在模型获取输入文本的语义信息时，不仅要知道 Token 是什么，还要知道它位于什么位置。仅有 Token Embedding 时，例如“会议延期”和“延期会议”包含相似 Token，但由于语序差异，却表达不同结含义。因此，模型还需要加入位置编码或位置表示。下图以 BERT 的输入层为例。</p>
-<img src="../../assets/manuscript-20260914/c31-b953381f9bd0aa.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>如上图 BERT 中所采用的表征方式所示，展示了 Token Embedding、句段 Embedding 和位置 Embedding 的组合方式。当然，不同模型结构和设计方式，采用的具体方案并不完全相同。以多模态大模型为例，图片、音频等内容也要先转换为向量。图片通常先被切成图像块，由视觉编码器提取特征；音频会先转换为声学特征，再由音频编码器处理。不同模态的特征经过投影或连接模块（Projection）后，才能进入大模型能够处理的向量空间。如下图所示，通过连接模块讲图像信息与语义信息进行融合。</p>
-<img src="../../assets/manuscript-20260914/c31-7405b55ce19469.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p />
-<h2><b>18.4　Attention：计算输入之间的关联</b></h2>
-<p>Attention 负责判断当前位置应该重点参考输入中的哪些内容。它会在模型已经形成的向量表示上计算关联程度，而不只是查找相同词语。例如，在“项目延期了，报告解释了它为什么没有按期完成”这句话中，模型处理代词“它”时，需要结合上下文判断它更可能指向“项目”，还是“报告”。在会议记录中提取负责人时，模型也需要把任务描述、人员姓名和表示分工的句子联系起来。</p>
-<p />
-<h3><b>18.4.1　从 Q、K、V 理解注意力</b></h3>
-<p />
-<p>每个输入向量会经过不同变换，形成 Query、Key 和 Value，通常简写为 Q、K 和 V。Attention 的计算公式可以简化写成：</p>
-<p />
-<p><span class="arithmatex">\(\mathrm{Attention}(Q, K, V)=\mathrm{softmax}\left(\frac{QK^{\mathrm{T}}}{\sqrt{d_k}}\right)V\)</span></p>
-<p>其中，Q 表示当前位置正在寻找什么信息，K 表示每个位置可以用什么特征被匹配，V 表示匹配后需要取回的内容。模型先比较 Q 和 K，得到当前位置与其他位置之间的相关分数；再通过 softmax 把分数转换为权重，按照权重对 V 进行加权汇总。公式中的<span class="arithmatex">\(d_k\)</span>是 Key 向量的维度，除以<span class="arithmatex">\(\sqrt{d_k}\)</span>用于调整分数尺度，使计算更加稳定。</p>
-<p>如果 Q、K、V 来自同一段序列，就称为自注意力（Self-Attention），用于建立序列内部的联系；如果 Q 来自一段序列，而 K、V 来自另一段序列，就称为交叉注意力（Cross-Attention）。例如，编码器—解码器翻译模型可以让解码器通过交叉注意力读取编码器提供的原文信息。</p>
-<p>对于生成式大模型，当前位置只能参考已经出现的内容，因此 Attention 中还需要加入因果掩码，屏蔽后续位置。即使屏蔽了未来 Token，完整因果注意力处理的关联数量仍会随序列长度近似按平方增长。同时，生成阶段还要保存历史 Token 的 K 和 V，形成后文介绍的 KV Cache。随着上下文变长，Attention 的计算和缓存开销会越来越突出，下面介绍的不同结构正是围绕这些问题逐步发展起来的。</p>
-<p />
-<h3><b>18.4.2　多头注意力（MHA）</b></h3>
-<p />
-<p>多头注意力（Multi-Head Attention，MHA）由 2017 年的 Transformer 论文《Attention Is All You Need》提出，后来应用于 BERT 以及 Llama 2 7B、13B 等模型。它在单组注意力计算的基础上增加多个并行的注意力头，使模型能够从不同的表示空间提取上下文关系。</p>
-<p>在 MHA 中，每个头都有各自生成 Q、K、V 的投影参数，分别计算注意力，再把各头的结果连接起来，通过线性层形成输出。如下图所示，左侧展示一组缩放点积注意力的计算过程，右侧把这一过程并行执行多次，再进行结果融合。不同头的关注模式由训练形成，可以共同支持指代判断、语义关联和远距离依赖等任务。</p>
-<img src="../../assets/manuscript-20260914/c31-dd04e51bfbe004.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>MHA 提升了模型聚合不同类型信息的能力，也便于在训练中并行计算。不过，在逐 Token 生成时，各个头都要读取自己的历史 K、V。模型层数、头数和上下文长度增加后，这部分缓存和数据读取会占用大量资源。因此，后续改进首先考虑能否保留多个 Query 头，同时减少需要保存的 Key 头和 Value 头。</p>
-<p />
-<h3><b>18.4.3　多查询注意力（MQA）</b></h3>
-<p>多查询注意力（Multi-Query Attention，MQA）由 Noam Shazeer 在 2019 年的论文《Fast Transformer Decoding: One Write-Head is All You Need》中提出，后来应用于 Falcon-7B 等大模型。它主要针对解码阶段的内存带宽问题：模型生成每一个新 Token 时，都需要读取已有的 KV Cache，读取量过大时，即使计算单元仍有余量，生成速度也会受到限制。</p>
-<p>MQA 保留多个 Query 头，但让它们共享一组 Key 和 Value。这样，不同头仍然可以生成不同的查询，历史位置却只需要保存一份供各头共用的 K、V。下图展示了将已有 MHA 模型转换为 MQA 时的一种初始化方法：把多个 Key 投影矩阵做平均，得到一个共享投影，Value 投影也可以采用同样处理；转换后还要继续训练，使模型适应新的共享结构。</p>
-<img src="../../assets/manuscript-20260914/c31-b12533e5299d38.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>采用这一结构后，MQA 可以明显减少 KV Cache 以及每步解码的数据读取量，为较长输入或较多并发请求腾出空间。例如，Falcon-7B 配置了 71 个 Query 头，但只有 1 个 KV 头。相对于相同头维度、相同精度的 71 组 KV 结构，其理论 KV 缓存只需约七十一分之一。共享也会约束 K、V 的表示容量，因此需要通过训练和评测确认这种效率收益对任务质量的影响。</p>
-<p />
-<h3><b>18.4.4　分组查询注意力（GQA）</b></h3>
-<p />
-<p>分组查询注意力（Grouped-Query Attention，GQA）由 Google Research 团队在 2023 年的 GQA 论文中系统提出，并应用于 Llama 2 70B、Mistral 7B 等大模型。它希望在 MHA 的多组表示能力和 MQA 的低缓存开销之间取得平衡，避免所有 Query 头都只能使用同一组 K、V。</p>
-<p>GQA 把 Query 头划分为若干组，每组共享一组 Key 和 Value，不同组保留不同的 K、V 表示。如下图所示，MHA 为每个 Query 头配置对应的 K、V，MQA 让所有 Query 头共享一组 K、V，GQA 则在组内共享。当组数等于 Query 头数时，GQA 等价于 MHA；当只有一组时，就等价于 MQA。</p>
-<img src="../../assets/manuscript-20260914/c31-a33c19025f4f45.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>以 Mistral 7B v0.1 为例，它有 32 个 Query 头和 8 个 KV 头，每 4 个 Query 头共享一组 K、V。在头维度和精度相同的情况下，这部分缓存约为 MHA 的四分之一。对实际部署而言，减少缓存和读取量通常有利于提高并发能力与解码效率；由于不同组仍保留各自的 K、V，GQA 也比完全共享的 MQA 保留了更多表示空间。这里减少的是 KV 头数，模型仍然可以对允许访问的全部历史位置计算注意力。</p>
-<p />
-<h3><b>18.4.5　滑动窗口注意力（SWA）</b></h3>
-<p />
-<p>滑动窗口注意力（Sliding Window Attention，SWA）来自长序列建模中的局部注意力思路，Mistral 7B v0.1 将它与 GQA 结合使用。GQA 减少了每个位置需要保存的 KV 头数，SWA 则进一步限制每个位置直接关注的历史范围，以降低长文本的计算和缓存压力。</p>
-<p>SWA 为每个 Token 设置固定大小的窗口，只对窗口内的近期位置计算注意力。下图左侧是完整因果注意力，中间是滑动窗口注意力，右侧说明信息如何通过多层网络向后传递。虽然单层只读取局部范围，但上一层的 Token 表示已经包含更早的上下文信息，因此模型经过多层处理后，可以间接利用窗口以外的内容。</p>
-<img src="../../assets/manuscript-20260914/c31-5586222f5a5ecb.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>Mistral 7B v0.1 采用 4096 个 Token 的窗口，并使用滚动缓存覆盖已经移出窗口的旧 K、V，使各层缓存可以维持在固定范围。论文在 16K 序列、4096 窗口的测试中报告，经过相应内核优化后，速度约为完整注意力基线的 2 倍。这种结构能够控制长文本的资源增长，但远处的原始细节需要经过中间表示传递，因此局部窗口大小并不能直接等同于模型能够准确检索的上下文长度。</p>
-<p />
-<h3><b>18.4.6　多头潜在注意力（MLA）</b></h3>
-<p />
-<p>多头潜在注意力（Multi-head Latent Attention，MLA）由 DeepSeek 团队在 DeepSeek-V2 中提出，随后继续用于 DeepSeek-V3。它同样针对 KV Cache 过大的问题，但进一步改变了缓存的保存形式：通过学习一个紧凑的联合表示，减少每个 Token 需要保存的数据，同时支持多个注意力头使用这些信息。</p>
-<p>具体来说，MLA 先用低秩投影把 K 和 V 联合表示为较低维度的潜在向量，推理时主要缓存这一向量，以及单独承载旋转位置信息的 Key 分量。多个 Query 头可以利用这个共享表示完成匹配和信息聚合，部分投影矩阵还可以在推理时合并，减少显式展开完整 K、V 的操作。下图中的斜线区域表示需要缓存的内容，可以看到 MLA 将多头 K、V 的缓存转移到了右侧较小的潜在表示中。</p>
-<img src="../../assets/manuscript-20260914/c31-ca9b169844f044.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>这种设计让 DeepSeek-V2、V3 能够在保留多头表达能力的同时，降低长上下文生成中的缓存压力。DeepSeek-V2 报告中，MLA 每 Token 的 KV 缓存规模相当于只有 2.25 组 KV 头的 GQA。它压缩的是每个位置的表示维度，历史位置本身仍然保留，因此在完整注意力模式下，模型依然需要读取并匹配全部历史条目。进一步减少每次实际参与计算的条目，就需要引入稀疏注意力。</p>
-<p />
-<h3><b>18.4.7　DeepSeek 稀疏注意力（DSA）</b></h3>
-<p />
-<p>DeepSeek 稀疏注意力（DeepSeek Sparse Attention，DSA）由 DeepSeek 团队提出，应用于 DeepSeek-V3.2-Exp 和 DeepSeek-V3.2。它在 MLA 基础上增加动态选择机制，解决长上下文中即使单个 KV 条目已经较小，读取和计算全部历史条目仍然昂贵的问题。</p>
-<p>DSA 先通过轻量索引器 Lightning Indexer 计算当前 Query 与历史 Token 的相关分数，再取分数最高的 Top-k 个位置，交给主 Attention 进行计算。下图中的绿色部分是新增的索引过程，Top-k Selector 负责选择位置，上方的核心 Attention 则读取所选位置对应的 MLA 缓存。索引器使用较小的表示和较少的头完成筛选，其计算成本低于直接执行完整的主 Attention。</p>
-<img src="../../assets/manuscript-20260914/c31-d111bded53c358.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>DeepSeek-V3.2 报告中的配置是每个 Query 最多选择 2048 个 KV 条目。随着上下文增长，核心 Attention 仍可以集中处理这一有限范围，因而明显降低长输入处理和后续生成的成本。未被本次选中的历史条目仍可供后续 Query 检索，所以稀疏选择主要减少的是本次读取和计算量，而不是按相同比例删除全部缓存。索引器本身仍需处理历史候选，实际开销也会受到上下文长度影响。</p>
-<p />
-<h3><b>18.4.8　MiniMax 稀疏注意力（MSA）</b></h3>
-<p>MiniMax 稀疏注意力（MiniMax Sparse Attention，MSA）由 MiniMax 团队提出，应用于 MiniMax-M3。它面向百万 Token 上下文中的效率问题，特别考虑了如何让稀疏注意力适合 GPU 批量计算，而不仅是在理论上减少参与计算的 Token。</p>
-<p>MSA 建立在 GQA 基础上，包含索引分支和主分支。索引分支先计算 Token 级相关分数，再取每个块内的最高分数作为块分数，为不同 GQA 组分别选择 Top-k 个历史块。主分支随后读取选中块中满足因果条件的 Token 级 K、V，同时保留当前所在的局部块。如下图所示，右侧两个 Query 组可以形成不同的选择范围，同组内的 Query 头则共享选择结果。</p>
-<img src="../../assets/manuscript-20260914/c31-e890dd80a296d1.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>按块组织访问可以提高 GPU 处理数据的规则性，而分组选择使不同组能够保留不同的检索模式。在 109B 参数实验模型的 1M 上下文测试中，论文报告 MSA 的每 Token 注意力计算量约为 GQA 的 1/28.4；配合专用内核，在 H800 上处理输入的 Prefill 阶段和逐 Token 生成的 Decode 阶段分别获得约 14.2 倍和 7.6 倍的速度提升。这说明稀疏算法与计算内核需要共同设计，减少计算量才能更充分地转化为实际速度收益。</p>
-<p />
-<h3><b>18.4.9　Qwen 稀疏注意力（QSA）</b></h3>
-<p>Qwen 稀疏注意力（Qwen Sparse Attention，QSA）由 Qwen 团队提出，并应用于 Qwen3.8-Flash-Next。该模型采用三层 Gated DeltaNet 搭配一层 QSA 的混合结构：前者通过状态更新高效处理序列，后者保留对历史 Token 的直接检索。QSA 重点处理的问题是，长上下文中的索引器自身也会产生较大开销。</p>
-<p>为此，QSA 先将连续多个 Token 的索引 Key 通过平均池化压缩成微块表示，在较短的微块序列上计算相关分数并选择 Top-k 块。选中后，再把块展开为原始 Token 位置，让核心 Attention 读取对应的 K、V；尚未组成完整块的尾部 Token 也会保留。下图左侧是压缩索引过程，右侧是根据选择结果进行的微块稀疏 Attention，两部分之间传递的是位置索引。</p>
-<img src="../../assets/manuscript-20260914/c31-346289a9285559.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>这样既减少了主 Attention 访问的位置，也缩短了索引器需要扫描的序列。Qwen3.8-Flash-Next 报告在 1M 上下文的内核测试中，QSA 相对稠密注意力的 Prefill 和 Decode 速度分别提升约 7.6 倍和 4.9 倍。理解这一结构时，需要区分索引表示与主 Attention 缓存：QSA 压缩前者来降低筛选成本，选中后仍读取 Token 级 KV，因此可以保留所选区域的细粒度信息。</p>
-<p />
-<h3><b>18.4.10　Kimi Delta Attention（KDA）</b></h3>
-<p />
-<p>Kimi Delta Attention（KDA）由 Moonshot AI 团队在 Kimi Linear 中提出，实际应用于 Kimi Linear 的 48B 总参数、3B 激活参数模型。它采用线性注意力思路，把历史信息持续写入固定大小的状态，减少每一步生成时反复读取长历史序列的开销。</p>
-<p />
-<p>KDA 在 Gated DeltaNet 的基础上引入更细粒度的门控。新 Token 到来时，模型先控制旧状态中不同通道的信息保留程度，再通过 Delta 规则修正已有的键值关联。这种更新可以理解为利用新输入与当前状态所预测内容之间的差异，调整状态中保存的信息。由于衰减门按通道变化，不同部分可以采用不同的保留速率。计算时还可以按块并行处理一段 Token，以提高 GPU 效率。</p>
-<img src="../../assets/manuscript-20260914/c31-bc3814a6007c94.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>上图展示了 Kimi Linear 将三层 KDA 与一层 MLA 交错使用的方式。KDA 层用固定大小的状态降低长序列成本，MLA 层则补充对具体历史位置的直接检索，缓解固定状态容量有限的问题。在论文采用相同训练方案的比较中，这一混合模型相对完整 MLA 基线最多减少 75%的 KV Cache，并在 1M 上下文下获得最高约 6 倍的解码吞吐量。这些效果对应 Kimi Linear 的混合架构，而不是所有 Kimi 型号的统一配置。</p>
-<p />
-<h3><b>18.4.11　压缩稀疏注意力（CSA）</b></h3>
-<p />
-<p>压缩稀疏注意力（Compressed Sparse Attention，CSA）由 DeepSeek 团队在 DeepSeek-V4 中提出，应用于 DeepSeek-V4-Pro 和 DeepSeek-V4-Flash。前面的 MLA 主要压缩每个 Token 的 KV 表示，CSA 进一步沿序列方向减少条目数量，将多个 Token 的信息汇聚到较少的 KV 条目中，再进行稀疏选择。</p>
-<p>CSA 先用可学习的 Token 级压缩器处理连续 Token，并结合相邻块的重叠信息，形成压缩 KV。接着，Lightning Indexer 为这些压缩条目打分，选择 Top-k 条目参与主 Attention。下图中，压缩器位于索引和选择之前，主 Attention 直接读取压缩后的 KV；左侧还有一条滑动窗口分支，把近期未压缩的 Token 一起送入计算，保留局部细节。</p>
-<img src="../../assets/manuscript-20260914/c31-0aac58ba333b88.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>DeepSeek-V4 报告中的 CSA 压缩率为 4，即历史 KV 条目数量约降至四分之一，再从中选择部分条目进行核心 Attention 计算。因此，CSA 既降低长期缓存量，也减少每次读取和计算的历史内容。QSA 压缩索引后会回到原始 Token，而 CSA 直接在压缩条目上完成信息聚合，因而对历史 KV 本身也进行了压缩。这种设计需要压缩器保留有用特征，并由局部窗口补充近期细节。</p>
-<p />
-<h3><b>18.4.12　高度压缩注意力（HCA）</b></h3>
-<p />
-<p>高度压缩注意力（Heavily Compressed Attention，HCA）同样由 DeepSeek 团队在 DeepSeek-V4 中提出，并与 CSA 在 DeepSeek-V4-Pro 和 Flash 的多层结构中交错使用。它采用更强的序列压缩，让模型以较少的缓存保留覆盖大范围历史的信息，与 CSA 的选择性读取形成补充。</p>
-<p>HCA 的压缩率在报告中设为 128，远高于 CSA 的 4。多个 Token 通过可学习的加权汇聚形成一个压缩条目后，当前 Query 会对全部因果可见的压缩历史执行 Attention，不再进行 Top-k 筛选。如下图所示，HCA 保留压缩分支和局部滑动窗口分支，但省去了 CSA 中的索引器和选择器。窗口提供近期 Token 的细节，压缩历史提供更大范围的上下文信息。</p>
-<img src="../../assets/manuscript-20260914/c31-db5fcb025aa2e7.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p />
-<p>CSA 与 HCA 交错配置，使 DeepSeek-V4 能够同时利用不同粒度的历史表示。报告中，在 1M 上下文下，DeepSeek-V4-Pro 的单 Token 推理 FLOPs 和 KV Cache 分别约为 DeepSeek-V3.2 的 27%和 10%。这是混合 Attention 及低精度计算、存储共同作用的整体效果。对使用者而言，这类结构的意义在于使超长上下文更容易在有限硬件上运行；具体模型能否准确提取长材料中的细节，仍取决于压缩方式、训练过程和实际任务。</p>
-<p>从这些模型的设计可以看出，Attention 的改进并不只有一种方向。MHA、MQA 和 GQA 主要改变头之间的共享关系，MLA 压缩每个位置的 KV 表示，DSA、MSA 和 QSA 减少核心 Attention 访问的位置，KDA 通过状态更新处理历史，而 CSA、HCA 进一步压缩历史条目。模型可以将其中多种方法组合使用，因此分析资源需求时，需要结合每种结构的层数和缓存形式。无论采用哪种结构，Attention 都只负责聚合上下文信息，模型的整体能力仍由它与 Embedding、前馈网络及训练过程共同形成。</p>
-<p />
-<h2><b>18.5　预训练：从大规模数据中学习基础规律</b></h2>
-<p>模型结构决定信息怎样计算，训练过程则决定模型最终学到什么。大模型的训练通常可以分为几个阶段。首先，预训练阶段，模型会在海量文本、代码等数据上学习语言规律、知识结构和基本的推理模式，获得通用能力；随后，进入指令微调（Supervised Fine-Tuning，SFT）阶段，通过大量“指令—回答”样本，让模型学会理解用户要求，并按照指定任务形式进行回答；在此基础上，还会进一步进行偏好优化或强化学习，根据人工反馈或规则对模型行为进行调整，使回答在有用性、准确性、表达风格、安全性以及行为边界等方面更加符合预期。</p>
-<p>预训练是模型形成基础能力的阶段。模型会在大规模文本、代码或多模态数据上反复训练。对于 Decoder-only 语言模型（比如 GPT 系列），常见训练任务是根据前面的内容预测下一个 Token，预测错误时再调整模型参数。海量样本不断重复后，模型逐渐学习语言结构、表达方式和不同概念之间的统计关系，并形成完成问答、摘要、翻译和代码生成等任务所需的基础表示与生成能力。</p>
-<p>模型在预训练中学到的知识分布在大量参数中，并不是一套可以逐条查询的数据库。它可以组合已经学到的规律，生成训练数据中没有原样出现过的内容，也可能把相关但不完全匹配的信息组合在一起，形成看似合理的错误答案。当然，训练数据也不是越多越好。重复内容、低质量网页、错误知识、隐私数据和有害内容都会影响模型。预训练前通常需要进行格式解析、去重、质量筛选、安全过滤和数据配比。数据规模决定模型能够接触多少内容，数据质量则直接影响模型能够从中学到什么。</p>
-<p />
-<h2><b>18.6　指令微调：让模型学会按照要求完成任务</b></h2>
-<p>完成预训练后，模型已经能够续写文本，但不一定会稳定地按照用户要求完成任务。例如，用户要求列出三个行动项，基础模型可能继续扩写问题，也可能忽略指定格式。指令微调会使用指令和期望答案组成的示例继续训练模型，以下是一个指令微调的例子：</p>
-<pre data-language="Plain Text"><code>指令：把下面的会议记录整理成行动项。
-输入：会议记录正文。
-输出：包含任务、负责人和截止时间的表格。</code></pre>
-<p>经过问答、摘要、信息抽取、代码、工具调用和安全拒答等不同类型的示例训练，模型会逐渐学会识别用户意图并遵守输出要求。指令微调主要教模型怎样使用已有能力。它可以补充部分知识，但不适合解决所有知识更新问题。需要频繁更新或者必须提供来源的内容，更适合通过知识库、检索或外部工具在运行时提供。</p>
-<p />
-<h2><b>18.7　后训练：继续调整模型行为</b></h2>
-<p>后训练是模型完成预训练后进行的一系列训练和对齐工作的总称。指令微调通常属于后训练的一部分，进一步地指令微调（SFT）、偏好优化和强化学习也可能出现在这个阶段。因此，指令微调和后训练不是两个互相独立的步骤，前者是一类具体方法，后者是包含多种方法的阶段。几种训练方式可以先按下面的关系理解如下：</p>
-<table><colgroup><col /><col /><col /></colgroup><tbody><tr><td><p>阶段或方法</p></td><td><p>主要使用的数据</p></td><td><p>主要解决的问题</p></td></tr><tr><td><p>预训练</p></td><td><p>大规模文本、代码和多模态数据</p></td><td><p>让模型学习语言和知识等基础规律</p></td></tr><tr><td><p>指令微调／SFT</p></td><td><p>指令与期望回答</p></td><td><p>让模型学会按照任务要求输出</p></td></tr><tr><td><p>偏好优化</p></td><td><p>同一问题下的较好回答和较差回答</p></td><td><p>让模型更倾向符合偏好的回答</p></td></tr><tr><td><p>强化学习</p></td><td><p>提示、模型回答和奖励信号</p></td><td><p>根据奖励继续调整生成策略</p></td></tr></tbody></table>
-<p>参考 InstructGPT 中采用的基于人类反馈的强化学习（Reinforcement Learning from Human Feedback，RLHF）框架，目前已经行程了一条经典后训练路线。RLHF 通常第一步使用人工示范数据完成 SFT，第二步使用回答排序数据训练奖励模型，第三步根据奖励模型给出的分数，使用 PPO 优化语言模型的生成策略。具体过程如下图所示。</p>
-<img src="../../assets/manuscript-20260914/c31-0040f1515f396a.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>其中，奖励模型给出的分数代表一种偏好，不等于客观真理。如果偏好数据覆盖不足，或者奖励规则设计不合理，模型可能只是学会迎合评分方式。</p>
-<p>实际模型不一定采用完全相同的路线。有的模型使用 SFT 加 DPO，有的使用 SFT、奖励模型和 PPO，还有的会加入 AI 反馈、安全对齐、工具使用训练和多轮对话数据。前面的预训练、指令微调和后训练解释了模型能力怎样形成。模型训练完成以后，使用者更常遇到的问题是一次能输入多少内容、运行时需要多少显存，以及有限硬件应该选择什么精度。</p>
-<h2><b> 18.8　上下文长度：模型一次能够处理多少内容</b></h2>
-<p>模型完成训练后，就进入实际推理和部署阶段。上下文长度决定一次请求能够放入多少 Token；上下文越长，模型能够读取的材料越多，但 Attention 计算和 KV Cache 占用也会增加，进而影响推理速度和显存需求。这里所谓的上下文，即一次请求中的系统提示、对话历史、当前输入、文件内容、工具说明、工具返回结果和模型已经生成的内容，可以使用如下公式来表达：上下文占用= 系统指令 + 对话历史 + 当前输入+ 附件内容 + 工具信息 + 模型输出。</p>
-<p>正如上文所提及的，大模型的上下文占用并不只是用户当前输入的内容，而是由多部分共同构成，包括系统指令、此前的对话历史、用户当前输入、附件中的相关内容、工具调用所需的信息以及模型已经生成的输出等。这些内容都会占用模型的上下文窗口，因此随着对话变长、附件增多或工具信息变复杂，可用于后续输入和生成的上下文空间也会逐渐减少。比如，模型标注支持上下文长度为：128K，通常表示一次请求能够处理的 Token 总量级。具体是否包含输出、单次最大输出是多少，还要看模型和服务接口的限制。通常，超出上下文后，平台可能拒绝请求、截断部分内容，或者自动压缩历史记录。</p>
-<p>为了提升模型在长文档场景下的推理效率和回答质量，在输入材料前应尽量对内容进行整理，删除与任务无关、重复或价值较低的信息，并明确告诉模型需要重点关注的章节、字段或问题范围，避免模型在大量无关上下文中分散注意力。对于篇幅特别长、一次难以完整处理的材料，可以先按照章节、主题或固定长度进行分段，让模型分别完成信息提取、摘要或分析，再对各部分结果进行统一汇总和综合判断。对于关键结论、重要数据或需要进一步核验的内容，还应要求模型同时标明对应的原文位置、章节或页码，便于后续人工检查和结果追溯，从而提高整体处理过程的准确性、可解释性和可靠性。</p>
-<p />
-<h2><b>18.9　KV Cache：长文本生成中的显存占用</b></h2>
-<p>基于 Transformer 架构的生成式模型，通常会逐个生成 Token，在生成的构成中，如果每生成一个 Token 都重新计算此前全部 Token 的注意力信息，会产生大量重复工作，因此不妨引入一套缓存机制，即 KV Cache。KV Cache 会保存各层已经计算过的 Key 和 Value，生成下一个 Token 时只需要计算新增部分，从而提高生成速度。每增加一个 Token，各个 Transformer 层都要保存对应的 K 和 V。因此，KV Cache 会随着上下文长度、输出长度、并发数量和模型层数增加。</p>
-<p>对于常见 Decoder-only 模型，可以用下面的简化公式理解单条序列的缓存占用，可以用以下公式表示：</p>
-<p><span class="arithmatex display-math">\(\text{KV Cache 占用}
-\approx
-2 \times \text{层数}
-\times \text{Token 数}
-\times \text{KV 头数}
-\times \text{每个头的维度}
-\times \text{每个数的字节数}
-\)</span></p>
-<p>模型权重加载完成后占用相对固定，KV Cache 却会随请求变化，因此，同一个量化模型在短问答中可以顺利运行，换成长文档或者多人并发后仍可能显存不足。例如，同一台服务器只处理一份短会议记录时可能运行正常，如果同时让十名用户上传长记录后，模型需要为多条序列分别保存 KV Cache，显存压力会明显增加。这也解释了，即使模型文件能够放进显存，随着输入的文本长度和并发规模的增大，算力资源的消耗也在发生变化。因此，在实际部署时，可以通过缩短无关上下文、限制最大生成长度、降低并发量、使用分页缓存，或者选择采用 GQA、MQA 结构的模型降低 KV Cache 压力，提升算力服务的效率。</p>
-<p />
-<h2><b>18.10   参数规模、量化与硬件</b></h2>
-<p>模型文件实际是保存当前模型结构即即相关参数，这些参数本质上是一组数值。结合计算机组成原理中的相关只是，这些参数通常在计算机中是一堆 0 和 1 的表达，而采用不同位数规模来表达同一数值，即规定的数值范围也规约了数值的精度，在模型训练时，通常用采用 FP32、FP16 或 BF16 等浮点格式进行运算，实际表示采用 32 位或 16 位 0 和 1 来表示一个数，位数越多，虽然表示的数值范围和数字精度都有所增加，但实际的资源消耗也非常大，因而，为进一步减少资源消耗，提出了量化方法，所谓量化，就是把这部分原本多位的浮点数值转换为 8 位的 INT8、4 位大的呃 INT4 等更低精度表示，从而减少模型文件和运行时的资源占用。下表展示了浮点数精度对应的相关特点：</p>
-<table><colgroup><col /><col /><col /></colgroup><tbody><tr><td><p>精度</p></td><td><p>每个参数的理论字节数</p></td><td><p>典型特点</p></td></tr><tr><td><p>FP32</p></td><td><p>4</p></td><td><p>精度较高，资源占用较大</p></td></tr><tr><td><p>FP16／BF16</p></td><td><p>2</p></td><td><p>常见训练和高精度推理格式</p></td></tr><tr><td><p>INT8</p></td><td><p>1</p></td><td><p>权重理论占用约为 16 位的一半</p></td></tr><tr><td><p>INT4</p></td><td><p>0.5</p></td><td><p>权重理论占用约为 16 位的四分之一</p></td></tr></tbody></table>
-<p>实际量化不是把所有小数简单取整，而是把一组浮点数映射到有限范围，并保存缩放系数、零点或分组信息。常见做法包括只压缩模型权重、同时量化权重和激活，以及在模型训练完成后进行训练后量化，我们过于不用担心因为量化导致的数值变化，因为最终模型在生成时，是预测每个候选 Token 作为下一个词的概率，在选择时，更多地时关系排序以及经过归一化后的得分，因此量化的精度虽有损失，但是在严格的控制下，可以有效地兼顾模型本身的生成效果。</p>
-<p>在进行模型选型时，经常需要判断显存是否够用。模型名称中的 7B、14B 和 70B 通常表示大约 70 亿、140 亿和 700 亿个参数。参数是模型训练中学到的数值，分布在 Attention、前馈网络和 Embedding 等模块中。</p>
-<p>参数量不能直接等同于模型文件大小，还要结合每个参数采用的精度。只计算模型权重时，可以使用下面的公式：</p>
-<p><span class="arithmatex display-math">\(权重占用 ≈ 参数量 × 每个参数的字节数
-\)</span></p>
-<table><colgroup><col /><col /><col /><col /></colgroup><tbody><tr><td><p>参数规模</p></td><td><p>FP16／BF16</p></td><td><p>INT8</p></td><td><p>INT4</p></td></tr><tr><td><p>7B</p></td><td><p>约 14GB</p></td><td><p>约 7GB</p></td><td><p>约 3.5GB</p></td></tr><tr><td><p>14B</p></td><td><p>约 28GB</p></td><td><p>约 14GB</p></td><td><p>约 7GB</p></td></tr><tr><td><p>32B</p></td><td><p>约 64GB</p></td><td><p>约 32GB</p></td><td><p>约 16GB</p></td></tr><tr><td><p>70B</p></td><td><p>约 140GB</p></td><td><p>约 70GB</p></td><td><p>约 35GB</p></td></tr></tbody></table>
-<p>表中的数字只表示模型权重的理论下限。量化模型还要保存缩放系数等信息，实际推理还需要 KV Cache、中间计算结果、推理框架工作区和并发请求缓存。</p>
-<p>例如，14B 模型的 INT4 权重理论上约 7GB，但在 8GB 显卡上几乎没有空间留给 KV Cache 和运行缓冲。短上下文、单请求时可能运行，处理长文档时则容易显存不足。使用 12GB 或 16GB 显存更加宽松。70B INT4 权重约 35GB，一般需要 48GB 以上的显存，在部署时，可以选择更大现存的算力卡、多卡或者使用 CPU 内存进行混合推理。</p>
-<p />
-<h2><b>18.11　领域模型：让通用模型适应专业场景</b></h2>
-<p>通用大模型需要覆盖大量知识和任务，在医疗、金融、法律和代码等专业场景中，不一定熟悉行业术语、业务流程和风险边界。领域模型通常是在通用底座模型上，使用专业数据和任务进行继续训练或适配，使模型更加适合某个领域。它不一定从零训练，也不只是通过 Prompt 把模型设定成专业人士。常见训练和适配方式包括：</p>
-<p />
-<ol><li>使用领域文献、法规、代码库等未标注数据继续预训练；</li><li>使用专业问答、信息抽取、报告生成等数据进行领域指令微调；</li><li>使用专家偏好、拒答规则和风险案例进行安全对齐；</li><li>连接专业知识库、数据库和外部工具，提供可以更新和追溯的信息。</li></ol>
-<p>这里需要区分领域模型和领域应用。领域模型经过专业数据训练，专业能力已经写入模型参数；领域应用则可以直接使用通用模型，再连接专业知识库、规则和工具。实际系统也经常把两种方式组合起来。</p>
-<p>下图中的法律问答系统先提取关键词，再从法规向量库中检索参考条文，最后由法律大模型结合依据生成回答。这说明专业能力不一定只依靠模型参数，外部资料也是领域应用的重要组成部分。</p>
-<img src="../../assets/manuscript-20260914/c31-ffa20d77d9ad6c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>专业数据并不等于专业可靠。医疗模型仍要检查医学证据和安全边界，法律模型要检查法条和引用，金融模型要检查数据时效和计算结果，代码模型则要通过运行和测试验证。医疗、法律和金融等高风险任务还应保留专业人员审批。</p>
-<p />
-<h2><b>18.13　模型幻觉：看似合理但缺少依据</b></h2>
-<p>使用模型整理会议记录时，如果原文没有指定负责人，模型却自行补出一个姓名；使用模型抽取合同时，如果原文没有金额，模型却生成了一个具体数字，这些都属于模型幻觉。模型幻觉是指大模型生成了语言流畅、结构完整，却与事实、输入材料或可验证来源不一致的内容。它还可能表现为编造不存在的政策、论文或网址，写错人物和时间，或者把没有形成的讨论写成已经确定的结论。</p>
-<p>大模型的核心任务是根据上下文预测下一个 Token，在生成的过程中，模型无法验证每句话是否真实。导致模型幻觉的原因有很多，比如，预训练数据可能存在错误或过时信息；用户问题可能缺少关键条件；长文本中的证据也可能被忽略或截断。后训练如果设计的奖励函数，更加偏向于鼓励完整、流畅的回答，也可能使模型在缺少依据时仍然继续生成。</p>
-<h3><b>18.13.1　常见幻觉类型</b></h3>
-<p>模型产生的幻觉也多种多样，通常可以分为事实幻觉、应用幻觉、推理幻觉等，详细分类和典型表现如下表所示：</p>
-<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>类型</p></td><td><p>典型表现</p></td></tr><tr><td><p>事实幻觉</p></td><td><p>人名、日期、数字和事件与真实情况不符</p></td></tr><tr><td><p>引用幻觉</p></td><td><p>编造论文、法条、链接或出处</p></td></tr><tr><td><p>输入幻觉</p></td><td><p>生成原始材料中没有出现的结论和字段</p></td></tr><tr><td><p>推理幻觉</p></td><td><p>中间推导存在错误，但回答表达得很确定</p></td></tr><tr><td><p>工具幻觉</p></td><td><p>声称已经读取文件或调用接口，实际上没有成功</p></td></tr></tbody></table>
-<p>除了通用模型外，训练获取的领域模型同样也会产生幻觉。通常，专业数据能够改善领域表现，但不能保证每个答案都准确。知识库检索也不能完全解决所有幻觉问题，如果检索到的材料不相关、已经过期或者本身存在错误，模型仍可能得到错误结论，进一步导致幻觉。</p>
-<h3><b>18.13.2　怎样降低幻觉风险</b></h3>
-<p>大模型产生幻觉是当前应用过程中比较常见的问题，仅仅在提示词中添加一句“不要编造”或者“请保证回答准确”，通常无法从根本上消除这类风险。模型本质上仍然是在根据上下文预测最可能出现的内容，当输入信息不足、材料存在冲突，或者问题本身超出模型可靠知识范围时，仍然可能生成看起来合理但实际上并不准确的答案。因此，降低幻觉风险更依赖一整套输入约束、外部验证和人工复核机制。</p>
-<p>首先，应尽量为模型提供清楚、相关且相互一致的材料，减少无关信息和冲突信息对判断过程的干扰。对于事实、数字、政策条款、实验结果等关键内容，可以要求模型同时标明对应的来源、章节、页码或原文位置，使回答具备可追溯性，方便后续核验。对于新闻、政策、价格、法规、产品参数等更新频繁的知识，则不应只依赖模型内部记忆，而应通过搜索引擎、知识库、数据库、API 或其他外部工具获取最新信息，再让模型基于这些可靠材料进行分析。</p>
-<p>其次，当原始材料中确实缺少某项信息时，应明确要求模型使用“待确认”、“原文未提供”、“无法根据现有材料判断”等方式进行标记，而不是根据经验自行补全。对于日期、金额、身份证号、统计数据、公式、代码执行结果等适合结构化检查的内容，还可以引入程序进行自动校验，例如检查数值范围、字段格式、计算结果以及代码是否能够实际运行，从而避免模型仅凭语言生成结果。</p>
-<p>此外，对于重要结论，特别是会影响业务决策、项目验收或用户权益的内容，还应保留人工复核环节。语言表达流畅、逻辑看起来完整，并不代表事实一定正确，因此不能把“说得像真的”直接等同于“确实是真的”。在医疗、法律、金融、安全生产等高风险场景中，更应明确模型只是辅助工具，最终结论需要由具备相应资质和经验的专业人员审核和确认。</p>
-<p>因此，降低幻觉的核心思路并不是要求模型“永远回答”，而是让模型学会在缺少可靠依据时合理停止。当现有信息不足以支持结论时，最合适的行为可能是明确说明“当前缺少哪些关键材料”“哪些结论暂时无法确认”，并进一步告诉用户需要补充哪些数据、文档或证据。相比继续生成一个貌似完整但缺乏依据的答案，这种做法通常更加可靠，也更适合实际业务应用。</p>
+业务场景：
+1. 来电后输送带仍未运行：核对供电、驱动与运行许可，
+   满足条件后请求恢复，再检查带速和新的出口计数。
+2. 温度升高导致输送暂停：请求开启散热并观察温度，
+   温度达标且重新获得运行许可后，再请求恢复输送。
+
+处理要求：结合运行记录、日志、状态和图片判断；
+先查询工具当前状态，再决定操作，最后核查新反馈。
+条件不足或反馈未确认时，如实说明并转人工。
+
+交付内容：在 app/ 生成 Agent、后端、中文前端和启动说明，
+接入已有的两个 MCP 服务，展示证据、动作记录和结果。
+工具未连接时明确提示，不伪造动作成功。</code></pre>
+<p><code>contracts/</code> 定义了输入数据、设备状态、操作和报告的格式规范。例如，输入数据需要包含哪些字段、分析报告应按什么结构输出，都在这里约定。</p>
+<p><code>examples/</code> 存放示例数据，其中 <code>examples/input/</code> 是提供给 Agent 应用的示例输入数据包，包含以下文件：</p>
+<pre data-language="plaintext"><code class="language-plaintext">examples/input/
+├── request.json          # 本次要解决的问题
+├── telemetry.csv         # 电压、带速、温度和产出记录
+├── events.jsonl          # 设备事件日志
+├── device_state.json     # 采集时的设备状态
+├── images/frame_001.png  # 工位图片
+├── operating_guide.md    # 设备操作说明
+└── ...</code></pre>
+<p>例如，<code>events.jsonl</code> 记录了设备状态变化日志。从下面摘取的两条日志可以看出，设备曾发生供电中断，恢复供电后，驱动虽然已就绪，但仍需等待新的运行许可才能启动。</p>
+<pre data-language="json"><code class="language-json">{
+  "timestamp": "2026-09-15T09:00:40+08:00",
+  "message": "上游24 V电源有效反馈由1变0，驱动支路电压降至0 V；独立供电的控制器保持在线。"
+}
+...
+{
+  "timestamp": "2026-09-15T09:01:12+08:00",
+  "message": "驱动重新就绪；配置禁止来电自动启动，等待新的获准运行请求。"
+}</code></pre>
+<p>这些日志会和运行数据、工位图片一起交给 Agent，供它分析停机原因和恢复条件。</p>
+<p><code>evaluation/</code> 用于开发完成后的评测与优化，我们将在第四章介绍。</p>
+<h3>3.2 了解两个 MCP 服务</h3>
+<p>Agent 应用除了阅读已有的业务材料，还需要查询设备当前的状态，并对设备执行正确的操作。</p>
+<p>在本例中，我们希望 Agent 应用能够完成恢复输送带运行和开启风机散热两个任务。因此，<code>interfaces/</code> 中提供了对应的两个 MCP 服务。每个服务提供相应的 MCP 工具，供 Agent 查询设备状态和执行操作。两个 MCP 服务的用途如下：</p>
+<table><colgroup><col width="198" /><col width="531" /></colgroup><thead><tr><th><p>MCP 服务</p></th><th><p>用途</p></th></tr></thead><tbody><tr><td><p><code>power-control</code></p></td><td><p>查询供电和输送带状态，满足条件后恢复输送带运行</p></td></tr><tr><td><p><code>cooling-control</code></p></td><td><p>查询温度和风机状态，开启风机散热</p></td></tr></tbody></table>
+<p>有了这两个 MCP 服务后，Agent 应用就可以控制设备，完成任务了。例如，供电恢复后输送带仍未运行，Agent 可以先通过 <code>power-control</code> 检查设备状态，满足条件后请求启动输送带。如果是温度过高导致停机，则先通过 <code>cooling-control</code> 开启风机，等温度降下来，再检查能否启动输送带。</p>
+<p>要让 Agent 用上这两个 MCP 服务，还需要 Penguin Harness 在开发时完成接入。因此，我们提前把这两个 MCP 的材料放在工作区（<code>interfaces/</code>），供 Penguin Harness 参考。</p>
+<p>另外，本例这两个 MCP 服务都在本地模拟环境中运行，后文演示中的启动、降温和产出变化，也都来自这个模拟环境。</p>
+<p>现在，我们已经了解了这两个 MCP 的用途。如果想知道它们更具体的配置，可以查看 <a href="https://github.com/rank-Yu/line-recovery-starter/blob/main/interfaces/README.md">interfaces/README.md</a>。</p>
+<h3>3.3 开发 Agent 应用</h3>
+<p>在准备好业务材料和 MCP 服务之后，就可以让 Penguin Harness 开始开发 Agent 应用了。</p>
+<p><strong>第 1 步：选择工作区</strong></p>
+<p>打开 Penguin Harness，新建对话，将工作区设为 2.4 节中已克隆到本地的 <code>line-recovery-starter</code>。</p>
+<img src="../../assets/penguin-harness/figure-12.png" alt="图 12：选择 line-recovery-starter 目录作为开发工作区。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 2 步：选择开发技能</strong></p>
+<p>打开输入框下方的“技能”菜单，选择 <code>agent-initialization</code> 技能。</p>
+<img src="../../assets/penguin-harness/figure-13.png" alt="图 13：在技能菜单中选择 agent-initialization。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 3 步：发送开发指令</strong></p>
+<p>接着，将 <code>README.md</code> 中的开发指令发送给 Penguin Harness，让它根据仓库中的已有材料开发产线巡检 Agent 与配套网页。</p>
+<blockquote><p>请使用 agent-initialization，先读 README.md，再看 contracts/、interfaces/ 和 examples/input/，在 app/ 制作产线恢复助手，包括 Agent、后端、中文前端和启动说明。按现有契约实现两个 MCP 的客户端；服务未交付时明确显示未连接，不伪造动作成功。用 example 联调输入读取和页面，保留初始版本，本轮不扩充数据、不做优化或正式评分。</p></blockquote>
+<img src="../../assets/penguin-harness/figure-14.png" alt="图 14：确认工作区、技能和模型后，发送完整开发指令。" class="article-image" loading="lazy" decoding="async" />
+<p>收到指令后，Penguin Harness 就会开始读取材料并开发 Agent 应用。展开运行记录，可以查看具体的开发过程。</p>
+<img src="../../assets/penguin-harness/figure-15.png" alt="图 15：Penguin Harness 开发过程中读取项目资料。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 4 步：查看开发结果</strong></p>
+<p>经过约 20 分钟的开发，Penguin Harness 开发出了完整的 Agent 应用，并给出了以下交付说明，列出了交付文件及其用途：</p>
+<img src="../../assets/penguin-harness/figure-16.png" alt="图 16：原项目的初始交付说明：应用框架先交付，设备接口随后继续接通。" class="article-image" loading="lazy" decoding="async" />
+<p>Penguin Harness 每次生成的应用可能有所不同。为方便复现，我们已将本例的 Agent 应用保存在 <a href="https://github.com/lzh368/line-recovery/tree/1e1f1e33d2ea55feafa89ae22895623179f68cfd/app">line-recovery 仓库</a>里。该应用包含了 Agent 本体和完整的前后端，其主要文件结构如下：</p>
+<pre data-language="plaintext"><code class="language-plaintext">app/
+├── agent/                 # Agent 的角色说明与技能
+│   ├── persona.md
+│   └── skills/
+├── src/                   # 后端、案例分析与工具调用
+├── public/                # 配套网页
+├── config/
+│   └── interfaces.json    # 两个 MCP 服务的连接配置
+├── package.json           # 项目依赖与启动命令
+└── README.md              # 安装、配置与启动说明</code></pre>
+<p>这一节，我们已经开发好了 Agent 应用。接下来，我们将通过一个案例，看看它的实际运行效果。</p>
+<h3>3.4 演示 Penguin Harness 开发的 Agent 应用</h3>
+<p>下面，我们将演示 Penguin Harness 开发的 Agent 应用——产线恢复助手。</p>
+<p><strong>第 1 步：打开应用</strong></p>
+<p>为了方便体验，我们已将本例的 Agent 应用部署到魔搭创空间，你可以通过<a href="https://modelscope.cn/studios/rankyu/line-recovery-app">产线恢复助手创空间</a>直接访问。建议先将该创空间复制到自己的账号下再体验。如果你希望在本地打开应用，也可以参考仓库中 <a href="https://github.com/lzh368/line-recovery/blob/1e1f1e33d2ea55feafa89ae22895623179f68cfd/app/README.md">app/README.md</a> 的安装和启动说明。</p>
+<p>打开产线恢复助手后，我们将看到初始界面，如下图所示。</p>
+<img src="../../assets/penguin-harness/figure-17.png" alt="图 17：产线恢复助手初始界面。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 2 步：加载案例资料</strong></p>
+<p>打开应用后，左侧是案例列表和“上传资料包”入口，右侧展示当前案例。下图是已载入示例数据包的首页，红框标出了资料上传入口。</p>
+<img src="../../assets/penguin-harness/figure-18.png" alt="图 18：产线恢复助手首页，红框为资料上传入口。" class="article-image" loading="lazy" decoding="async" />
+<p>本次以 lr_101 示例资料包 为例。点击“载入 example”，即可加载该资料包。你也可以先下载 <a href="https://github.com/lzh368/line-recovery/raw/refs/heads/main/docs/penguin-harness/attachments/lr_101.zip">lr_101.zip</a>，然后在左侧选择下载好的文件，点击“上传并解析”。</p>
+<p><strong>第 3 步：浏览资料</strong></p>
+<p>我们先浏览资料包中的工位图片和时序数据，了解设备的基本情况。</p>
+<p>加载资料后，先点击右侧“工位图片”页签，查看工位和纸箱的分布。</p>
+<img src="../../assets/penguin-harness/figure-19.png" alt="图 19：查看案例中的工位图片。" class="article-image" loading="lazy" decoding="async" />
+<p>再切换到“时序数据”页签，查看供电和带速的变化。从下图所展示的折线图可以看出，供电已经恢复，但带速仍为零，产出计数也没有增加。</p>
+<img src="../../assets/penguin-harness/figure-20.png" alt="图 20：供电已经恢复，但带速仍为零。" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 4 步：连接设备工具</strong></p>
+<p>先在左侧“设备工具”区域，分别点击供电恢复和散热控制服务的“连接”按钮，确认两个服务均显示“已连接”后，再开始诊断。</p>
+<img src="../../assets/penguin-harness/connect-device-tools.png" alt="connect-device-tools" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 5 步：发起诊断</strong></p>
+<p>下面，我们让 Agent 对这个案例做一次诊断。</p>
+<p>切换到“诊断与证据”页签，点击“开始诊断”按钮；当已有报告时，按钮会显示为“重新诊断”。</p>
+<img src="../../assets/penguin-harness/lr_101-start-diagnosis.png" alt="lr_101-start-diagnosis" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 6 步：查看运行结果</strong></p>
+<p>诊断完成后，我们分别查看 Agent 的分析结论和设备操作的执行反馈。</p>
+<p><strong>查看诊断与证据</strong></p>
+<p>在“诊断与证据”页签中，可以查看 Agent 的分析结论和对应证据。</p>
+<img src="../../assets/penguin-harness/figure-21.png" alt="图 21：Agent 的停机分析与对应证据。" class="article-image" loading="lazy" decoding="async" />
+<p>从上图中可以看到，Agent 判断输送带因供电中断而停机。虽然供电已经恢复、驱动已经就绪，但设备没有收到新的运行请求，因此仍未启动。</p>
+<p><strong>查看动作与反馈</strong></p>
+<p>切换到“动作与反馈”页签，查看 Agent 的操作记录及执行结果。</p>
+<img src="../../assets/penguin-harness/figure-22.png" alt="图 22：恢复输送后，带速和产出计数发生变化。" class="article-image" loading="lazy" decoding="async" />
+<p>从上图的“本次执行详情”可以看到，输送带已恢复运行，带速为 0.397 m/s，出口累计计数从 1813 增至 1816，有新的纸箱通过。这说明 Penguin Harness 开发的 Agent 应用成功完成了本例的产线恢复任务！</p>
+<h3>3.5 本章小结</h3>
+<p>本章介绍了如何使用 Penguin Harness 开发产线巡检 Agent 应用，并通过一个来电后重启输送带的案例，演示了应用的使用过程。在本例中，Agent 应用成功完成了产线恢复任务。</p>
+<h2>4. 用 Penguin Harness 评测与优化产线巡检 Agent 应用</h2>
+<p>上一章，我们用 Penguin Harness 开发了产线巡检 Agent 应用，并演示了它处理一个案例的过程。本章，我们将让 Penguin Harness 评测并优化 Agent 应用，帮助它更好地完成产线恢复任务，再测试看看它的表现是否真的提升。下图展示了这一过程：</p>
+<img src="../../assets/penguin-harness/figure-23.png" alt="图 23：Penguin Harness 评测与优化 Agent 应用。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.1 发起评测与优化任务</h3>
+<p>这一节，我们将准备评测材料，选择评测与优化技能，并让 Penguin Harness 开始优化 Agent。</p>
+<p><strong>第 1 步：选择工作区</strong></p>
+<p>在上一章中，我们已经在 <code>line-recovery-starter</code> 工作区中开发了 Agent 应用。接下来，在 Penguin Harness 中新建对话，继续选择这个目录作为工作区，点击“使用此目录”。</p>
+<img src="../../assets/penguin-harness/ch4-workspace-new.png" alt="ch4-workspace-new" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 2 步：了解评测材料</strong></p>
+<p>工作区中的 <code>evaluation/</code> 存放了本次评测所需的数据和说明。其中，优化集有 10 例，在 Agent 优化时使用，用于发现 Agent 的问题并指导修改；测试集有 7 例，在优化完成后使用，通过比较初始版本和优化版本的得分，检验 Agent 的表现是否提升。下面是 <code>evaluation/</code> 内部的文件结构，其中包含了每个案例的数据资料、参考答案和评分说明等：</p>
+<pre data-language="plaintext"><code class="language-plaintext">evaluation/
+├── README.md          # 评测流程与使用约定
+├── SCORING.md         # 评分说明
+├── data/
+│   ├── optimization/  # 优化集，10 例
+│   └── test/          # 测试集，7 例
+├── grading/           # 参考答案与模拟设备状态
+└── scripts/           # 材料检查与评分脚本</code></pre>
+<p>评测时，Agent 应用先根据每份案例的输入资料完成任务，Penguin Harness 再结合该案例的参考答案和评分说明，检查应用对异常情况的判断、设备操作及执行结果，并计算最终得分。</p>
+<p><strong>第 3 步：选择评测与优化技能</strong></p>
+<p>点击输入框下方的“技能”，选中 <code>agent-evaluation</code> 和 <code>agent-optimization</code>，分别用于评测 Agent 和根据评测结果进行优化。选中后，输入框上方会显示这两个技能。</p>
+<img src="../../assets/penguin-harness/ch4-skills-new.png" alt="ch4-skills-new" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 4 步：发送任务指令</strong></p>
+<p>更加具体的要求已经写在工作区的说明文件中，所以我们只需在指令中告诉 Penguin Harness 阅读这些文件就好了。</p>
+<p>把下面的指令填入输入框，并点击发送按钮。</p>
+<pre data-language="text"><code class="language-text">使用 Agent Evaluation 和 Agent Optimization，按照 `evaluation/README.md` 和 `evaluation/SCORING.md` 的说明，对当前工作区 `app/` 中的产线巡检 Agent 应用进行一轮评测与优化。
+
+保留初始版本，使用优化集评测、分析问题并优化，再用测试集比较初始版本和优化版本的表现。输出报告，说明评测结果、主要修改和仍未解决的问题。</code></pre>
+<img src="../../assets/penguin-harness/ch4-prompt-new.png" alt="ch4-prompt-new" class="article-image" loading="lazy" decoding="async" />
+<p>点击发送后，Penguin Harness 就会开始本次评测与优化任务。</p>
+<img src="../../assets/penguin-harness/ch4-running-new.png" alt="ch4-running-new" class="article-image" loading="lazy" decoding="async" />
+<p><strong>第 5 步：查看评测报告</strong></p>
+<p>本次任务完成后，Penguin Harness 将完整报告保存在工作区的 <code>reports/REPORT.md</code> 中，并在对话里给出了以下结果：</p>
+<img src="../../assets/penguin-harness/ch4-results-new.png" alt="ch4-results-new" class="article-image" loading="lazy" decoding="async" />
+<p>从上图可以看到，Agent 在优化集上的平均分从 79.29 提高到 100.00，在测试集上从 78.99 提高到 89.92，这说明 Penguin Harness 通过这一轮优化，成功提升了 Agent 在本次巡检任务评测中的整体表现！</p>
+<p>同时，图中也列出了 Penguin Harness 主要的改进点，也就是改进 Agent 对异常情况和操作条件的判断，并规范报告输出。<br />下面这张图可视化展现了产线巡检 Agent 在优化集和测试集上的得分提升：</p>
+<img src="../../assets/penguin-harness/ch4-score-comparison-aligned.png" alt="ch4-score-comparison-aligned" class="article-image" loading="lazy" decoding="async" />
+<h3>4.2 本章小结</h3>
+<p>本章介绍了如何使用 Penguin Harness 评测并优化已有的产线巡检 Agent 应用。我们使用优化集发现问题、指导修改，再通过测试集比较优化前后的表现。本次评测中，优化后的 Agent 应用在两个数据集上的平均分均有所提高，说明 Penguin Harness 提升了 Agent 处理产线恢复任务的整体表现！</p>
+<h2>5. 投入与运行成本</h2>
+<p>除了任务表现，开发和使用 Agent 的成本也是落地时需要考虑的问题。下面分别介绍开发与优化阶段、日常运行阶段的成本。</p>
+<h3>5.1 Agent 开发与优化的成本</h3>
+<p>在开发阶段，Penguin Harness 可以承担应用生成、工具联调和批量评测等工作，使用者主要负责提供需求与示例，并核查交付结果。以这类应用的开发和一轮优化为例，使用 DeepSeek Flash 的模型调用费用约为 5～20 元。</p>
+<table><colgroup><col width="153" /><col width="282" /><col width="303" /></colgroup><thead><tr><th><p>投入项目</p></th><th><p>人工开发与调试</p></th><th><p>使用 Penguin Harness</p></th></tr></thead><tbody><tr><td><p>开发与一轮优化</p></td><td><p>开发、联调和评测的人工费用</p></td><td><p>使用 DeepSeek Flash，模型调用费用约 <strong>5～20 元</strong></p></td></tr><tr><td><p>配套投入</p></td><td><p>需求梳理、环境配置、测试验收</p></td><td><p>提供需求与示例、核查结果</p></td></tr></tbody></table>
+<h3>5.2 单次巡检任务的运行成本</h3>
+<p>Agent 投入使用后，每处理一份案例都会产生相应的模型调用费用。按单次任务累计输入 10 万 Token、输出 1 万 Token 估算，使用 DeepSeek Flash 的模型调用费用约为 0.15～0.30 元。</p>
+<table><colgroup><col width="153" /><col width="217" /><col width="328" /></colgroup><thead><tr><th><p>指标</p></th><th><p>人工处理</p></th><th><p>Agent 处理</p></th></tr></thead><tbody><tr><td><p>单次直接费用</p></td><td><p>处理工时 × 人力单价</p></td><td><p>模型调用费约 <strong>0.15～0.30 元/次（估算）</strong></p></td></tr><tr><td><p>其他成本</p></td><td><p>管理、工具等费用</p></td><td><p>服务器、维护及人工复核费用</p></td></tr></tbody></table>
+<h2>6. 总结</h2>
+<p>本文以产线巡检为例，介绍了如何使用 Penguin Harness 开发完整的 Agent 应用，并通过实际案例演示了应用的使用效果。在此基础上，我们又让 Penguin Harness 对应用进行评测与优化，并通过测试验证了优化后应用在产线巡检任务上的表现提升。</p>
+<p>对于其他业务场景，也可以按照这一流程，用 Penguin Harness 开发适合自身业务需求的 Agent 应用。</p>
+<hr />
+<p>可以在魔搭创空间体验本文的两个演示：</p>
+<ul><li><a href="https://modelscope.cn/studios/rankyu/line-recovery">Penguin Harness 演示</a>：体验用 Penguin Harness 开发 Agent 应用。</li><li><a href="https://modelscope.cn/studios/rankyu/line-recovery-app">产线恢复助手演示</a>：体验已开发完成的 Agent 应用。</li></ul>
+<p>请勿在公用创空间中输入或保存私人 API Key。如需使用自己的 API Key，请先将空间复制到自己的账号下，设置为非公开后再使用。</p>
 <p />
 </article>
