@@ -315,6 +315,14 @@
       "file": "source-html/chapter-35.html",
       "status": "ready",
       "discussionId": "chapter-34"
+    },
+    {
+      "number": 36,
+      "title": "快速使用 AtomCode",
+      "partIndex": 6,
+      "file": "source-html/chapter-36.html",
+      "status": "ready",
+      "discussionId": "chapter-36"
     }
   ]
 }
