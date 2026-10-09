@@ -1,6 +1,6 @@
 {
   "title": "魔搭紫皮书",
-  "sourceUpdated": "2026-09-20",
+  "sourceUpdated": "2026-10-09",
   "parts": [
     {
       "title": "第一篇　认识开源模型",
@@ -302,17 +302,25 @@
     },
     {
       "number": 34,
+      "title": "Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律",
+      "partIndex": 6,
+      "file": "source-html/chapter-34.html",
+      "status": "ready",
+      "discussionId": "mini-ai-scientist"
+    },
+    {
+      "number": 35,
       "title": "补充：大模型基础知识",
       "partIndex": 7,
-      "file": "source-html/chapter-34.html",
+      "file": "source-html/chapter-35.html",
       "status": "ready",
       "discussionId": "chapter-31"
     },
     {
-      "number": 35,
+      "number": 36,
       "title": "主流 LLM 评测",
       "partIndex": 7,
-      "file": "source-html/chapter-35.html",
+      "file": "source-html/chapter-36.html",
       "status": "ready",
       "discussionId": "chapter-34"
     }

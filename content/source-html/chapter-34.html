@@ -1,194 +1,135 @@
 <article>
-<h1>补充：大模型基础知识</h1>
-<p>第一次准备下载大模型时，模型页面上的 7B、32B、128K 和 INT4 很容易让人困惑：7B 表示模型有多大，128K 是不是可以直接放入一本书，INT4 为什么能让模型占用更少显存？</p>
-<p>真正开始使用以后，还会遇到会议记录放不下、长对话忘记前文、模型回答没有依据、同一个模型换种量化方式效果发生变化等问题。</p>
-<p>要判断一个模型适不适合当前任务，需要先了解文字怎样进入模型、模型的能力怎样训练出来，以及模型运行时为什么会占用内存和显存。</p>
-<p>这些知识可以分成三条主线，第一条从 Transformer 总体结构出发，再看 Token、Embedding 和 Attention，说明一段文字怎样进入模型并被处理；第二条是预训练、指令微调和后训练，说明模型的能力怎样形成；第三条是上下文长度、KV Cache、量化和硬件，决定模型能不能在目标设备上稳定运行。</p>
-<p>本章内容是对前面相关章节内容的基础知识提炼，例如本次所提及的模型推理相关例如可以参考第六章和第七章的内容；针对模型 SFT 可以参考第九章所介绍的魔搭自带的 ms-swift 微调框架；针对后训练相关内容，也可以参考第十章中介绍的关于偏好对齐与强化学习的内容。针对领域模型的应用和幻觉问题等，也可以参考第十三章介绍的 RAG 方法，利用外部知识即提升大模型在领域类的问答下效果也能进一步降低模型的幻觉。</p>
-<h2><b>18.1　Transformer 基本结构</b></h2>
-<p>Transformer 是目前大多数大型语言模型采用的基础架构。与早期循环神经网络按顺序处理文本不同，Transformer 在训练和输入处理阶段可以并行计算多个位置，并通过 Attention 建立不同位置之间的联系。经典 Transformer 由编码器和解码器组成。每个 Transformer 层通常包含 Attention 和前馈网络。前馈网络也叫 FFN 或 MLP，它会对每个位置的向量进行非线性变换。层中还会使用残差连接和层归一化，帮助信息稳定地通过深层网络。大量相似层堆叠起来后，模型才能逐步形成复杂的文本表示和生成能力。Transformer 的整体架构如下图所示，图中左侧是编码器（Encoder），右侧是解码器（Decoder）。图中的<code>N×</code>表示同类模块会重复堆叠多层，实际层数会根据模型架构和参数规模变化。</p>
-<img src="../../assets/manuscript-20260914/c31-5a97057c9d1670.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>在模型进行推理时，当用户输入一段文字后，模型内部会经过下面的处理过程：大模型在处理文本时，首先会通过 Tokenizer 将原始文字切分成一个个 Token，并转换成对应的 Token ID；随后，Embedding 层会把这些离散的 Token ID 映射成连续的向量表示，同时加入位置信息，让模型知道各个 Token 在句子中的先后顺序。接下来，这些向量会经过多层 Transformer 反复处理，其中 Attention 机制负责让不同 Token 之间相互关注、交换上下文信息，前馈网络则进一步加工每个位置上的特征。经过多层计算后，模型会得到对当前上下文的综合表示，并据此计算下一个 Token 的概率分布，选择或采样出下一个 Token，再将其加入上下文继续重复这一过程，直到完成整段内容的生成。</p>
-<p>原始 Transformer 中的三个部分各有不同作用：</p>
-<p>- <b>编码器（Encoder-only）结构：</b>主要负责理解输入，可以同时参考输入序列中的不同位置，适合分类、抽取和语义表示等任务；</p>
-<p>- <b>解码器（Decoder-only）结构：</b>主要负责生成输出，生成当前位置时只能查看已经出现的内容；</p>
-<p>- <b>编码器—解码器（Encoder-Decoder）结构：</b>先理解输入，再逐步生成输出，常见于翻译和摘要等序列转换任务。</p>
-<p>现代大模型不一定同时使用完整的编码器和解码器。在此基础之上，衍生了基于 Transformer 多种架构，比如，GPT 类生成模型通常采用 Decoder-only 结构，BERT 类模型主要使用 Encoder-only，T5 类模型则保留 Encoder-Decoder 结构。</p>
-<h2><b>18.2　Token：模型处理文本的基本单位</b></h2>
-<p>词元（Token）是模型读取和生成文本时使用的基本单位。它可能是一个汉字、一个词、词的一部分、标点符号，也可能是空格或特殊控制标记。例如，同一句话在不同 Tokenizer 中可能得到不同结果：</p>
-<pre data-language="Plain Text"><code>原文：大型语言模型正在改变办公方式。
+<h1>Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律</h1>
+<h2>1. 背景</h2>
+<p>"AI Scientist"是近来 Agent 方向的热门话题：让大模型自己提出假设、设计实验、分析数据，最后得出结论。但如果直接让模型做开放式科研，很快会遇到两个问题：一是小模型很难完成；二是结果<strong>无法判断对错</strong>——模型说"我发现了 X"，却没有标准答案可以核对，也就没法比较不同模型、不同 Agent 设计的好坏。</p>
+<p>我们换一个思路：先把科研压缩成一个<strong>最小但完整、而且可以自动验证</strong>的闭环。研究对象是一台"黑盒机器"，输入两个整数 a、b（0～20），输出一个整数，内部规则未知，可能还带条件分支，例如"a 为偶数时输出 a+b，否则输出 a×b"。模型只能通过做实验来了解它，最后提交一条规则。因为输入只有 21×21=441 种，提交的规则可以在全部输入上逐一核对，<strong>不需要 LLM 当裁判</strong>。</p>
+<p>本文用 Qwen3 系列开源模型和 vLLM，在魔搭 Notebook 中一步步搭建这个 Mini AI Scientist，并回答一个实际问题：<strong>多小的开源模型能完成这类"科学发现"？瓶颈在模型规模、思考模式，还是 Agent 的流程设计？</strong></p>
+<table><colgroup><col width="150" /><col width="580" /></colgroup><thead><tr><th><p>项目</p></th><th><p>内容</p></th></tr></thead><tbody><tr><td><p>一句话简介</p></td><td><p>给开源模型一台隐藏规则的黑盒机器，让它自己提出假设、设计实验、调用 Python 检验并修正，最终提交规则，由程序在 441 个输入上穷举验证对错。</p></td></tr><tr><td><p>适用对象</p></td><td><p>做 LLM Agent、推理与评测的开发者；想把 AI Scientist 落到可量化实验的同学；需要可验证奖励环境（如 GRPO）的训练者。</p></td></tr><tr><td><p>难度与耗时</p></td><td><p>进阶。首次复现约 60 分钟：安装依赖约 10 分钟，下载模型约 5 分钟，Notebook 运行约 35 分钟（单卡 A100 实测，24GB 显卡会更慢）。</p></td></tr><tr><td><p>运行方式</p></td><td><p>魔搭 Notebook（单卡 GPU，≥24GB 显存），本地 vLLM 推理，无需任何 API Key。</p></td></tr><tr><td><p>主要模型与工具</p></td><td><p>Qwen3-4B（思考模式，主模型）；Qwen3-0.6B/1.7B/8B 与 Qwen2.5-Instruct 用于对比；vLLM 0.11.0；Python AST 沙箱。</p></td></tr></tbody></table>
+<p>本 Case 的输入、输出与完成边界如下：</p>
+<table><colgroup><col width="150" /><col width="580" /></colgroup><thead><tr><th><p>项目</p></th><th><p>说明</p></th></tr></thead><tbody><tr><td><p>输入</p></td><td><p>一台隐藏规则的黑盒机器（12 条规则、3 个难度等级）、实验预算 30 次、最多 15 轮交互</p></td></tr><tr><td><p>输出</p></td><td><p>模型提交的规则（Python 表达式）、完整的科研过程记录（JSONL）、自动评测结果（是否正确、一致率、实验次数）</p></td></tr><tr><td><p>完成标准</p></td><td><p>提交规则在全部 441 个输入上与真实规则完全一致，才算"发现成功"</p></td></tr><tr><td><p>边界</p></td><td><p>规则是两个整数输入上的确定性函数，不涉及噪声、连续变量和真实物理实验（拓展方向见第 7 节）</p></td></tr></tbody></table>
+<h2>2. 解决思路</h2>
+<p>整体思路是让模型与 Python 各司其职：<strong>模型负责决定</strong>（提出什么假设、做什么实验、什么时候下结论），<strong>Python 负责执行与校验</strong>（运行实验、计算、逐条核对假设），<strong>黑盒实验室保管真值</strong>（最后的穷举验证）。完整流程如下图所示：</p>
+<img src="../../assets/mini-ai-scientist/flow.png" alt="图 1：Mini AI Scientist 的科研闭环。蓝色为模型决策，绿色为 Python 执行与校验，橙色为黑盒实验室与真值。" class="article-image" loading="lazy" decoding="async" />
+<p>每一轮，模型输出一个 JSON 动作，从下面四个工具中选一个：</p>
+<table><colgroup><col width="130" /><col width="440" /><col width="160" /></colgroup><thead><tr><th><p>工具</p></th><th><p>作用</p></th><th><p>是否消耗实验预算</p></th></tr></thead><tbody><tr><td><p><code>experiment</code></p></td><td><p>选择最多 6 组输入，在黑盒机器上运行</p></td><td><p>是（共 30 次）</p></td></tr><tr><td><p><code>compute</code></p></td><td><p>让 Python 在全部观测上计算派生列，例如 <code>out - a*b</code>，并提示哪一列是常数</p></td><td><p>否</p></td></tr><tr><td><p><code>check</code></p></td><td><p>用候选规则逐条核对已观测数据，列出对与错的行</p></td><td><p>否</p></td></tr><tr><td><p><code>submit</code></p></td><td><p>提交最终规则，结束研究</p></td><td><p>—</p></td></tr></tbody></table>
+<p>围绕这四个工具，代码分成几个模块：</p>
+<table><colgroup><col width="190" /><col width="540" /></colgroup><thead><tr><th><p>模块</p></th><th><p>作用</p></th></tr></thead><tbody><tr><td><p><code>lab.py</code> 隐藏规则实验室</p></td><td><p>保存 12 条真实规则；执行实验；在 441 个输入上做等价验证</p></td></tr><tr><td><p><code>compile_expr</code> 安全沙箱</p></td><td><p>只允许算术、比较、<code>X if C else Y</code> 和 <code>abs/min/max</code>，拒绝任意代码执行</p></td></tr><tr><td><p><code>agent.py</code> Agent 循环</p></td><td><p>解析动作、调用工具、组织反馈；用"实验记录本"保存已检验的假设，只保留最近 3 轮对话，控制上下文长度</p></td></tr><tr><td><p>提交关卡（可选）</p></td><td><p>提交时如果规则与模型自己已观测的数据矛盾，就拒绝并列出矛盾行</p></td></tr><tr><td><p><code>backend.py</code> 推理后端</p></td><td><p>用 vLLM 批量推理；剥离 <code>&lt;think&gt;</code> 思考内容，只把最终动作写回对话</p></td></tr></tbody></table>
+<p>选型上有三点考虑。第一，<strong>Qwen3 系列</strong>同一家族覆盖 0.6B～8B，并且可以按请求开关思考模式，适合做"规模 × 思考"的对照。第二，<strong>vLLM</strong>：思考模式每轮会生成数千 token，用 transformers 跑 Qwen3-8B，4 个 episode 就要 28 分钟；换成 vLLM 批量推理，36 个 episode 只需 33 分钟。第三，<strong>穷举验证而非 LLM 裁判</strong>：输入空间只有 441 种，等价性可以精确判定，评测零成本、没有歧义。</p>
+<h2>3. 前置准备</h2>
+<table><colgroup><col width="150" /><col width="580" /></colgroup><thead><tr><th><p>项目</p></th><th><p>要求与版本</p></th></tr></thead><tbody><tr><td><p>平台</p></td><td><p>魔搭 Notebook GPU 环境，单卡 ≥24GB 显存。本文实测环境为 Linux、单卡 A100 80GB</p></td></tr><tr><td><p>运行时</p></td><td><p>Python 3.11</p></td></tr><tr><td><p>依赖</p></td><td><p><code>vllm==0.11.0</code>（自带 <code>torch==2.8.0+cu128</code>）、<code>transformers&gt;=4.56,&lt;5</code>、<code>modelscope</code>、<code>pandas</code>、<code>matplotlib</code></p></td></tr><tr><td><p>驱动</p></td><td><p>NVIDIA 驱动需支持 CUDA 12.8 及以上</p></td></tr><tr><td><p>模型</p></td><td><p><code>Qwen/Qwen3-4B</code>（约 8GB，从魔搭下载）；可选 <code>Qwen/Qwen3-8B</code>（约 16GB）</p></td></tr><tr><td><p>数据</p></td><td><p>无需下载。12 条隐藏规则定义在代码中，开局观测由随机种子生成，完全可复现</p></td></tr><tr><td><p>权限</p></td><td><p>无需 API Key 或 Token</p></td></tr></tbody></table>
+<p><strong>第 1 步：安装依赖</strong></p>
+<p>在 Notebook 的第一个单元格中运行下面的命令。安装完成后，<strong>重启 Kernel</strong> 再继续：</p>
+<pre data-language="bash"><code class="language-bash">pip install -q "vllm==0.11.0" "transformers&gt;=4.56,&lt;5" modelscope pandas matplotlib</code></pre>
+<p><strong>第 2 步：获取代码</strong></p>
+<p>本文的完整代码、Notebook 和实测结果都在 <a href="https://github.com/14H034160212/mini-ai-scientist">mini-ai-scientist 仓库</a>中：</p>
+<pre data-language="bash"><code class="language-bash">git clone https://github.com/14H034160212/mini-ai-scientist.git mini_ai_scientist
+cd mini_ai_scientist
+python scripts/test_lab.py      # 无需 GPU 的自检，应输出 all lab tests passed</code></pre>
+<p>打开仓库中的 <code>mini_ai_scientist.ipynb</code>，按顺序运行即可。下文的每个步骤都对应 Notebook 中的单元格，截图均来自本文实测运行（为便于阅读，截图中略去了 vLLM 的启动日志）。</p>
+<p><strong>第 3 步：检查环境</strong></p>
+<p>运行环境检查单元格，确认 <code>transformers</code> 为 4.x、<code>vllm</code> 为 0.11.0，并能看到 GPU 型号与显存。环境变量 <code>USE_MODELSCOPE=1</code> 表示模型权重从魔搭下载。</p>
+<img src="../../assets/mini-ai-scientist/env.png" alt="图 2：环境检查：Python、torch、transformers、vLLM 版本与 GPU 信息。" class="article-image" loading="lazy" decoding="async" />
+<p>复现时需要提前留意下面三个问题，它们都是我们实际踩过的坑：</p>
+<ul><li><p><strong>transformers 5.x 与 vLLM 0.11 不兼容</strong>，会报 <code>Qwen2Tokenizer has no attribute all_special_tokens_extended</code>，请安装 <code>transformers&lt;5</code>。</p></li><li><p><strong>CUDA 13 构建的 vLLM 需要更新的驱动</strong>，会报 <code>CUDA driver version is insufficient</code>，请使用本文固定的 <code>vllm==0.11.0</code>。</p></li><li><p>在 <code>.py</code> 脚本里使用 vLLM 时，入口代码要放在 <code>if __name__ == "__main__":</code> 下（vLLM 以 spawn 方式启动子进程）；Notebook 中没有这个问题。</p></li></ul>
+<h2>4. 分步实战</h2>
+<p>我们先验证不依赖模型的模块（4.1～4.3，CPU 即可），再接入模型（4.4～4.8）。每一步最后都有一个检查单元格，用 <code>assert</code> 判断这一步是否成功。</p>
+<h3>4.1 搭建隐藏规则实验室</h3>
+<p><strong>目标</strong>：构造研究对象——一台规则未知、但真值可以穷举验证的黑盒机器。</p>
+<p><strong>输入与操作</strong>：12 条规则分三个难度等级。Tier 1 是单一公式（如 <code>a + b</code>）；Tier 2 带一个条件分支（如按 a 的奇偶切换公式）；Tier 3 是嵌套条件或取模条件（如 <code>(a + b) % 5 == 0</code>）。<code>Lab(rule, seed)</code> 会用随机种子生成 3 个开局观测。</p>
+<pre data-language="python"><code class="language-python">from mini_scientist import Lab, RULES, RULES_BY_NAME
 
-分词器A：大型 / 语言 / 模型 / 正在 / 改变 / 办公 / 方式 / 。
-分词器B：大 / 型 / 语言 / 模型 / 正 / 在 / 改变 / 办公 / 方式 / 。</code></pre>
-<p>两个结果表达的是同一句话，但 Token 数量并不相同。模型实际接收的是每个 Token 对应的数字编号，也就是 Token ID。以整理会议纪要为例，模型看到的不是一篇完整的会议记录，而是一串 Token ID。会议名称、发言内容、时间、标点和输出要求都会占用 Token；模型生成的摘要、结论和行动项同样会继续占用 Token。因此，同一份材料要求输出得越详细，留给原始记录的空间就可能越少。</p>
-<p>如果完全按字符切分，词表可以比较小，但序列会变长；如果完全按完整单词切分，词表会非常庞大，还会不断遇到新词、缩写和拼写变化。大模型通常采用子词分词，在字符和完整单词之间寻找平衡。BPE、WordPiece、Unigram 和 SentencePiece 都是常见方法。</p>
-<p />
-<h2><b>18.3　Embedding：把内容转换为向量</b></h2>
-<p>通常，模型不能直接对文字或图片进行矩阵运算，需要先把内容转换为数字向量。这个过程称为叫嵌入或向量表示（Embedding）。对于文本，分词器（Tokenizer）先把文字转换为 Token ID，Embedding 层再根据 ID 找到对应向量。向量中的单个数通常没有直观含义，但整个向量可以表示该 Token 在模型内部的特征。以 Token 为“会议”为例，对应的 Token ID 可以是某个整数编号，例如“15872”，而该 Token 对应的表征即 Embedding，可以是：[0.12, -0.37, 0.08, ……]，这样一组向量。Embedding 会在训练过程中不断调整，出现在相似上下文中的 Token，其向量往往会形成某些相近特征。由于模型结构和训练的过程不同，同一个词经过多层 Transformer 处理后，还会根据上下文形成不同表示。</p>
-<p>在模型获取输入文本的语义信息时，不仅要知道 Token 是什么，还要知道它位于什么位置。仅有 Token Embedding 时，例如“会议延期”和“延期会议”包含相似 Token，但由于语序差异，却表达不同结含义。因此，模型还需要加入位置编码或位置表示。下图以 BERT 的输入层为例。</p>
-<img src="../../assets/manuscript-20260914/c31-b953381f9bd0aa.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>如上图 BERT 中所采用的表征方式所示，展示了 Token Embedding、句段 Embedding 和位置 Embedding 的组合方式。当然，不同模型结构和设计方式，采用的具体方案并不完全相同。以多模态大模型为例，图片、音频等内容也要先转换为向量。图片通常先被切成图像块，由视觉编码器提取特征；音频会先转换为声学特征，再由音频编码器处理。不同模态的特征经过投影或连接模块（Projection）后，才能进入大模型能够处理的向量空间。如下图所示，通过连接模块讲图像信息与语义信息进行融合。</p>
-<img src="../../assets/manuscript-20260914/c31-7405b55ce19469.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p />
-<h2><b>18.4　Attention：计算输入之间的关联</b></h2>
-<p>Attention 负责判断当前位置应该重点参考输入中的哪些内容。它会在模型已经形成的向量表示上计算关联程度，而不只是查找相同词语。例如，在“项目延期了，报告解释了它为什么没有按期完成”这句话中，模型处理代词“它”时，需要结合上下文判断它更可能指向“项目”，还是“报告”。在会议记录中提取负责人时，模型也需要把任务描述、人员姓名和表示分工的句子联系起来。</p>
-<p />
-<h3><b>18.4.1　从 Q、K、V 理解注意力</b></h3>
-<p />
-<p>每个输入向量会经过不同变换，形成 Query、Key 和 Value，通常简写为 Q、K 和 V。Attention 的计算公式可以简化写成：</p>
-<p />
-<p><span class="arithmatex">\(\mathrm{Attention}(Q, K, V)=\mathrm{softmax}\left(\frac{QK^{\mathrm{T}}}{\sqrt{d_k}}\right)V\)</span></p>
-<p>其中，Q 表示当前位置正在寻找什么信息，K 表示每个位置可以用什么特征被匹配，V 表示匹配后需要取回的内容。模型先比较 Q 和 K，得到当前位置与其他位置之间的相关分数；再通过 softmax 把分数转换为权重，按照权重对 V 进行加权汇总。公式中的<span class="arithmatex">\(d_k\)</span>是 Key 向量的维度，除以<span class="arithmatex">\(\sqrt{d_k}\)</span>用于调整分数尺度，使计算更加稳定。</p>
-<p>如果 Q、K、V 来自同一段序列，就称为自注意力（Self-Attention），用于建立序列内部的联系；如果 Q 来自一段序列，而 K、V 来自另一段序列，就称为交叉注意力（Cross-Attention）。例如，编码器—解码器翻译模型可以让解码器通过交叉注意力读取编码器提供的原文信息。</p>
-<p>对于生成式大模型，当前位置只能参考已经出现的内容，因此 Attention 中还需要加入因果掩码，屏蔽后续位置。即使屏蔽了未来 Token，完整因果注意力处理的关联数量仍会随序列长度近似按平方增长。同时，生成阶段还要保存历史 Token 的 K 和 V，形成后文介绍的 KV Cache。随着上下文变长，Attention 的计算和缓存开销会越来越突出，下面介绍的不同结构正是围绕这些问题逐步发展起来的。</p>
-<p />
-<h3><b>18.4.2　多头注意力（MHA）</b></h3>
-<p />
-<p>多头注意力（Multi-Head Attention，MHA）由 2017 年的 Transformer 论文《Attention Is All You Need》提出，后来应用于 BERT 以及 Llama 2 7B、13B 等模型。它在单组注意力计算的基础上增加多个并行的注意力头，使模型能够从不同的表示空间提取上下文关系。</p>
-<p>在 MHA 中，每个头都有各自生成 Q、K、V 的投影参数，分别计算注意力，再把各头的结果连接起来，通过线性层形成输出。如下图所示，左侧展示一组缩放点积注意力的计算过程，右侧把这一过程并行执行多次，再进行结果融合。不同头的关注模式由训练形成，可以共同支持指代判断、语义关联和远距离依赖等任务。</p>
-<img src="../../assets/manuscript-20260914/c31-dd04e51bfbe004.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>MHA 提升了模型聚合不同类型信息的能力，也便于在训练中并行计算。不过，在逐 Token 生成时，各个头都要读取自己的历史 K、V。模型层数、头数和上下文长度增加后，这部分缓存和数据读取会占用大量资源。因此，后续改进首先考虑能否保留多个 Query 头，同时减少需要保存的 Key 头和 Value 头。</p>
-<p />
-<h3><b>18.4.3　多查询注意力（MQA）</b></h3>
-<p>多查询注意力（Multi-Query Attention，MQA）由 Noam Shazeer 在 2019 年的论文《Fast Transformer Decoding: One Write-Head is All You Need》中提出，后来应用于 Falcon-7B 等大模型。它主要针对解码阶段的内存带宽问题：模型生成每一个新 Token 时，都需要读取已有的 KV Cache，读取量过大时，即使计算单元仍有余量，生成速度也会受到限制。</p>
-<p>MQA 保留多个 Query 头，但让它们共享一组 Key 和 Value。这样，不同头仍然可以生成不同的查询，历史位置却只需要保存一份供各头共用的 K、V。下图展示了将已有 MHA 模型转换为 MQA 时的一种初始化方法：把多个 Key 投影矩阵做平均，得到一个共享投影，Value 投影也可以采用同样处理；转换后还要继续训练，使模型适应新的共享结构。</p>
-<img src="../../assets/manuscript-20260914/c31-b12533e5299d38.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>采用这一结构后，MQA 可以明显减少 KV Cache 以及每步解码的数据读取量，为较长输入或较多并发请求腾出空间。例如，Falcon-7B 配置了 71 个 Query 头，但只有 1 个 KV 头。相对于相同头维度、相同精度的 71 组 KV 结构，其理论 KV 缓存只需约七十一分之一。共享也会约束 K、V 的表示容量，因此需要通过训练和评测确认这种效率收益对任务质量的影响。</p>
-<p />
-<h3><b>18.4.4　分组查询注意力（GQA）</b></h3>
-<p />
-<p>分组查询注意力（Grouped-Query Attention，GQA）由 Google Research 团队在 2023 年的 GQA 论文中系统提出，并应用于 Llama 2 70B、Mistral 7B 等大模型。它希望在 MHA 的多组表示能力和 MQA 的低缓存开销之间取得平衡，避免所有 Query 头都只能使用同一组 K、V。</p>
-<p>GQA 把 Query 头划分为若干组，每组共享一组 Key 和 Value，不同组保留不同的 K、V 表示。如下图所示，MHA 为每个 Query 头配置对应的 K、V，MQA 让所有 Query 头共享一组 K、V，GQA 则在组内共享。当组数等于 Query 头数时，GQA 等价于 MHA；当只有一组时，就等价于 MQA。</p>
-<img src="../../assets/manuscript-20260914/c31-a33c19025f4f45.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>以 Mistral 7B v0.1 为例，它有 32 个 Query 头和 8 个 KV 头，每 4 个 Query 头共享一组 K、V。在头维度和精度相同的情况下，这部分缓存约为 MHA 的四分之一。对实际部署而言，减少缓存和读取量通常有利于提高并发能力与解码效率；由于不同组仍保留各自的 K、V，GQA 也比完全共享的 MQA 保留了更多表示空间。这里减少的是 KV 头数，模型仍然可以对允许访问的全部历史位置计算注意力。</p>
-<p />
-<h3><b>18.4.5　滑动窗口注意力（SWA）</b></h3>
-<p />
-<p>滑动窗口注意力（Sliding Window Attention，SWA）来自长序列建模中的局部注意力思路，Mistral 7B v0.1 将它与 GQA 结合使用。GQA 减少了每个位置需要保存的 KV 头数，SWA 则进一步限制每个位置直接关注的历史范围，以降低长文本的计算和缓存压力。</p>
-<p>SWA 为每个 Token 设置固定大小的窗口，只对窗口内的近期位置计算注意力。下图左侧是完整因果注意力，中间是滑动窗口注意力，右侧说明信息如何通过多层网络向后传递。虽然单层只读取局部范围，但上一层的 Token 表示已经包含更早的上下文信息，因此模型经过多层处理后，可以间接利用窗口以外的内容。</p>
-<img src="../../assets/manuscript-20260914/c31-5586222f5a5ecb.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>Mistral 7B v0.1 采用 4096 个 Token 的窗口，并使用滚动缓存覆盖已经移出窗口的旧 K、V，使各层缓存可以维持在固定范围。论文在 16K 序列、4096 窗口的测试中报告，经过相应内核优化后，速度约为完整注意力基线的 2 倍。这种结构能够控制长文本的资源增长，但远处的原始细节需要经过中间表示传递，因此局部窗口大小并不能直接等同于模型能够准确检索的上下文长度。</p>
-<p />
-<h3><b>18.4.6　多头潜在注意力（MLA）</b></h3>
-<p />
-<p>多头潜在注意力（Multi-head Latent Attention，MLA）由 DeepSeek 团队在 DeepSeek-V2 中提出，随后继续用于 DeepSeek-V3。它同样针对 KV Cache 过大的问题，但进一步改变了缓存的保存形式：通过学习一个紧凑的联合表示，减少每个 Token 需要保存的数据，同时支持多个注意力头使用这些信息。</p>
-<p>具体来说，MLA 先用低秩投影把 K 和 V 联合表示为较低维度的潜在向量，推理时主要缓存这一向量，以及单独承载旋转位置信息的 Key 分量。多个 Query 头可以利用这个共享表示完成匹配和信息聚合，部分投影矩阵还可以在推理时合并，减少显式展开完整 K、V 的操作。下图中的斜线区域表示需要缓存的内容，可以看到 MLA 将多头 K、V 的缓存转移到了右侧较小的潜在表示中。</p>
-<img src="../../assets/manuscript-20260914/c31-ca9b169844f044.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>这种设计让 DeepSeek-V2、V3 能够在保留多头表达能力的同时，降低长上下文生成中的缓存压力。DeepSeek-V2 报告中，MLA 每 Token 的 KV 缓存规模相当于只有 2.25 组 KV 头的 GQA。它压缩的是每个位置的表示维度，历史位置本身仍然保留，因此在完整注意力模式下，模型依然需要读取并匹配全部历史条目。进一步减少每次实际参与计算的条目，就需要引入稀疏注意力。</p>
-<p />
-<h3><b>18.4.7　DeepSeek 稀疏注意力（DSA）</b></h3>
-<p />
-<p>DeepSeek 稀疏注意力（DeepSeek Sparse Attention，DSA）由 DeepSeek 团队提出，应用于 DeepSeek-V3.2-Exp 和 DeepSeek-V3.2。它在 MLA 基础上增加动态选择机制，解决长上下文中即使单个 KV 条目已经较小，读取和计算全部历史条目仍然昂贵的问题。</p>
-<p>DSA 先通过轻量索引器 Lightning Indexer 计算当前 Query 与历史 Token 的相关分数，再取分数最高的 Top-k 个位置，交给主 Attention 进行计算。下图中的绿色部分是新增的索引过程，Top-k Selector 负责选择位置，上方的核心 Attention 则读取所选位置对应的 MLA 缓存。索引器使用较小的表示和较少的头完成筛选，其计算成本低于直接执行完整的主 Attention。</p>
-<img src="../../assets/manuscript-20260914/c31-d111bded53c358.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>DeepSeek-V3.2 报告中的配置是每个 Query 最多选择 2048 个 KV 条目。随着上下文增长，核心 Attention 仍可以集中处理这一有限范围，因而明显降低长输入处理和后续生成的成本。未被本次选中的历史条目仍可供后续 Query 检索，所以稀疏选择主要减少的是本次读取和计算量，而不是按相同比例删除全部缓存。索引器本身仍需处理历史候选，实际开销也会受到上下文长度影响。</p>
-<p />
-<h3><b>18.4.8　MiniMax 稀疏注意力（MSA）</b></h3>
-<p>MiniMax 稀疏注意力（MiniMax Sparse Attention，MSA）由 MiniMax 团队提出，应用于 MiniMax-M3。它面向百万 Token 上下文中的效率问题，特别考虑了如何让稀疏注意力适合 GPU 批量计算，而不仅是在理论上减少参与计算的 Token。</p>
-<p>MSA 建立在 GQA 基础上，包含索引分支和主分支。索引分支先计算 Token 级相关分数，再取每个块内的最高分数作为块分数，为不同 GQA 组分别选择 Top-k 个历史块。主分支随后读取选中块中满足因果条件的 Token 级 K、V，同时保留当前所在的局部块。如下图所示，右侧两个 Query 组可以形成不同的选择范围，同组内的 Query 头则共享选择结果。</p>
-<img src="../../assets/manuscript-20260914/c31-e890dd80a296d1.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>按块组织访问可以提高 GPU 处理数据的规则性，而分组选择使不同组能够保留不同的检索模式。在 109B 参数实验模型的 1M 上下文测试中，论文报告 MSA 的每 Token 注意力计算量约为 GQA 的 1/28.4；配合专用内核，在 H800 上处理输入的 Prefill 阶段和逐 Token 生成的 Decode 阶段分别获得约 14.2 倍和 7.6 倍的速度提升。这说明稀疏算法与计算内核需要共同设计，减少计算量才能更充分地转化为实际速度收益。</p>
-<p />
-<h3><b>18.4.9　Qwen 稀疏注意力（QSA）</b></h3>
-<p>Qwen 稀疏注意力（Qwen Sparse Attention，QSA）由 Qwen 团队提出，并应用于 Qwen3.8-Flash-Next。该模型采用三层 Gated DeltaNet 搭配一层 QSA 的混合结构：前者通过状态更新高效处理序列，后者保留对历史 Token 的直接检索。QSA 重点处理的问题是，长上下文中的索引器自身也会产生较大开销。</p>
-<p>为此，QSA 先将连续多个 Token 的索引 Key 通过平均池化压缩成微块表示，在较短的微块序列上计算相关分数并选择 Top-k 块。选中后，再把块展开为原始 Token 位置，让核心 Attention 读取对应的 K、V；尚未组成完整块的尾部 Token 也会保留。下图左侧是压缩索引过程，右侧是根据选择结果进行的微块稀疏 Attention，两部分之间传递的是位置索引。</p>
-<img src="../../assets/manuscript-20260914/c31-346289a9285559.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>这样既减少了主 Attention 访问的位置，也缩短了索引器需要扫描的序列。Qwen3.8-Flash-Next 报告在 1M 上下文的内核测试中，QSA 相对稠密注意力的 Prefill 和 Decode 速度分别提升约 7.6 倍和 4.9 倍。理解这一结构时，需要区分索引表示与主 Attention 缓存：QSA 压缩前者来降低筛选成本，选中后仍读取 Token 级 KV，因此可以保留所选区域的细粒度信息。</p>
-<p />
-<h3><b>18.4.10　Kimi Delta Attention（KDA）</b></h3>
-<p />
-<p>Kimi Delta Attention（KDA）由 Moonshot AI 团队在 Kimi Linear 中提出，实际应用于 Kimi Linear 的 48B 总参数、3B 激活参数模型。它采用线性注意力思路，把历史信息持续写入固定大小的状态，减少每一步生成时反复读取长历史序列的开销。</p>
-<p />
-<p>KDA 在 Gated DeltaNet 的基础上引入更细粒度的门控。新 Token 到来时，模型先控制旧状态中不同通道的信息保留程度，再通过 Delta 规则修正已有的键值关联。这种更新可以理解为利用新输入与当前状态所预测内容之间的差异，调整状态中保存的信息。由于衰减门按通道变化，不同部分可以采用不同的保留速率。计算时还可以按块并行处理一段 Token，以提高 GPU 效率。</p>
-<img src="../../assets/manuscript-20260914/c31-bc3814a6007c94.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>上图展示了 Kimi Linear 将三层 KDA 与一层 MLA 交错使用的方式。KDA 层用固定大小的状态降低长序列成本，MLA 层则补充对具体历史位置的直接检索，缓解固定状态容量有限的问题。在论文采用相同训练方案的比较中，这一混合模型相对完整 MLA 基线最多减少 75%的 KV Cache，并在 1M 上下文下获得最高约 6 倍的解码吞吐量。这些效果对应 Kimi Linear 的混合架构，而不是所有 Kimi 型号的统一配置。</p>
-<p />
-<h3><b>18.4.11　压缩稀疏注意力（CSA）</b></h3>
-<p />
-<p>压缩稀疏注意力（Compressed Sparse Attention，CSA）由 DeepSeek 团队在 DeepSeek-V4 中提出，应用于 DeepSeek-V4-Pro 和 DeepSeek-V4-Flash。前面的 MLA 主要压缩每个 Token 的 KV 表示，CSA 进一步沿序列方向减少条目数量，将多个 Token 的信息汇聚到较少的 KV 条目中，再进行稀疏选择。</p>
-<p>CSA 先用可学习的 Token 级压缩器处理连续 Token，并结合相邻块的重叠信息，形成压缩 KV。接着，Lightning Indexer 为这些压缩条目打分，选择 Top-k 条目参与主 Attention。下图中，压缩器位于索引和选择之前，主 Attention 直接读取压缩后的 KV；左侧还有一条滑动窗口分支，把近期未压缩的 Token 一起送入计算，保留局部细节。</p>
-<img src="../../assets/manuscript-20260914/c31-0aac58ba333b88.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>DeepSeek-V4 报告中的 CSA 压缩率为 4，即历史 KV 条目数量约降至四分之一，再从中选择部分条目进行核心 Attention 计算。因此，CSA 既降低长期缓存量，也减少每次读取和计算的历史内容。QSA 压缩索引后会回到原始 Token，而 CSA 直接在压缩条目上完成信息聚合，因而对历史 KV 本身也进行了压缩。这种设计需要压缩器保留有用特征，并由局部窗口补充近期细节。</p>
-<p />
-<h3><b>18.4.12　高度压缩注意力（HCA）</b></h3>
-<p />
-<p>高度压缩注意力（Heavily Compressed Attention，HCA）同样由 DeepSeek 团队在 DeepSeek-V4 中提出，并与 CSA 在 DeepSeek-V4-Pro 和 Flash 的多层结构中交错使用。它采用更强的序列压缩，让模型以较少的缓存保留覆盖大范围历史的信息，与 CSA 的选择性读取形成补充。</p>
-<p>HCA 的压缩率在报告中设为 128，远高于 CSA 的 4。多个 Token 通过可学习的加权汇聚形成一个压缩条目后，当前 Query 会对全部因果可见的压缩历史执行 Attention，不再进行 Top-k 筛选。如下图所示，HCA 保留压缩分支和局部滑动窗口分支，但省去了 CSA 中的索引器和选择器。窗口提供近期 Token 的细节，压缩历史提供更大范围的上下文信息。</p>
-<img src="../../assets/manuscript-20260914/c31-db5fcb025aa2e7.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p />
-<p>CSA 与 HCA 交错配置，使 DeepSeek-V4 能够同时利用不同粒度的历史表示。报告中，在 1M 上下文下，DeepSeek-V4-Pro 的单 Token 推理 FLOPs 和 KV Cache 分别约为 DeepSeek-V3.2 的 27%和 10%。这是混合 Attention 及低精度计算、存储共同作用的整体效果。对使用者而言，这类结构的意义在于使超长上下文更容易在有限硬件上运行；具体模型能否准确提取长材料中的细节，仍取决于压缩方式、训练过程和实际任务。</p>
-<p>从这些模型的设计可以看出，Attention 的改进并不只有一种方向。MHA、MQA 和 GQA 主要改变头之间的共享关系，MLA 压缩每个位置的 KV 表示，DSA、MSA 和 QSA 减少核心 Attention 访问的位置，KDA 通过状态更新处理历史，而 CSA、HCA 进一步压缩历史条目。模型可以将其中多种方法组合使用，因此分析资源需求时，需要结合每种结构的层数和缓存形式。无论采用哪种结构，Attention 都只负责聚合上下文信息，模型的整体能力仍由它与 Embedding、前馈网络及训练过程共同形成。</p>
-<p />
-<h2><b>18.5　预训练：从大规模数据中学习基础规律</b></h2>
-<p>模型结构决定信息怎样计算，训练过程则决定模型最终学到什么。大模型的训练通常可以分为几个阶段。首先，预训练阶段，模型会在海量文本、代码等数据上学习语言规律、知识结构和基本的推理模式，获得通用能力；随后，进入指令微调（Supervised Fine-Tuning，SFT）阶段，通过大量“指令—回答”样本，让模型学会理解用户要求，并按照指定任务形式进行回答；在此基础上，还会进一步进行偏好优化或强化学习，根据人工反馈或规则对模型行为进行调整，使回答在有用性、准确性、表达风格、安全性以及行为边界等方面更加符合预期。</p>
-<p>预训练是模型形成基础能力的阶段。模型会在大规模文本、代码或多模态数据上反复训练。对于 Decoder-only 语言模型（比如 GPT 系列），常见训练任务是根据前面的内容预测下一个 Token，预测错误时再调整模型参数。海量样本不断重复后，模型逐渐学习语言结构、表达方式和不同概念之间的统计关系，并形成完成问答、摘要、翻译和代码生成等任务所需的基础表示与生成能力。</p>
-<p>模型在预训练中学到的知识分布在大量参数中，并不是一套可以逐条查询的数据库。它可以组合已经学到的规律，生成训练数据中没有原样出现过的内容，也可能把相关但不完全匹配的信息组合在一起，形成看似合理的错误答案。当然，训练数据也不是越多越好。重复内容、低质量网页、错误知识、隐私数据和有害内容都会影响模型。预训练前通常需要进行格式解析、去重、质量筛选、安全过滤和数据配比。数据规模决定模型能够接触多少内容，数据质量则直接影响模型能够从中学到什么。</p>
-<p />
-<h2><b>18.6　指令微调：让模型学会按照要求完成任务</b></h2>
-<p>完成预训练后，模型已经能够续写文本，但不一定会稳定地按照用户要求完成任务。例如，用户要求列出三个行动项，基础模型可能继续扩写问题，也可能忽略指定格式。指令微调会使用指令和期望答案组成的示例继续训练模型，以下是一个指令微调的例子：</p>
-<pre data-language="Plain Text"><code>指令：把下面的会议记录整理成行动项。
-输入：会议记录正文。
-输出：包含任务、负责人和截止时间的表格。</code></pre>
-<p>经过问答、摘要、信息抽取、代码、工具调用和安全拒答等不同类型的示例训练，模型会逐渐学会识别用户意图并遵守输出要求。指令微调主要教模型怎样使用已有能力。它可以补充部分知识，但不适合解决所有知识更新问题。需要频繁更新或者必须提供来源的内容，更适合通过知识库、检索或外部工具在运行时提供。</p>
-<p />
-<h2><b>18.7　后训练：继续调整模型行为</b></h2>
-<p>后训练是模型完成预训练后进行的一系列训练和对齐工作的总称。指令微调通常属于后训练的一部分，进一步地指令微调（SFT）、偏好优化和强化学习也可能出现在这个阶段。因此，指令微调和后训练不是两个互相独立的步骤，前者是一类具体方法，后者是包含多种方法的阶段。几种训练方式可以先按下面的关系理解如下：</p>
-<table><colgroup><col /><col /><col /></colgroup><tbody><tr><td><p>阶段或方法</p></td><td><p>主要使用的数据</p></td><td><p>主要解决的问题</p></td></tr><tr><td><p>预训练</p></td><td><p>大规模文本、代码和多模态数据</p></td><td><p>让模型学习语言和知识等基础规律</p></td></tr><tr><td><p>指令微调／SFT</p></td><td><p>指令与期望回答</p></td><td><p>让模型学会按照任务要求输出</p></td></tr><tr><td><p>偏好优化</p></td><td><p>同一问题下的较好回答和较差回答</p></td><td><p>让模型更倾向符合偏好的回答</p></td></tr><tr><td><p>强化学习</p></td><td><p>提示、模型回答和奖励信号</p></td><td><p>根据奖励继续调整生成策略</p></td></tr></tbody></table>
-<p>参考 InstructGPT 中采用的基于人类反馈的强化学习（Reinforcement Learning from Human Feedback，RLHF）框架，目前已经行程了一条经典后训练路线。RLHF 通常第一步使用人工示范数据完成 SFT，第二步使用回答排序数据训练奖励模型，第三步根据奖励模型给出的分数，使用 PPO 优化语言模型的生成策略。具体过程如下图所示。</p>
-<img src="../../assets/manuscript-20260914/c31-0040f1515f396a.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>其中，奖励模型给出的分数代表一种偏好，不等于客观真理。如果偏好数据覆盖不足，或者奖励规则设计不合理，模型可能只是学会迎合评分方式。</p>
-<p>实际模型不一定采用完全相同的路线。有的模型使用 SFT 加 DPO，有的使用 SFT、奖励模型和 PPO，还有的会加入 AI 反馈、安全对齐、工具使用训练和多轮对话数据。前面的预训练、指令微调和后训练解释了模型能力怎样形成。模型训练完成以后，使用者更常遇到的问题是一次能输入多少内容、运行时需要多少显存，以及有限硬件应该选择什么精度。</p>
-<h2><b> 18.8　上下文长度：模型一次能够处理多少内容</b></h2>
-<p>模型完成训练后，就进入实际推理和部署阶段。上下文长度决定一次请求能够放入多少 Token；上下文越长，模型能够读取的材料越多，但 Attention 计算和 KV Cache 占用也会增加，进而影响推理速度和显存需求。这里所谓的上下文，即一次请求中的系统提示、对话历史、当前输入、文件内容、工具说明、工具返回结果和模型已经生成的内容，可以使用如下公式来表达：上下文占用= 系统指令 + 对话历史 + 当前输入+ 附件内容 + 工具信息 + 模型输出。</p>
-<p>正如上文所提及的，大模型的上下文占用并不只是用户当前输入的内容，而是由多部分共同构成，包括系统指令、此前的对话历史、用户当前输入、附件中的相关内容、工具调用所需的信息以及模型已经生成的输出等。这些内容都会占用模型的上下文窗口，因此随着对话变长、附件增多或工具信息变复杂，可用于后续输入和生成的上下文空间也会逐渐减少。比如，模型标注支持上下文长度为：128K，通常表示一次请求能够处理的 Token 总量级。具体是否包含输出、单次最大输出是多少，还要看模型和服务接口的限制。通常，超出上下文后，平台可能拒绝请求、截断部分内容，或者自动压缩历史记录。</p>
-<p>为了提升模型在长文档场景下的推理效率和回答质量，在输入材料前应尽量对内容进行整理，删除与任务无关、重复或价值较低的信息，并明确告诉模型需要重点关注的章节、字段或问题范围，避免模型在大量无关上下文中分散注意力。对于篇幅特别长、一次难以完整处理的材料，可以先按照章节、主题或固定长度进行分段，让模型分别完成信息提取、摘要或分析，再对各部分结果进行统一汇总和综合判断。对于关键结论、重要数据或需要进一步核验的内容，还应要求模型同时标明对应的原文位置、章节或页码，便于后续人工检查和结果追溯，从而提高整体处理过程的准确性、可解释性和可靠性。</p>
-<p />
-<h2><b>18.9　KV Cache：长文本生成中的显存占用</b></h2>
-<p>基于 Transformer 架构的生成式模型，通常会逐个生成 Token，在生成的构成中，如果每生成一个 Token 都重新计算此前全部 Token 的注意力信息，会产生大量重复工作，因此不妨引入一套缓存机制，即 KV Cache。KV Cache 会保存各层已经计算过的 Key 和 Value，生成下一个 Token 时只需要计算新增部分，从而提高生成速度。每增加一个 Token，各个 Transformer 层都要保存对应的 K 和 V。因此，KV Cache 会随着上下文长度、输出长度、并发数量和模型层数增加。</p>
-<p>对于常见 Decoder-only 模型，可以用下面的简化公式理解单条序列的缓存占用，可以用以下公式表示：</p>
-<p><span class="arithmatex display-math">\(\text{KV Cache 占用}
-\approx
-2 \times \text{层数}
-\times \text{Token 数}
-\times \text{KV 头数}
-\times \text{每个头的维度}
-\times \text{每个数的字节数}
-\)</span></p>
-<p>模型权重加载完成后占用相对固定，KV Cache 却会随请求变化，因此，同一个量化模型在短问答中可以顺利运行，换成长文档或者多人并发后仍可能显存不足。例如，同一台服务器只处理一份短会议记录时可能运行正常，如果同时让十名用户上传长记录后，模型需要为多条序列分别保存 KV Cache，显存压力会明显增加。这也解释了，即使模型文件能够放进显存，随着输入的文本长度和并发规模的增大，算力资源的消耗也在发生变化。因此，在实际部署时，可以通过缩短无关上下文、限制最大生成长度、降低并发量、使用分页缓存，或者选择采用 GQA、MQA 结构的模型降低 KV Cache 压力，提升算力服务的效率。</p>
-<p />
-<h2><b>18.10   参数规模、量化与硬件</b></h2>
-<p>模型文件实际是保存当前模型结构即即相关参数，这些参数本质上是一组数值。结合计算机组成原理中的相关只是，这些参数通常在计算机中是一堆 0 和 1 的表达，而采用不同位数规模来表达同一数值，即规定的数值范围也规约了数值的精度，在模型训练时，通常用采用 FP32、FP16 或 BF16 等浮点格式进行运算，实际表示采用 32 位或 16 位 0 和 1 来表示一个数，位数越多，虽然表示的数值范围和数字精度都有所增加，但实际的资源消耗也非常大，因而，为进一步减少资源消耗，提出了量化方法，所谓量化，就是把这部分原本多位的浮点数值转换为 8 位的 INT8、4 位大的呃 INT4 等更低精度表示，从而减少模型文件和运行时的资源占用。下表展示了浮点数精度对应的相关特点：</p>
-<table><colgroup><col /><col /><col /></colgroup><tbody><tr><td><p>精度</p></td><td><p>每个参数的理论字节数</p></td><td><p>典型特点</p></td></tr><tr><td><p>FP32</p></td><td><p>4</p></td><td><p>精度较高，资源占用较大</p></td></tr><tr><td><p>FP16／BF16</p></td><td><p>2</p></td><td><p>常见训练和高精度推理格式</p></td></tr><tr><td><p>INT8</p></td><td><p>1</p></td><td><p>权重理论占用约为 16 位的一半</p></td></tr><tr><td><p>INT4</p></td><td><p>0.5</p></td><td><p>权重理论占用约为 16 位的四分之一</p></td></tr></tbody></table>
-<p>实际量化不是把所有小数简单取整，而是把一组浮点数映射到有限范围，并保存缩放系数、零点或分组信息。常见做法包括只压缩模型权重、同时量化权重和激活，以及在模型训练完成后进行训练后量化，我们过于不用担心因为量化导致的数值变化，因为最终模型在生成时，是预测每个候选 Token 作为下一个词的概率，在选择时，更多地时关系排序以及经过归一化后的得分，因此量化的精度虽有损失，但是在严格的控制下，可以有效地兼顾模型本身的生成效果。</p>
-<p>在进行模型选型时，经常需要判断显存是否够用。模型名称中的 7B、14B 和 70B 通常表示大约 70 亿、140 亿和 700 亿个参数。参数是模型训练中学到的数值，分布在 Attention、前馈网络和 Embedding 等模块中。</p>
-<p>参数量不能直接等同于模型文件大小，还要结合每个参数采用的精度。只计算模型权重时，可以使用下面的公式：</p>
-<p><span class="arithmatex display-math">\(权重占用 ≈ 参数量 × 每个参数的字节数
-\)</span></p>
-<table><colgroup><col /><col /><col /><col /></colgroup><tbody><tr><td><p>参数规模</p></td><td><p>FP16／BF16</p></td><td><p>INT8</p></td><td><p>INT4</p></td></tr><tr><td><p>7B</p></td><td><p>约 14GB</p></td><td><p>约 7GB</p></td><td><p>约 3.5GB</p></td></tr><tr><td><p>14B</p></td><td><p>约 28GB</p></td><td><p>约 14GB</p></td><td><p>约 7GB</p></td></tr><tr><td><p>32B</p></td><td><p>约 64GB</p></td><td><p>约 32GB</p></td><td><p>约 16GB</p></td></tr><tr><td><p>70B</p></td><td><p>约 140GB</p></td><td><p>约 70GB</p></td><td><p>约 35GB</p></td></tr></tbody></table>
-<p>表中的数字只表示模型权重的理论下限。量化模型还要保存缩放系数等信息，实际推理还需要 KV Cache、中间计算结果、推理框架工作区和并发请求缓存。</p>
-<p>例如，14B 模型的 INT4 权重理论上约 7GB，但在 8GB 显卡上几乎没有空间留给 KV Cache 和运行缓冲。短上下文、单请求时可能运行，处理长文档时则容易显存不足。使用 12GB 或 16GB 显存更加宽松。70B INT4 权重约 35GB，一般需要 48GB 以上的显存，在部署时，可以选择更大现存的算力卡、多卡或者使用 CPU 内存进行混合推理。</p>
-<p />
-<h2><b>18.11　领域模型：让通用模型适应专业场景</b></h2>
-<p>通用大模型需要覆盖大量知识和任务，在医疗、金融、法律和代码等专业场景中，不一定熟悉行业术语、业务流程和风险边界。领域模型通常是在通用底座模型上，使用专业数据和任务进行继续训练或适配，使模型更加适合某个领域。它不一定从零训练，也不只是通过 Prompt 把模型设定成专业人士。常见训练和适配方式包括：</p>
-<p />
-<ol><li>使用领域文献、法规、代码库等未标注数据继续预训练；</li><li>使用专业问答、信息抽取、报告生成等数据进行领域指令微调；</li><li>使用专家偏好、拒答规则和风险案例进行安全对齐；</li><li>连接专业知识库、数据库和外部工具，提供可以更新和追溯的信息。</li></ol>
-<p>这里需要区分领域模型和领域应用。领域模型经过专业数据训练，专业能力已经写入模型参数；领域应用则可以直接使用通用模型，再连接专业知识库、规则和工具。实际系统也经常把两种方式组合起来。</p>
-<p>下图中的法律问答系统先提取关键词，再从法规向量库中检索参考条文，最后由法律大模型结合依据生成回答。这说明专业能力不一定只依靠模型参数，外部资料也是领域应用的重要组成部分。</p>
-<img src="../../assets/manuscript-20260914/c31-ffa20d77d9ad6c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>专业数据并不等于专业可靠。医疗模型仍要检查医学证据和安全边界，法律模型要检查法条和引用，金融模型要检查数据时效和计算结果，代码模型则要通过运行和测试验证。医疗、法律和金融等高风险任务还应保留专业人员审批。</p>
-<p />
-<h2><b>18.13　模型幻觉：看似合理但缺少依据</b></h2>
-<p>使用模型整理会议记录时，如果原文没有指定负责人，模型却自行补出一个姓名；使用模型抽取合同时，如果原文没有金额，模型却生成了一个具体数字，这些都属于模型幻觉。模型幻觉是指大模型生成了语言流畅、结构完整，却与事实、输入材料或可验证来源不一致的内容。它还可能表现为编造不存在的政策、论文或网址，写错人物和时间，或者把没有形成的讨论写成已经确定的结论。</p>
-<p>大模型的核心任务是根据上下文预测下一个 Token，在生成的过程中，模型无法验证每句话是否真实。导致模型幻觉的原因有很多，比如，预训练数据可能存在错误或过时信息；用户问题可能缺少关键条件；长文本中的证据也可能被忽略或截断。后训练如果设计的奖励函数，更加偏向于鼓励完整、流畅的回答，也可能使模型在缺少依据时仍然继续生成。</p>
-<h3><b>18.13.1　常见幻觉类型</b></h3>
-<p>模型产生的幻觉也多种多样，通常可以分为事实幻觉、应用幻觉、推理幻觉等，详细分类和典型表现如下表所示：</p>
-<table><colgroup><col /><col /></colgroup><tbody><tr><td><p>类型</p></td><td><p>典型表现</p></td></tr><tr><td><p>事实幻觉</p></td><td><p>人名、日期、数字和事件与真实情况不符</p></td></tr><tr><td><p>引用幻觉</p></td><td><p>编造论文、法条、链接或出处</p></td></tr><tr><td><p>输入幻觉</p></td><td><p>生成原始材料中没有出现的结论和字段</p></td></tr><tr><td><p>推理幻觉</p></td><td><p>中间推导存在错误，但回答表达得很确定</p></td></tr><tr><td><p>工具幻觉</p></td><td><p>声称已经读取文件或调用接口，实际上没有成功</p></td></tr></tbody></table>
-<p>除了通用模型外，训练获取的领域模型同样也会产生幻觉。通常，专业数据能够改善领域表现，但不能保证每个答案都准确。知识库检索也不能完全解决所有幻觉问题，如果检索到的材料不相关、已经过期或者本身存在错误，模型仍可能得到错误结论，进一步导致幻觉。</p>
-<h3><b>18.13.2　怎样降低幻觉风险</b></h3>
-<p>大模型产生幻觉是当前应用过程中比较常见的问题，仅仅在提示词中添加一句“不要编造”或者“请保证回答准确”，通常无法从根本上消除这类风险。模型本质上仍然是在根据上下文预测最可能出现的内容，当输入信息不足、材料存在冲突，或者问题本身超出模型可靠知识范围时，仍然可能生成看起来合理但实际上并不准确的答案。因此，降低幻觉风险更依赖一整套输入约束、外部验证和人工复核机制。</p>
-<p>首先，应尽量为模型提供清楚、相关且相互一致的材料，减少无关信息和冲突信息对判断过程的干扰。对于事实、数字、政策条款、实验结果等关键内容，可以要求模型同时标明对应的来源、章节、页码或原文位置，使回答具备可追溯性，方便后续核验。对于新闻、政策、价格、法规、产品参数等更新频繁的知识，则不应只依赖模型内部记忆，而应通过搜索引擎、知识库、数据库、API 或其他外部工具获取最新信息，再让模型基于这些可靠材料进行分析。</p>
-<p>其次，当原始材料中确实缺少某项信息时，应明确要求模型使用“待确认”、“原文未提供”、“无法根据现有材料判断”等方式进行标记，而不是根据经验自行补全。对于日期、金额、身份证号、统计数据、公式、代码执行结果等适合结构化检查的内容，还可以引入程序进行自动校验，例如检查数值范围、字段格式、计算结果以及代码是否能够实际运行，从而避免模型仅凭语言生成结果。</p>
-<p>此外，对于重要结论，特别是会影响业务决策、项目验收或用户权益的内容，还应保留人工复核环节。语言表达流畅、逻辑看起来完整，并不代表事实一定正确，因此不能把“说得像真的”直接等同于“确实是真的”。在医疗、法律、金融、安全生产等高风险场景中，更应明确模型只是辅助工具，最终结论需要由具备相应资质和经验的专业人员审核和确认。</p>
-<p>因此，降低幻觉的核心思路并不是要求模型“永远回答”，而是让模型学会在缺少可靠依据时合理停止。当现有信息不足以支持结论时，最合适的行为可能是明确说明“当前缺少哪些关键材料”“哪些结论暂时无法确认”，并进一步告诉用户需要补充哪些数据、文档或证据。相比继续生成一个貌似完整但缺乏依据的答案，这种做法通常更加可靠，也更适合实际业务应用。</p>
-<p />
+lab = Lab(RULES_BY_NAME["parity_a"], seed=0)
+print("开局观测 (a, b, out):", lab.observations)
+print("做一次实验 [(3,4), (4,4)] -&gt;", lab.run([(3, 4), (4, 4)]))</code></pre>
+<p><strong>检查方法</strong>：每条真实规则对自身的验证必须 100% 正确；同一种子的开局观测必须完全相同。</p>
+<img src="../../assets/mini-ai-scientist/step1-lab.png" alt="图 3：步骤 1：12 条规则、开局观测与一次实验结果，检查通过。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.2 让模型"调用 Python"的安全沙箱</h3>
+<p><strong>目标</strong>：模型写的规则和计算式要被真正执行，但不能执行任意代码。</p>
+<p><strong>输入与操作</strong>：<code>compile_expr</code> 先解析表达式的语法树，只放行算术、比较、<code>X if C else Y</code> 与 <code>abs/min/max</code>，指数只允许 0～4 的常数。</p>
+<p><strong>检查方法</strong>：<code>__import__</code>、属性访问、超大指数必须被拒绝；判定看的是语义等价，所以 <code>max(a, b) - min(a, b)</code> 也应被判为 <code>|a - b|</code> 的正确答案。</p>
+<img src="../../assets/mini-ai-scientist/step2-sandbox.png" alt="图 4：步骤 2：危险表达式被拒绝，等价规则被判为正确。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.3 用"脚本模型"空跑 Agent 循环</h3>
+<p><strong>目标</strong>：接入真实模型之前，先确认 Agent 循环、四个工具和评测流程本身没有问题。</p>
+<p><strong>输入与操作</strong>：用一个按固定剧本回复的假模型走一遍：做实验 → 计算 → 检验错误假设 → 检验正确假设 → 提交。Notebook 中同时打印了模型实际看到的系统提示词。</p>
+<p><strong>检查方法</strong>：空跑必须"发现成功"，并且实验 3 次、检验 2 次、计算 1 次、没有格式错误。下图中可以看到 <code>check</code> 的反馈：错误假设 <code>a - b</code> 会列出对与错的行，帮助模型定位条件分支。</p>
+<img src="../../assets/mini-ai-scientist/step3-dryrun.png" alt="图 5：步骤 3：系统提示词与脚本模型空跑的逐轮反馈，检查通过。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.4 加载模型（vLLM + 思考模式）</h3>
+<p><strong>目标</strong>：在 GPU 上加载 Qwen3-4B，开启思考模式。</p>
+<p><strong>输入与操作</strong>：</p>
+<pre data-language="python"><code class="language-python">from mini_scientist.backend import VLLMBackend
+
+MODEL = "Qwen/Qwen3-4B"      # 显存充足可换 "Qwen/Qwen3-8B"
+backend = VLLMBackend(MODEL, thinking=True, max_tokens=8192,
+                      max_model_len=20480, gpu_memory_utilization=0.85)</code></pre>
+<p>几个关键参数的含义：<code>max_tokens=8192</code> 是每轮思考加回答的上限；<code>max_model_len=20480</code> 是上下文长度，实验记录本让对话保持很短，这个长度足够；采样使用 Qwen3 官方推荐的思考模式参数 <code>temperature=0.6, top_p=0.95, top_k=20</code>，因为贪心解码容易让思考模型陷入循环；<code>gpu_memory_utilization=0.85</code> 在 24GB 显卡上可以正常运行 4B，显存不足时可调小或换 <code>Qwen/Qwen3-1.7B</code>。</p>
+<p><strong>过程与输出</strong>：首次运行会从魔搭下载约 8GB 权重，并做 CUDA Graph 编译。实测加载用时 37 秒（已下载、有编译缓存时）。随后发送一个最简单的请求做冒烟测试。</p>
+<p><strong>检查方法</strong>：模型的第一轮回复能被解析成带 <code>tool</code> 字段的 JSON 动作。</p>
+<img src="../../assets/mini-ai-scientist/step4-model.png" alt="图 6：步骤 4：模型加载完成，第一轮回复是合规的 experiment 动作。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.5 一次完整的科研过程</h3>
+<p><strong>目标</strong>：观察模型如何从 3 个开局观测出发，一步步做实验、检验，直到提交。</p>
+<p><strong>输入与操作</strong>：规则 <code>parity_a</code>（Tier 2：a 为偶数时输出 <code>a + b</code>，否则输出 <code>a * b</code>），开局种子为 0。模型看不到真实规则。</p>
+<p><strong>过程与输出</strong>：下图是一次真实运行。模型从 3 个开局观测中猜出"按 a 的奇偶切换"，再用 (2,3) 和 (3,4) 两组对照实验验证，确认后提交，441 个输入全部一致，用时 76 秒。</p>
+<p><strong>检查方法</strong>：过程完整结束并得到验证结果。由于采样存在随机性，单次结果可能成功也可能失败，这正是 4.6 节要用多条规则统计的原因。</p>
+<img src="../../assets/mini-ai-scientist/step5-episode.png" alt="图 7：步骤 5：Qwen3-4B 发现 parity_a 规则的完整过程，441 个输入全部一致。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.6 批量评测</h3>
+<p><strong>目标</strong>：用统一口径衡量 Agent 的发现能力。</p>
+<p><strong>输入与操作</strong>：12 条规则各建一个 episode（种子 0），所有 episode 同步推进，每轮做一次批量推理：</p>
+<pre data-language="python"><code class="language-python">eps = [Episode(Lab(r, seed=0)) for r in RULES]
+results = run_batch(backend, eps)      # 每轮一次批量推理，直到全部提交</code></pre>
+<p><strong>过程与输出</strong>：完整过程保存在 <code>results/notebook/Qwen3-4B_think.jsonl</code>，每行包括提交规则、441 点一致率、实验次数和逐轮记录。实测用时 930 秒，总体解出 6/12：Tier 1 全部解出（4/4），Tier 2 解出 2/4，Tier 3 为 0/4。</p>
+<p><strong>检查方法</strong>：我们用同一配置跑了 3 个种子，每个种子解出 6～7/12、Tier 1 解出 3～4/4。因此正常范围是：总体 ≥4/12 且 Tier 1 ≥3/4。另外，vLLM 的采样种子是固定的，我们在同一环境中两次运行这一步，结果完全相同。</p>
+<img src="../../assets/mini-ai-scientist/step6-batch.png" alt="图 8：步骤 6：12 条规则的逐条结果与按难度汇总，结果在正常范围内。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.7 分析失败：模型和自己的数据"唱反调"</h3>
+<p><strong>目标</strong>：弄清失败到底是"找不到规律"，还是别的原因。</p>
+<p><strong>输入与操作</strong>：对每个失败的 episode，把模型提交的规则放回它<strong>自己做过的全部实验</strong>上逐条核对。</p>
+<p><strong>过程与输出</strong>：在这次运行中，6 个失败里有 1 个提交了与自身数据矛盾的规则（<code>threshold_b</code>，矛盾 2 行），另有 1 个（<code>nested</code>）到最后也没有提交。这个比例在不同配置之间差别很大：完整实验中，不开思考的 Qwen3-8B 有 23/24 次失败属于这种情况，开启思考后降到 10/20（见第 5 节）。也就是说，很多失败不是不会发现，而是<strong>没核对就下结论</strong>。</p>
+<p><strong>检查方法</strong>：表中"与自身数据矛盾的行数"为 0 表示规则与已有数据一致但仍然错误（数据不足以排除），大于 0 表示自相矛盾，-1 表示未提交。</p>
+<img src="../../assets/mini-ai-scientist/step7-failures.png" alt="图 9：步骤 7：失败 episode 的提交规则与模型自身数据的矛盾情况。" class="article-image" loading="lazy" decoding="async" />
+<h3>4.8 加一道"提交关卡"</h3>
+<p><strong>目标</strong>：把"结论必须与自己的数据一致"这条科研规范写进 Agent。</p>
+<p><strong>输入与操作</strong>：<code>Episode(..., gate=True)</code>，其余设置与 4.6 完全相同。提交时如果规则与已观测数据矛盾，就拒绝提交、列出矛盾行，让模型继续研究。为保证每个 episode 都能结束，最后一轮的提交不经过关卡。</p>
+<p><strong>过程与输出</strong>：实测用时 1007 秒，解出数从 6/12 变为 7/12，关卡共拦截 5 次矛盾提交。</p>
+<p><strong>检查方法</strong>：被拦截次数 <code>rejected</code> 大于 0，说明关卡确实拦下了矛盾结论。单种子的差异会受随机性影响，多种子、多规模的结果见第 5 节。</p>
+<img src="../../assets/mini-ai-scientist/step8-gate.png" alt="图 10：步骤 8：开启提交关卡前后的解出数对比。" class="article-image" loading="lazy" decoding="async" />
+<h2>5. 完整运行与结果</h2>
+<p>Notebook 中的 4.6～4.8 是单种子的精简版。完整实验用命令行脚本一次跑完，实测单卡 A100 约 4 小时：</p>
+<pre data-language="bash"><code class="language-bash">CUDA_VISIBLE_DEVICES=0 bash scripts/run_sweep.sh
+python scripts/analyze.py results/sweep    # 生成 summary.md 与 solve_rate.png</code></pre>
+<p>每个配置运行 12 条规则 × 3 个种子 = 36 个 episode，共 17 个配置：Qwen3-0.6B/1.7B/4B/8B 各开关思考、提交关卡、Qwen2.5-Instruct 对照，以及去掉 <code>compute</code> 或 <code>check</code> 工具的消融。所有逐轮记录都保存在 <code>results/sweep/</code>，完整结果表见仓库中的 <code>results/sweep/summary.md</code>。</p>
+<p>需要说明的是，每组只有 36 个 episode，解出率在 50% 附近时，单组的标准误约为 8 个百分点。因此下面只把明显大于这个量级的差异当作结论。</p>
+<h3>5.1 思考模式比参数量更重要</h3>
+<img src="../../assets/mini-ai-scientist/solve_rate.png" alt="图 11：Qwen3 各规模模型开启与关闭思考模式时的解出率（每组 36 个 episode）。" class="article-image" loading="lazy" decoding="async" />
+<table><colgroup><col width="180" /><col width="130" /><col width="130" /><col width="290" /></colgroup><thead><tr><th><p>模型</p></th><th><p>关闭思考</p></th><th><p>开启思考</p></th><th><p>失败中与自身数据矛盾（关 → 开）</p></th></tr></thead><tbody><tr><td><p>Qwen3-0.6B</p></td><td><p>0/36</p></td><td><p>7/36</p></td><td><p>36/36 → 26/29</p></td></tr><tr><td><p>Qwen3-1.7B</p></td><td><p>5/36</p></td><td><p>14/36</p></td><td><p>28/31 → 5/22</p></td></tr><tr><td><p>Qwen3-4B</p></td><td><p>10/36</p></td><td><p><strong>20/36</strong></p></td><td><p>25/26 → 7/16</p></td></tr><tr><td><p>Qwen3-8B</p></td><td><p>12/36</p></td><td><p>16/36</p></td><td><p>23/24 → 10/20</p></td></tr></tbody></table>
+<p>每个规模开启思考后，解出率都明显提升；开启思考的 1.7B（14/36）已经超过不开思考的 8B（12/36）。4B 与 8B（开思考）之间的差距在随机波动范围内，所以<strong>在这个任务上，4B 已经够用</strong>，魔搭免费 GPU 也能运行。</p>
+<p>表格最后一列揭示了思考带来的主要收益：不开思考时，失败几乎全部是"提交了与自己实验数据矛盾的规则"；开启思考后，这类失败大幅减少（0.6B 例外，它开启思考后仍然大多自相矛盾）。</p>
+<h3>5.2 提交关卡：能拦住矛盾结论，但能否改对取决于模型</h3>
+<table><colgroup><col width="200" /><col width="140" /><col width="140" /><col width="250" /></colgroup><thead><tr><th><p>配置</p></th><th><p>无关卡</p></th><th><p>有关卡</p></th><th><p>关卡拦截次数</p></th></tr></thead><tbody><tr><td><p>Qwen3-8B 开思考</p></td><td><p>16/36</p></td><td><p>19/36</p></td><td><p>12 次（6 个 episode）</p></td></tr><tr><td><p>Qwen3-4B 开思考</p></td><td><p>20/36</p></td><td><p>20/36</p></td><td><p>22 次（7 个 episode）</p></td></tr><tr><td><p>Qwen3-1.7B 开思考</p></td><td><p>14/36</p></td><td><p>16/36</p></td><td><p>30 次（8 个 episode）</p></td></tr><tr><td><p>Qwen3-8B 关思考</p></td><td><p>12/36</p></td><td><p>11/36</p></td><td><p>48 次（12 个 episode）</p></td></tr></tbody></table>
+<p>关卡只能告诉模型"你的结论和数据矛盾"，不能告诉它怎么改对。开启思考的模型被拦下后有时能自己修正，所以小幅提升；不开思考的 8B 被拦下后反复提交错误规则，直到轮数用完。这些差异都在随机波动范围内，我们的结论是：<strong>流程设计可以帮模型避免草率下结论，但修正假设的能力仍然要靠模型自己的推理。</strong></p>
+<h3>5.3 工具要匹配模型能力</h3>
+<table><colgroup><col width="260" /><col width="130" /><col width="340" /></colgroup><thead><tr><th><p>配置（Qwen3-8B 开思考）</p></th><th><p>解出</p></th><th><p>说明</p></th></tr></thead><tbody><tr><td><p>完整工具</p></td><td><p>16/36</p></td><td><p>平均每个 episode 只用 0.36 次 <code>compute</code></p></td></tr><tr><td><p>去掉 <code>compute</code></p></td><td><p>20/36</p></td><td><p>没有变差</p></td></tr><tr><td><p>去掉 <code>check</code></p></td><td><p>17/36</p></td><td><p>没有变差</p></td></tr></tbody></table>
+<p><code>compute</code> 最初是为不会思考、心算容易出错的模型设计的。开启思考的模型会在思考过程里自己计算，几乎不用这个工具（1.7B 平均每个 episode 只用 0.06 次），去掉它也不会变差。对弱模型必要的辅助，对强模型可能只是多余的选项。</p>
+<h3>5.4 其他观察</h3>
+<ul><li><p><strong>上一代非推理模型明显更弱</strong>：Qwen2.5-7B-Instruct 与 3B-Instruct 均为 5/36，1.5B 为 0/36，从 3B 到 7B 没有提升。</p></li><li><p><strong>Tier 3 仍是能力边界</strong>：嵌套或取模条件的规则，所有配置中最好的成绩只有 2/12（Qwen3-8B 开思考 + 提交关卡）。</p></li></ul>
+<h2>6. 评测与验收</h2>
+<h3>6.1 功能验收</h3>
+<ul><li><p>Notebook 步骤 1～3 的检查全部通过（不需要 GPU）。</p></li><li><p>步骤 6、8 生成 <code>results/notebook/*.jsonl</code>，每行包括提交规则、441 点一致率、实验次数和完整过程。</p></li><li><p>运行 <code>python scripts/test_lab.py</code> 输出 <code>all lab tests passed</code>。</p></li></ul>
+<h3>6.2 质量验收</h3>
+<p>我们使用三个指标：<strong>发现成功率</strong>（提交规则在 441 个输入上与真实规则完全一致的比例，按难度分层报告）、<strong>一致率</strong>（提交规则与真实规则结果相同的输入比例，用来衡量部分正确）、<strong>实验效率</strong>（成功时平均使用的实验次数）。Qwen3-4B 开启思考时，单种子的正常范围是总体 ≥4/12、Tier 1 ≥3/4。</p>
+<p>作为对照，我们还实现了一个不用 LLM 的基线：随机做实验，同时在约 1.2 万条 <code>F if C else G</code> 形式的候选规则中排除与数据不符的。</p>
+<img src="../../assets/mini-ai-scientist/baseline.png" alt="图 12：穷举搜索基线：解出 32/36，但平均实验次数远高于 LLM。" class="article-image" loading="lazy" decoding="async" />
+<p>穷举基线解出 32/36，看起来比 LLM 好，但它有两个本质局限：一是<strong>表达能力受限于候选语法</strong>，两层嵌套的 <code>nested</code> 规则不在候选空间中，永远发现不了；二是<strong>实验是盲目的</strong>，即使是最简单的 Tier 1 规则，平均也要用 29 次实验；而开启思考的 Qwen3-8B 与 4B 成功时，平均只用了 3.9 次和 7.6 次。LLM 科学家的价值在于有针对性地设计实验，差距在于推理的可靠性。</p>
+<h3>6.3 异常验收</h3>
+<table><colgroup><col width="220" /><col width="210" /><col width="300" /></colgroup><thead><tr><th><p>异常情况</p></th><th><p>实际出现在</p></th><th><p>系统表现</p></th></tr></thead><tbody><tr><td><p>思考过长被截断，没有输出 <code>&lt;/think&gt;</code></p></td><td><p>Qwen3 思考模式约 10%～20% 的轮次（8B 24/194，4B 31/158）</p></td><td><p>不把半截思考当作回答写回对话；提示"想得简短一些"，并计入 <code>truncated</code></p></td></tr><tr><td><p>输出格式不合规（如 LaTeX 转义 <code>\(</code>、输入写成 <code>{"a":3,"b":4}</code>）</p></td><td><p>小模型常见</p></td><td><p>宽松解析；无法解析时计入格式错误并提示重试，单个 episode 出错不会中断整批评测</p></td></tr><tr><td><p>同一检验反复执行、原地打转</p></td><td><p>Qwen2.5-7B</p></td><td><p>拦截重复的 <code>check</code>/<code>compute</code>，提示去做新实验</p></td></tr><tr><td><p>提交与自身数据矛盾的结论</p></td><td><p>各规模模型普遍</p></td><td><p>开启提交关卡时拒绝，并列出矛盾行</p></td></tr><tr><td><p>恶意代码</p></td><td><p>演示用</p></td><td><p>AST 白名单拒绝（见 4.2）</p></td></tr></tbody></table>
+<img src="../../assets/mini-ai-scientist/exceptions.png" alt="图 13：异常验收：思考截断、畸形输入与矛盾提交的实际处理结果。" class="article-image" loading="lazy" decoding="async" />
+<h2>7. 已知限制、排错与可复用方向</h2>
+<p><strong>已知限制</strong></p>
+<ul><li><p>规则空间较小（两个整数输入、确定性输出），离真实科研还有距离。</p></li><li><p>采样有随机性，单次结果会波动，结论应以多种子统计为准；本文每个配置只有 36 个 episode，较小的差异不具备统计意义。</p></li><li><p>Tier 3 规则对 8B 以内的模型仍然很难。</p></li><li><p>思考模式的计算开销约为非思考模式的 10～14 倍，且约 10%～20% 的轮次会因思考过长被截断。</p></li></ul>
+<p><strong>常见问题</strong></p>
+<table><colgroup><col width="270" /><col width="210" /><col width="250" /></colgroup><thead><tr><th><p>现象</p></th><th><p>原因</p></th><th><p>解决方法</p></th></tr></thead><tbody><tr><td><p><code>Qwen2Tokenizer has no attribute all_special_tokens_extended</code></p></td><td><p>transformers 5.x 与 vLLM 0.11 不兼容</p></td><td><p>安装 <code>transformers&lt;5</code> 后重启 Kernel</p></td></tr><tr><td><p><code>CUDA driver version is insufficient for CUDA runtime version</code></p></td><td><p>安装了 CUDA 13 构建的 vLLM</p></td><td><p>固定 <code>vllm==0.11.0</code></p></td></tr><tr><td><p><code>Free memory on device ... is less than desired GPU memory utilization</code></p></td><td><p>显存被其他进程占用</p></td><td><p>调小 <code>gpu_memory_utilization</code>，或结束占用显存的进程</p></td></tr><tr><td><p>脚本中报 <code>An attempt has been made to start a new process before ... bootstrapping</code></p></td><td><p>vLLM 用 spawn 方式启动子进程</p></td><td><p>把入口代码放在 <code>if __name__ == "__main__":</code> 下</p></td></tr><tr><td><p><code>decoder prompt is longer than the maximum model length</code></p></td><td><p>截断的思考被当成回答写回对话</p></td><td><p>代码已在 <code>split_thinking</code> 中处理；修改后端时请保留这段逻辑</p></td></tr></tbody></table>
+<p><strong>可复用方向</strong></p>
+<ul><li><p>把观测改成带噪声、三元输入或浮点输出，考察重复实验与统计推断能力。</p></li><li><p>环境自带可验证奖励（441 点精确匹配），可以直接用于 GRPO 等强化学习，训练小模型的"科研策略"。</p></li><li><p>"模型决策 + Python 执行 + 真值验证"的结构，也适用于数据分析 Agent 的自动评测、SQL 与公式推断、系统辨识和故障定位等场景。</p></li></ul>
+<h2>8. 代码、数据与参考资料</h2>
+<ul><li><p>代码仓库：<a href="https://github.com/14H034160212/mini-ai-scientist">mini-ai-scientist</a>，包含 <code>mini_scientist/</code> 源码、<code>scripts/</code>、带真实输出的 Notebook，以及 <code>results/sweep/</code> 下 17 个配置的完整逐轮记录。</p></li><li><p>数据：无外部数据。12 条规则定义在 <code>mini_scientist/lab.py</code> 中，开局观测由随机种子生成。</p></li><li><p>模型（Apache-2.0）：<a href="https://modelscope.cn/models/Qwen/Qwen3-4B">Qwen3-4B</a>、<a href="https://modelscope.cn/models/Qwen/Qwen3-8B">Qwen3-8B</a>、<a href="https://modelscope.cn/models/Qwen/Qwen3-1.7B">Qwen3-1.7B</a>、<a href="https://modelscope.cn/models/Qwen/Qwen3-0.6B">Qwen3-0.6B</a>。</p></li><li><p>推理框架：<a href="https://github.com/vllm-project/vllm">vLLM</a>（Apache-2.0）。</p></li><li><p>相关工作：Sakana AI 的 The AI Scientist；BoxingGym（实验设计基准）；Popper（LLM Agent 的可证伪检验）。</p></li></ul>
+<h2>9. 小结</h2>
+<p>本文用开源模型搭建了一个可以自动验证的 Mini AI Scientist：模型负责提出假设、设计实验和下结论，Python 负责执行和校验，穷举验证给出确定的对错。实验表明，在这个任务上，<strong>开启思考的 4B 模型已经能精确发现过半的隐藏规则</strong>；思考模式的主要作用，是让模型的结论与自己的实验数据保持一致。而 Tier 3 规则的低成功率也提醒我们，小模型离可靠的"科学发现"还有不小的距离——这个可验证的环境，正好可以作为后续改进与训练的起点。</p>
 </article>
