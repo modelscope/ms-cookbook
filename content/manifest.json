@@ -326,17 +326,25 @@
     },
     {
       "number": 37,
+      "title": "Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律",
+      "partIndex": 6,
+      "file": "source-html/chapter-37.html",
+      "status": "ready",
+      "discussionId": "mini-ai-scientist"
+    },
+    {
+      "number": 38,
       "title": "补充：大模型基础知识",
       "partIndex": 7,
-      "file": "source-html/chapter-37.html",
+      "file": "source-html/chapter-38.html",
       "status": "ready",
       "discussionId": "chapter-31"
     },
     {
-      "number": 38,
+      "number": 39,
       "title": "主流 LLM 评测",
       "partIndex": 7,
-      "file": "source-html/chapter-38.html",
+      "file": "source-html/chapter-39.html",
       "status": "ready",
       "discussionId": "chapter-34"
     }

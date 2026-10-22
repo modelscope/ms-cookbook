@@ -32,9 +32,9 @@
 
 A useful model application starts with practical decisions: which model fits the task, what hardware it needs, how to adapt it to your data, and how to judge the result. The cookbook connects these decisions to runnable examples, using tools such as **EvalScope, ms-swift, DiffSynth, and Ollama**, alongside RAG and Agent workflows.
 
-The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, product-image creation, and production-line inspection.
+The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, product-image creation, production-line inspection, and AI-driven scientific discovery.
 
-> **8 parts · 38 chapters · 37 available to read**
+> **8 parts · 39 chapters · 38 available to read**
 
 ## Start reading
 
@@ -120,9 +120,10 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | [34 · 快速使用 DeepSeek Harness](content/chapters/chapter-34.md) | Getting started with DeepSeek Harness |
 | [35 · 补充：Agent 框架知识](content/chapters/chapter-35.md) | Agent framework fundamentals |
 | [36 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-36.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
+| [37 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-37.md) | Build a verifiable scientific-discovery Agent with Qwen3 and compare model size and thinking mode |
 | **Part 8 · Supplementary fundamentals** | |
-| [37 · 补充：大模型基础知识](content/chapters/chapter-37.md) | Model architecture, training, inference, and limitations |
-| [38 · 主流 LLM 评测](content/chapters/chapter-38.md) | Invitation to contribute evaluations of mainstream models |
+| [38 · 补充：大模型基础知识](content/chapters/chapter-38.md) | Model architecture, training, inference, and limitations |
+| [39 · 主流 LLM 评测](content/chapters/chapter-39.md) | Invitation to contribute evaluations of mainstream models |
 
 ## Application examples
 
@@ -134,6 +135,7 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | Enterprise knowledge assistant | Retrieve reference material for grounded answers | [20](content/chapters/chapter-20.md) |
 | Product marketing visuals | Generate and edit product images | [25](content/chapters/chapter-25.md) |
 | Production-line inspection | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation | [36](content/chapters/chapter-36.md) |
+| Mini AI Scientist | Let open models propose hypotheses, design experiments, and verify discoveries automatically | [37](content/chapters/chapter-37.md) |
 
 ## Community
 
