@@ -1,0 +1,17 @@
+/cache/
+/cuda12/
+/models/
+/llama.cpp-b10430/
+/build-cuda12/
+/logs/
+**/__pycache__/
+*.py[cod]
+*.gguf
+*.aria2
+case-evidence.tar.gz
+# Publish reviewed evidence explicitly in a separate directory.
+/results/*/
+/results/summary.csv
+/results/recommendation.json
+/results/report.md
+/results/smoke.json
