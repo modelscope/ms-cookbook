@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'app.py'
+      - 'admin/**'
       - 'requirements.txt'
       - 'Dockerfile'
       - 'tests/**'

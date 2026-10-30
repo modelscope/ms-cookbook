@@ -52,6 +52,7 @@ a { color: inherit; }
 .metric-grid strong { display: block; margin: 10px 0 7px; color: var(--brand); font-size: 32px; line-height: 1.1; }
 .metric-grid small { color: var(--muted); font-size: 11px; }
 .metric-grid .lifetime-metric { border-color: #d9cef0; background: linear-gradient(145deg,#fff 15%,#f8f4ff 100%); }
+.account-metrics { grid-template-columns: repeat(3, 1fr); }
 .panel { margin-top: 20px; padding: 24px; }
 .panel > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
 .panel h2 { margin: 0; font-size: 20px; }

@@ -82,7 +82,7 @@
   }
 
   function rangeLabel(data) {
-    if(data.range.days===1)return '今天';
+    if(data.range.days===1)return data.range.end===todayInShanghai()?'今天':data.range.end;
     if(data.range.end===todayInShanghai())return `近 ${data.range.days} 天`;
     return `${data.range.start} 至 ${data.range.end}`;
   }
@@ -146,8 +146,26 @@
     try {
       const data=await request('/api/analytics/summary?'+query);
       render(data);
+      await loadAccounts(query);
     } catch(error) {
       $('#dashboardStatus').textContent=error.message;
+    }
+  }
+
+  async function loadAccounts(query) {
+    for(const id of ['accountTotal','accountToday','accountSelected'])$('#'+id).textContent='—';
+    $('#accountNote').textContent='正在加载登录统计…';
+    try {
+      const data=await request('/api/analytics/accounts?'+query);
+      $('#accountTotal').textContent=number.format(data.total);
+      $('#accountToday').textContent=number.format(data.today);
+      $('#accountSelected').textContent=number.format(data.selected);
+      $('#accountRangeLabel').textContent=rangeLabel(data)+'登录账号';
+      $('#accountNote').textContent=data.trackedSince
+        ?`登录日期自 ${data.trackedSince} 起记录；更早的账号只计入累计人数。`
+        :'登录日期将在功能上线后的首次成功登录时开始记录。';
+    } catch(error) {
+      $('#accountNote').textContent='登录统计加载失败：'+error.message;
     }
   }
 

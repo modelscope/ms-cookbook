@@ -76,7 +76,7 @@ try {
   run('git', ['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], target);
 
   // Export committed files only. Deployment scripts and credentials stay out of the site.
-  const files = ['Dockerfile', 'requirements.txt', 'app.py', 'index.html', 'favicon.svg', 'assets', 'content', 'chapters', 'CONTRIBUTING.md', 'README.md', 'README.zh-CN.md', 'LICENSE'];
+  const files = ['Dockerfile', 'requirements.txt', 'app.py', 'index.html', 'favicon.svg', 'assets', 'content', 'chapters', 'admin', 'CONTRIBUTING.md', 'README.md', 'README.zh-CN.md', 'LICENSE'];
   const archive = join(temporary, 'site.tar');
   const buildScripts=['scripts/build-content.py','scripts/chapter_markdown.py','scripts/version-assets.mjs'];
   run('git', ['archive', '--format=tar', '--output', archive, commit, '--', ...files, ...buildScripts]);

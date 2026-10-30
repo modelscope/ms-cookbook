@@ -92,6 +92,8 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         CREATE TABLE IF NOT EXISTS wishes(id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), text TEXT NOT NULL, created INTEGER NOT NULL);
         CREATE INDEX IF NOT EXISTS wishes_user_time ON wishes(user_id, created);
         CREATE TABLE IF NOT EXISTS user_profiles(user_id TEXT PRIMARY KEY REFERENCES users(id), username TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS account_login_daily(user_id TEXT NOT NULL REFERENCES users(id), day TEXT NOT NULL, first_login INTEGER NOT NULL, last_login INTEGER NOT NULL, login_count INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(user_id, day));
+        CREATE INDEX IF NOT EXISTS account_logins_day ON account_login_daily(day);
         CREATE TABLE IF NOT EXISTS entry_replies(entry_id TEXT PRIMARY KEY REFERENCES entries(id) ON DELETE CASCADE, parent_id TEXT REFERENCES entries(id) ON DELETE SET NULL);
         ''')
 
@@ -500,6 +502,17 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
             'updatedAt':current.isoformat(timespec='seconds'),
         }
 
+    @app.get('/api/analytics/accounts')
+    def account_summary(days: int = Query(7,ge=1,le=90), start: str = '', end: str = ''):
+        today,first,last,span=analytics_range(days,start,end)
+        with db() as conn:
+            total=conn.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+            selected=conn.execute('SELECT COUNT(DISTINCT user_id) FROM account_login_daily WHERE day BETWEEN ? AND ?',(first.isoformat(),last.isoformat())).fetchone()[0]
+            today_total=conn.execute('SELECT COUNT(*) FROM account_login_daily WHERE day=?',(today.isoformat(),)).fetchone()[0]
+            since=conn.execute('SELECT MIN(day) FROM account_login_daily').fetchone()[0]
+        return {'total':total,'today':today_total,'selected':selected,'trackedSince':since,
+                'range':{'start':first.isoformat(),'end':last.isoformat(),'days':span,'timezone':'Asia/Shanghai'}}
+
     @app.get('/auth/login')
     async def login(request: Request, return_to: str = '#home'):
         if not enabled: raise HTTPException(503,'魔搭登录尚未配置')
@@ -545,6 +558,10 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
                 conn.execute('INSERT INTO user_profiles VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET username=excluded.username',(uid,username.strip()))
             conn.execute('DELETE FROM sessions WHERE expires<=? OR id=?',(now,request.session.get('sid','')))
             conn.execute('INSERT INTO sessions VALUES (?,?,?)',(sid,uid,now+7*86400))
+            day=datetime.fromtimestamp(now,analytics_timezone).date().isoformat()
+            conn.execute('''INSERT INTO account_login_daily(user_id,day,first_login,last_login,login_count)
+                VALUES (?,?,?,?,1) ON CONFLICT(user_id,day) DO UPDATE SET
+                last_login=MAX(last_login,excluded.last_login),login_count=login_count+1''',(uid,day,now,now))
         target=request.session.get('return_to','#home')
         request.session.clear()
         request.session.update(sid=sid,csrf=secrets.token_urlsafe(32))
