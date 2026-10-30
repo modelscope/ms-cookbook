@@ -58,7 +58,7 @@ def test_activity_timeline_is_tracked_as_a_named_page(analytics_site):
     assert client.post('/api/analytics/view',json={'page':'events','visitor':'visitor_aaaaaaaaaaaaaaaa'}).status_code==204
     summary=client.get('/api/analytics/summary?days=1').json()
     page=next(item for item in summary['pages'] if item['page']=='events')
-    assert page['title']=='共建活动时间线' and page['pv']==1 and page['uv']==1
+    assert page['title']=='丰富的共学共建活动' and page['pv']==1 and page['uv']==1
 
 
 def test_tracking_validates_origin_page_and_visitor(analytics_site):

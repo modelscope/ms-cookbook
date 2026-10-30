@@ -1,6 +1,6 @@
-# 共建活动时间线
+# 丰富的共学共建活动
 
-[在线查看时间线](https://modelscope.cn/studios/ms-cookbook-team/ms-cookbook) · [返回项目首页](../../README.md)
+[在线查看活动](https://modelscope.cn/studios/ms-cookbook-team/ms-cookbook) · [返回项目首页](../../README.md)
 
 <a id="aiscientist-20261104"></a>
 
@@ -12,7 +12,7 @@
 
 <p><strong>面向人群：</strong>想用开源模型搭建 Agent、探索 AI 科研与推理评测的朋友。</p>
 
-<p><strong>主讲人：</strong>包启明，AI Research Scientist&amp;Engineer@Xtracta，魔搭社区共建者 <a class="event-profile-link" href="https://modelscope.cn/profile/qbao775" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a>；<a class="event-profile-link" href="https://github.com/14H034160212" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub（新窗口）"><img src="../../assets/brand/github.svg" width="18" height="18" alt="GitHub"></a></p>
+<p>主讲人：</p><p>包启明，AI Research Scientist&amp;Engineer@Xtracta，魔搭社区共建者 <a class="event-profile-link" href="https://modelscope.cn/profile/qbao775" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a> <a class="event-profile-link" href="https://github.com/14H034160212" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub（新窗口）"><img src="../../assets/brand/github.svg" width="18" height="18" alt="GitHub"></a></p>
 
 <p>直播内容：</p>
 
@@ -66,9 +66,9 @@
 
 <p>主讲人：</p>
 
-<ul><li>刘聪 NLP，自媒体博主（全网ID-刘聪NLP），魔搭社区共建者，曾任某头部AI独角兽公司大模型算法专家<a class="event-profile-link" href="https://modelscope.cn/profile/liucong" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></li></ul>
+<p>刘聪 NLP，自媒体博主（全网ID-刘聪NLP），魔搭社区共建者，曾任某头部AI独角兽公司大模型算法专家<a class="event-profile-link" href="https://modelscope.cn/profile/liucong" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></p>
 
-<ul><li>甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者，<a class="event-profile-link" href="https://modelscope.cn/profile/zuiyn0113" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></li></ul>
+<p>甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者<a class="event-profile-link" href="https://modelscope.cn/profile/zuiyn0113" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></p>
 
 <p>面向人群：跑过模型、会基本 Python，准备把模型用进真实业务的朋友。</p>
 
@@ -92,7 +92,7 @@
 
 ## 2026-10-21 至 2026-10-23 · 展出
 
-### 魔搭紫皮书登录 2026 云栖大会展出
+### 魔搭紫皮书登陆 2026 云栖大会展出
 
 <p>时间：2026 年 10 月 21 日-23 日</p>
 
@@ -106,7 +106,7 @@
 
 ### 工作坊：魔搭× Qwen-Image ：面向生产力的图像生成基础模型——技术解析与实践
 
-<p><strong>主讲人：</strong>吴晨飞 Qwen-Image负责人、魔搭社区共建者</p>
+<p>主讲人：</p><p>吴晨飞 Qwen-Image负责人、魔搭社区共建者 <a class="event-profile-link" href="https://modelscope.cn/profile/Moymix" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a> <a class="event-profile-link" href="https://www.zhihu.com/people/wu-chen-fei-54" target="_blank" rel="noopener noreferrer" title="知乎" aria-label="知乎（新窗口）"><img src="../../assets/brand/zhihu.ico" width="18" height="18" alt="知乎"></a></p>
 
 <p>地点：清华大学五教5101</p>
 
@@ -132,9 +132,9 @@
 
 <p>主讲人：</p>
 
-<ul><li>刘聪 NLP，自媒体博主（全网ID-刘聪NLP），魔搭社区共建者，曾任某头部AI独角兽公司大模型算法专家<a class="event-profile-link" href="https://modelscope.cn/profile/liucong" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></li></ul>
+<p>刘聪 NLP，自媒体博主（全网ID-刘聪NLP），魔搭社区共建者，曾任某头部AI独角兽公司大模型算法专家<a class="event-profile-link" href="https://modelscope.cn/profile/liucong" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></p>
 
-<ul><li>甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者，<a class="event-profile-link" href="https://modelscope.cn/profile/zuiyn0113" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></li></ul>
+<p>甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者<a class="event-profile-link" href="https://modelscope.cn/profile/zuiyn0113" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></p>
 
 <p>面向人群：刚接触开源模型，想动手试一试的朋友。</p>
 
@@ -160,7 +160,7 @@
 
 ### 工作坊：魔搭 X面壁 MiniCPM  ：端侧大模型的训练解析与手机部署实践
 
-<p>主讲人：杨知铮 OpenBMB 开源社区开发者关系负责人、魔搭社区共建者</p>
+<p>主讲人：</p><p>杨知铮 OpenBMB 开源社区开发者关系负责人、魔搭社区共建者 <a class="event-profile-link" href="https://modelscope.cn/profile/pzc163" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="../../assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a></p>
 
 <p>地点：清华大学1015 新水利馆325</p>
 

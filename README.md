@@ -79,7 +79,7 @@ python3 -m http.server 4173 --bind 127.0.0.1
 - **10.28 · 线上共学营**　[魔搭紫皮书共学营·AIGC 专场：从出图、改图到做漫剧：魔搭紫皮书 AIGC 解读与实战](content/events/README.md#aigc-20261028)
 - **10.21 · 线上共学营**　[魔搭紫皮书共学营·进阶实践：模型跑通了，怎么变好用？  选型、评测、微调与企业知识问答实战](content/events/README.md#advanced-20261021)
 
-[查看完整活动时间线 →](content/events/README.md)
+[查看丰富的共学共建活动](content/events/README.md)
 <!-- events-preview:end -->
 
 <a id="contents"></a>

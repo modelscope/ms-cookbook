@@ -1,6 +1,6 @@
 # 紫皮书活动汇总
 
-### 魔搭紫皮书登录 2026 云栖大会展出
+### 魔搭紫皮书登陆 2026 云栖大会展出
 
 时间：2026 年 10 月 21 日-23 日
 
@@ -8,7 +8,7 @@
 
 ### 工作坊：魔搭 X面壁 MiniCPM  ：端侧大模型的训练解析与手机部署实践
 
-主讲人：杨知铮 OpenBMB 开源社区开发者关系负责人、魔搭社区共建者
+主讲人：杨知铮 OpenBMB 开源社区开发者关系负责人、魔搭社区共建者 https://modelscope.cn/profile/pzc163
 
 地点：清华大学1015 新水利馆325
 
@@ -22,7 +22,7 @@
 
 ### 工作坊：魔搭× Qwen-Image ：面向生产力的图像生成基础模型——技术解析与实践
 
-**主讲人：**吴晨飞 Qwen-Image负责人、魔搭社区共建者
+主讲人：吴晨飞 Qwen-Image负责人、魔搭社区共建者 https://modelscope.cn/profile/Moymix https://www.zhihu.com/people/wu-chen-fei-54
 
 地点：清华大学五教5101
 
@@ -44,7 +44,7 @@
 
 *   刘聪 NLP，自媒体博主（全网ID-刘聪NLP），魔搭社区共建者，曾任某头部AI独角兽公司大模型算法专家https://modelscope.cn/profile/liucong
     
-*   甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者，https://modelscope.cn/profile/zuiyn0113
+*   甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者https://modelscope.cn/profile/zuiyn0113
     
 
 面向人群：刚接触开源模型，想动手试一试的朋友。
@@ -72,7 +72,7 @@
 
 *   刘聪 NLP，自媒体博主（全网ID-刘聪NLP），魔搭社区共建者，曾任某头部AI独角兽公司大模型算法专家https://modelscope.cn/profile/liucong
     
-*   甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者，https://modelscope.cn/profile/zuiyn0113
+*   甲木，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者https://modelscope.cn/profile/zuiyn0113
     
 
 面向人群：跑过模型、会基本 Python，准备把模型用进真实业务的朋友。
@@ -121,7 +121,7 @@
 
 **面向人群：**想用开源模型搭建 Agent、探索 AI 科研与推理评测的朋友。
 
-**主讲人：**包启明，AI Research Scientist&Engineer@Xtracta，魔搭社区共建者 https://modelscope.cn/profile/qbao775；https://github.com/14H034160212
+主讲人：包启明，AI Research Scientist&Engineer@Xtracta，魔搭社区共建者 https://modelscope.cn/profile/qbao775 https://github.com/14H034160212
 
 直播内容：
 

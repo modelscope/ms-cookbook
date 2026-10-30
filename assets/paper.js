@@ -7,10 +7,9 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const shortTitle = title => title.replace(/^第[^　\s]+章[　\s]*/, '');
   const partNames = data.parts.map(p => p.shortTitle || p.title);
-  const projectLinks = '<a href="https://github.com/modelscope/ms-cookbook" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="https://modelscope.cn/spotlight" target="_blank" rel="noopener noreferrer">魔搭开发者实践 ↗</a><a href="#contribute">社区共建</a>';
+  const projectLinks = '<a href="https://github.com/modelscope/ms-cookbook" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://modelscope.cn/spotlight" target="_blank" rel="noopener noreferrer">魔搭开发者实践</a><a href="#contribute">社区共建</a>';
   $$('.project-links').forEach(el=>{el.innerHTML=projectLinks;});
   $$('.quiet-footer').forEach(el=>{el.insertAdjacentHTML('beforeend',`<div class="project-links">${projectLinks}</div>`);});
-  const arrow = '<img class="arrow" src="assets/home/arrow.svg" alt="">';
   const artSource = art => `assets/editorial-art/${art}.png`;
   const paths = {
     beginner: {name:'从零开始',title:'从零开始，跑通第一个模型',art:'seedling',desc:'适合刚接触开源模型的读者。从理解模型，到选择任务，再到看到第一个结果。',brief:'建立基础认知，快速上手实践。',steps:'认识 → 选型 → 运行',link:'开始这条路径',chapters:[1,5,7],labels:['建立基础认知','找到业务任务','跑通第一个示例'],notes:['理解开源模型与使用边界','明确输入、输出与评估方式','完成一次模型运行']},
@@ -37,8 +36,8 @@
     return [c.id, (c.title+' '+c.headings.map(h=>h.text).join(' ')+' '+holder.textContent).toLowerCase()];
   }));
 
-  $('#homePaths').innerHTML = Object.entries(paths).map(([key,p]) => `<article><a class="path-art-link" href="#paths/${key}" aria-label="${p.name}"><img src="${artSource(p.art)}" alt="" width="400" height="250"></a><h3>${p.name}</h3><p class="path-brief">${p.brief}</p><p>${p.steps}</p><a class="text-link" href="#paths/${key}">${p.link} ${arrow}</a></article>`).join('');
-  $('#sceneGrid').innerHTML = scenes.map(s=>`<article class="scene"><a class="scene-art" href="#chapter-${s.id}" aria-label="${s.title}"><img src="${artSource(s.art)}" alt="" width="320" height="260" loading="lazy"></a><div class="scene-copy"><h2><a href="#chapter-${s.id}">${s.title}</a></h2><p>${s.desc}</p><div class="scene-meta"><span>第 ${s.id} 章 · ${s.type}</span><a class="text-link" href="#chapter-${s.id}">${chapters.get('chapter-'+s.id).status==='pending'?'查看章节':'阅读实践'} ${arrow}</a></div></div></article>`).join('');
+  $('#homePaths').innerHTML = Object.entries(paths).map(([key,p]) => `<article><a class="path-art-link" href="#paths/${key}" aria-label="${p.name}"><img src="${artSource(p.art)}" alt="" width="400" height="250"></a><h3>${p.name}</h3><p class="path-brief">${p.brief}</p><p>${p.steps}</p><a class="text-link" href="#paths/${key}">${p.link}</a></article>`).join('');
+  $('#sceneGrid').innerHTML = scenes.map(s=>`<article class="scene"><a class="scene-art" href="#chapter-${s.id}" aria-label="${s.title}"><img src="${artSource(s.art)}" alt="" width="320" height="260" loading="lazy"></a><div class="scene-copy"><h2><a href="#chapter-${s.id}">${s.title}</a></h2><p>${s.desc}</p><div class="scene-meta"><span>第 ${s.id} 章 · ${s.type}</span><a class="text-link" href="#chapter-${s.id}">${chapters.get('chapter-'+s.id).status==='pending'?'查看章节':'阅读实践'}</a></div></div></article>`).join('');
 
   function highlighted(text,query) {
     if (!query) return esc(text);
@@ -57,7 +56,7 @@
       return `<section class="index-part"><div class="part-badge"><small>PART</small><span>${String(i+1).padStart(2,'0')}</span></div><div><h2>${partNames[i]}</h2><nav aria-label="${partNames[i]}">${ids.map(id=>{
         const c=chapters.get(id);
         const heading=q ? c.headings.find(h=>h.text.toLowerCase().includes(q)) : null;
-        return `<a href="#${id}"><span class="chapter-index">${String(c.number).padStart(2,'0')}</span><span>${highlighted(shortTitle(c.title),query)}${c.status==='pending'?'<small class="pending-badge">待补充</small>':''}${heading ? `<small class="search-context">${highlighted(heading.text,query)}</small>`:''}</span>${arrow}</a>`;
+        return `<a href="#${id}"><span class="chapter-index">${String(c.number).padStart(2,'0')}</span><span>${highlighted(shortTitle(c.title),query)}${c.status==='pending'?'<small class="pending-badge">待补充</small>':''}${heading ? `<small class="search-context">${highlighted(heading.text,query)}</small>`:''}</span></a>`;
       }).join('')}</nav></div></section>`;
     }).join('');
     $('#searchStatus').hidden = !query;
@@ -176,7 +175,7 @@
     $('#pathTitle').textContent=p.title; $('#pathDescription').textContent=p.desc;
     $('#pathStart').href=chapterHash('chapter-'+p.chapters[0],'',selected);
     $('#pathStations').style.setProperty('--stations',p.chapters.length);
-    $('#pathStations').innerHTML=p.chapters.map((n,i)=>`<li><span class="station-number">${String(i+1).padStart(2,'0')}</span><h3>${p.labels[i]}</h3><small>第 ${n} 章</small><p class="station-title">${esc(shortTitle(chapters.get('chapter-'+n).title))}</p><p>${p.notes[i]}</p><a class="text-link" href="${chapterHash('chapter-'+n,'',selected)}">阅读章节 ${arrow}</a></li>`).join('');
+    $('#pathStations').innerHTML=p.chapters.map((n,i)=>`<li><span class="station-number">${String(i+1).padStart(2,'0')}</span><h3>${p.labels[i]}</h3><small>第 ${n} 章</small><p class="station-title">${esc(shortTitle(chapters.get('chapter-'+n).title))}</p><p>${p.notes[i]}</p><a class="text-link" href="${chapterHash('chapter-'+n,'',selected)}">阅读章节</a></li>`).join('');
   }
   function renderPathNavigation(chapter) {
     const step=pathStep(paths,currentPathKey,chapter.number);
@@ -186,12 +185,12 @@
     $('#previousChapter small').textContent=step?'全书上一章':'上一章';
     $('#nextChapter small').textContent=step?'全书下一章':'下一章';
     $('#mobilePrevious').textContent=step?'本路径上一步':'上一章';
-    $('#mobileNext').textContent=step?'本路径下一步':'下一章 →';
+    $('#mobileNext').textContent=step?'本路径下一步':'下一章';
     if(!step)return;
     const path=paths[currentPathKey];
     const previous=step.previous?chapterHash('chapter-'+step.previous,'',currentPathKey):'';
     const next=step.next?chapterHash('chapter-'+step.next,'',currentPathKey):'';
-    const markup=`<div class="path-reader-heading"><span>阅读路径 · <strong>${esc(path.name)}</strong><small>第 ${step.index+1} / ${step.total} 步</small></span><a href="#paths/${currentPathKey}">返回路径 ↗</a></div><ol class="path-reader-steps">${path.chapters.map(n=>`<li><a href="${chapterHash('chapter-'+n,'',currentPathKey)}"${n===chapter.number?' aria-current="step"':''} title="${esc(shortTitle(chapters.get('chapter-'+n).title))}">第 ${n} 章</a></li>`).join('')}</ol><div class="path-reader-actions">${previous?`<a href="${previous}" data-path-direction="previous">← 本路径上一步 · 第 ${step.previous} 章</a>`:'<span>从这里开始</span>'}${next?`<a href="${next}" data-path-direction="next">本路径下一步 · 第 ${step.next} 章 →</a>`:'<span class="path-reader-last">已到本路径最后一步</span>'}</div>`;
+    const markup=`<div class="path-reader-heading"><span>阅读路径 · <strong>${esc(path.name)}</strong><small>第 ${step.index+1} / ${step.total} 步</small></span><a href="#paths/${currentPathKey}">返回路径</a></div><ol class="path-reader-steps">${path.chapters.map(n=>`<li><a href="${chapterHash('chapter-'+n,'',currentPathKey)}"${n===chapter.number?' aria-current="step"':''} title="${esc(shortTitle(chapters.get('chapter-'+n).title))}">第 ${n} 章</a></li>`).join('')}</ol><div class="path-reader-actions">${previous?`<a href="${previous}" data-path-direction="previous">本路径上一步 · 第 ${step.previous} 章</a>`:'<span>从这里开始</span>'}${next?`<a href="${next}" data-path-direction="next">本路径下一步 · 第 ${step.next} 章</a>`:'<span class="path-reader-last">已到本路径最后一步</span>'}</div>`;
     panels.forEach(panel=>{panel.innerHTML=markup;});
     setPager($('#mobilePrevious'),step.previous?chapters.get('chapter-'+step.previous):null);
     if(previous)$('#mobilePrevious').href=previous;
@@ -319,7 +318,7 @@
       if(currentChapter?.id!==chapter.id||currentView!=='reader'||pathChanged)renderChapter(chapter);
     } else {
       if(headingObserver)headingObserver.disconnect();
-      document.title=({home:'让开源模型，从知识走向实践',contents:'全书目录',paths:'阅读路径',practice:'场景实践',events:'共建活动时间线',contribute:'社区共建'}[view])+'｜魔搭紫皮书';
+      document.title=({home:'让开源模型，从知识走向实践',contents:'全书目录',paths:'阅读路径',practice:'场景实践',events:'丰富的共学共建活动',contribute:'社区共建'}[view])+'｜魔搭紫皮书';
       if(view==='contents')renderIndex();if(view==='paths')renderPath(sub);
     }
     currentView=view;

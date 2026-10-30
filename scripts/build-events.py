@@ -40,6 +40,8 @@ def icon_link(url, prefix=''):
 
 
 def inline(text, speaker=False):
+    if speaker:
+        text = text.replace('**', '')
     result = []
     offset = 0
     for match in TOKEN.finditer(text):
@@ -76,12 +78,15 @@ def blocks(body):
         speaker_next = is_label or (speaker_next and speaker)
         if re.match(r'^\*\s', value):
             items = re.split(r'\n\s*\*\s+', re.sub(r'^\*\s+', '', value))
-            markup = '<ul>' + ''.join('<li>' + inline(item.strip(), speaker) + '</li>' for item in items) + '</ul>'
+            markup = ''.join('<p>' + inline(item.strip(), True) + '</p>' for item in items) if speaker else '<ul>' + ''.join('<li>' + inline(item.strip()) + '</li>' for item in items) + '</ul>'
+        elif speaker and plain.startswith('主讲人：'):
+            guest = plain.removeprefix('主讲人：').strip()
+            markup = '<p>主讲人：</p>' + ('<p>' + inline(guest, True) + '</p>' if guest else '')
         elif value.startswith('!['):
             markup = '<div class="event-gallery">' + inline(value) + '</div>'
         else:
             markup = '<p>' + inline(value, speaker) + '</p>'
-        kind = 'speaker' if speaker else 'meta' if re.match(r'^(直播时间|时间|地点)：', value) else 'image' if value.startswith('![') else 'body'
+        kind = 'speaker' if speaker else 'meta' if re.match(r'^(直播时间|时间|地点)：', value) else 'image' if value.startswith('![') else 'replay' if plain.startswith('直播回放：') else 'body'
         rendered.append((kind, markup, value))
     return rendered
 
@@ -111,8 +116,8 @@ def card(event):
     detail = ''.join(markup for kind, markup, _ in event['blocks'] if kind == 'body')
     gallery = ''.join(markup for kind, markup, _ in event['blocks'] if kind == 'image')
     replay = re.search(r'https://www\.bilibili\.com/[^\s)\]]+', event['body'])
-    replay_link = f'<a class="text-link event-replay" href="{html.escape(clean_url(replay.group()), quote=True)}" target="_blank" rel="noopener noreferrer">观看回放 ↗</a>' if replay else ''
-    # The body itself retains the original 直播回放 label and link.
+    replay_link = f'<a class="text-link event-replay" href="{html.escape(clean_url(replay.group()), quote=True)}" target="_blank" rel="noopener noreferrer">观看回放</a>' if replay else ''
+    # The manuscript retains the replay URL; the card provides one action only.
     details = f'<details class="event-details"><summary>活动详情</summary><div class="event-body">{detail}{gallery}</div></details>' if detail else gallery
     return (f'<li class="event-node" id="event-{event["id"]}" data-start="{event["start"]}" data-end="{event["end"]}">'
             f'<div class="event-date"><time datetime="{event["start"]}">{date_label(event)}</time></div>'
@@ -129,13 +134,6 @@ def timeline(events):
     return '\n'.join(f'<section class="event-month" data-month="{month}"><h2>{month[:4]} 年 {int(month[5:])} 月</h2><ol class="event-timeline">' + ''.join(card(event) for event in items) + '</ol></section>' for month, items in groups.items())
 
 
-def preview(events):
-    return '<ol class="event-preview-list">' + ''.join(
-        f'<li><a href="#events/{event["id"]}"><time datetime="{event["start"]}">{date_label(event)}</time>'
-        f'<span><small>{event["type"]}</small><strong>{html.escape(event["title"])}</strong></span><span aria-hidden="true">↗</span></a></li>'
-        for event in events[:3]) + '</ol>'
-
-
 def github_body(event):
     # GFM treats **label：** followed directly by Chinese as literal asterisks.
     # Reuse the rendered manuscript so both views preserve the same prose and
@@ -146,14 +144,14 @@ def github_body(event):
 
 
 def github_timeline(events):
-    content = ['# 共建活动时间线', '', '[在线查看时间线](https://modelscope.cn/studios/ms-cookbook-team/ms-cookbook) · [返回项目首页](../../README.md)', '']
+    content = ['# 丰富的共学共建活动', '', '[在线查看活动](https://modelscope.cn/studios/ms-cookbook-team/ms-cookbook) · [返回项目首页](../../README.md)', '']
     for event in events:
         content += [f'<a id="{event["id"]}"></a>', '', f'## {event["start"]}' + (f' 至 {event["end"]}' if event['end'] != event['start'] else '') + f' · {event["type"]}', '', f'### {event["title"]}', '', github_body(event), '', '---', '']
     return '\n'.join(content)
 
 
 def github_preview(events):
-    return '\n'.join([f'- **{date_label(event)} · {event["type"]}**　[{event["title"]}](content/events/README.md#{event["id"]})' for event in events[:3]]) + '\n\n[查看完整活动时间线 →](content/events/README.md)'
+    return '\n'.join([f'- **{date_label(event)} · {event["type"]}**　[{event["title"]}](content/events/README.md#{event["id"]})' for event in events[:3]]) + '\n\n[查看丰富的共学共建活动](content/events/README.md)'
 
 
 def replace_region(text, name, value):
@@ -169,8 +167,7 @@ def main():
     events = load_events()
     index = ROOT / 'index.html'
     page = replace_region(index.read_text(), 'events-timeline', timeline(events))
-    page = replace_region(page, 'events-preview', preview(events))
-    for asset in ('assets/paper.js', 'assets/events.js', 'assets/events.css'):
+    for asset in ('assets/paper.js', 'assets/events.js', 'assets/events.css', 'assets/wishes.js', 'assets/reader-tools.css'):
         digest = hashlib.sha256((ROOT / asset).read_bytes()).hexdigest()[:12]
         page = re.sub(rf'((?:src|href)="{re.escape(asset)})(?:\?v=[^"]+)?(")', rf'\1?v={digest}\2', page)
     outputs = {index: page, ROOT / 'content/events/README.md': github_timeline(events)}
