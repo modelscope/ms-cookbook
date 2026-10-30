@@ -49,6 +49,7 @@
     const response=await fetch(path,{credentials:'same-origin',...options,headers:{'Content-Type':'application/json','X-CSRF-Token':session.csrf,...options.headers}});
     let data;try{data=await response.json();}catch{throw new Error('评论服务暂时不可用，请稍后重试。');}
     if(!response.ok){if(response.status===401)refreshSession();throw new Error(typeof data.detail==='string'?data.detail:'请求未完成，请重试。');}
+    if(options.method&&options.method!=='GET'&&path.includes('/entries'))window.dispatchEvent(new Event('purplebook:discussion-changed'));
     return data;
   }
   function loginLink(text='使用魔搭账号登录') {

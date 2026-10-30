@@ -6,6 +6,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import secrets
 import shutil
 import sqlite3
@@ -14,6 +15,7 @@ import time
 from pathlib import Path
 from urllib.parse import quote, urlparse
 from zoneinfo import ZoneInfo
+import httpx
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import FastAPI, HTTPException, Query, Request, Response
@@ -312,9 +314,34 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         if not u: return None
         with db() as conn:
             profile=conn.execute('SELECT username FROM user_profiles WHERE user_id=?',(u['id'],)).fetchone()
-        return {'id':u['id'],'name':u['name'],'moderator':u['sub'] in admins,'profileUrl':profile_url(profile['username']) if profile else None}
+        return {'id':u['id'],'name':u['name'],'moderator':u['sub'] in admins,'profileUrl':profile_url(profile['username']) if profile else reader_profile_url(u['id'])}
     def profile_url(username):
         return 'https://modelscope.cn/profile/'+quote(username,safe='') if username else None
+    def reader_profile_url(uid):
+        return '/readers/'+quote(uid,safe='')+'/profile'
+    def lookup_profile(name):
+        # Legacy versions kept the displayed handle but not the profile claim.
+        # Resolve only an exact, public ModelScope account, never a fuzzy match.
+        if not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}',name): return None
+        try:
+            response=httpx.get('https://modelscope.cn/api/v1/users/'+quote(name,safe=''),timeout=8)
+            response.raise_for_status();body=response.json()
+            handle=body.get('Data',{}).get('UserName')
+            if body.get('Success') and isinstance(handle,str) and handle.casefold()==name.casefold(): return handle
+        except (httpx.HTTPError,ValueError): pass
+        return None
+
+    @app.get('/readers/{reader_id}/profile')
+    def reader_profile(reader_id: str):
+        with db() as conn:
+            author=conn.execute('SELECT u.name,p.username FROM users u LEFT JOIN user_profiles p ON p.user_id=u.id WHERE u.id=?',(reader_id,)).fetchone()
+        if not author: raise HTTPException(404,'读者不存在')
+        handle=author['username'] or app.state.lookup_profile(author['name'])
+        if not handle: raise HTTPException(404,'该读者尚未提供可验证的魔搭主页，请作者重新登录后再试')
+        if not author['username']:
+            with db() as conn:
+                conn.execute('INSERT OR IGNORE INTO user_profiles VALUES (?,?)',(reader_id,handle))
+        return RedirectResponse(profile_url(handle),status_code=303,headers={'Cache-Control':'no-store'})
     def require_user(request):
         u=user(request)
         if not u: raise HTTPException(401,'请先使用魔搭账号登录')
@@ -358,6 +385,12 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
     def session(request: Request):
         request.session.setdefault('csrf',secrets.token_urlsafe(32))
         return {'user':public_user(user(request)), 'csrf':request.session['csrf'], 'loginEnabled':enabled}
+
+    @app.get('/api/community/summary')
+    def community_summary():
+        with db() as conn:
+            count=conn.execute("SELECT COUNT(*) FROM entries WHERE kind IN ('comment','annotation')").fetchone()[0]
+        return {'comments':count}
 
     @app.post('/api/analytics/view',status_code=204)
     def record_analytics_view(view: AnalyticsView, request: Request):
@@ -475,13 +508,24 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
             token = await oauth.modelscope.authorize_access_token(request)
             info = token.get('userinfo')
             if not info or not info.get('sub'): raise ValueError('Missing validated identity')
+            info=dict(info)
+            if not info.get('preferred_username') and isinstance(info.get('username'),str):
+                info['preferred_username']=info['username']
             # ID tokens may omit profile claims. Fetch them server-side and bind
             # the result to the already validated subject before saving a handle.
             if not info.get('preferred_username') and token.get('access_token'):
                 profile = await oauth.modelscope.userinfo(token=token)
                 if str(profile.get('sub')) != str(info['sub']): raise ValueError('Identity mismatch')
                 info = {**info, **profile}
-        except (OAuthError, ValueError):
+            if not info.get('preferred_username') and token.get('access_token'):
+                # Some provider responses expose the handle through OpenAPI only.
+                try:
+                    response=await oauth.modelscope.get('https://modelscope.cn/openapi/v1/users/me',token=token)
+                    response.raise_for_status();profile=response.json()
+                    account=profile.get('data') or profile.get('Data') or {}
+                    info['preferred_username']=account.get('username') or account.get('UserName')
+                except (OAuthError,ValueError,httpx.HTTPError): pass
+        except (OAuthError, ValueError, httpx.HTTPError):
             return RedirectResponse('/?login=failed#home',status_code=303)
         sub=str(info['sub'])
         name=str(info.get('name') or info.get('preferred_username') or '魔搭读者')[:100]
@@ -521,7 +565,7 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         for row in rows[:100]:
             item=dict(row); item['chapter']=chapter; item['mine']=item['user_id']==uid
             item['canDelete']=item['mine'] or bool(u and u['sub'] in admins)
-            item['profileUrl']=profile_url(item.pop('username'))
+            item['profileUrl']=profile_url(item.pop('username')) or reader_profile_url(item['user_id'])
             item['replyTo']={'id':item.pop('parent_id'),'name':item.pop('parent_name'),'text':item.pop('parent_text')} if item.pop('reply_id') else None
             for field in ('parent_id','parent_name','parent_text'): item.pop(field,None)
             item.pop('user_id'); items.append(item)
@@ -568,7 +612,7 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         for row in rows[:20]:
             item=dict(row)
             item['canDelete']=bool(u and (item['user_id']==u['id'] or u['sub'] in admins))
-            item['profileUrl']=profile_url(item.pop('username'))
+            item['profileUrl']=profile_url(item.pop('username')) or reader_profile_url(item['user_id'])
             item.pop('user_id'); items.append(item)
         return {'items':items,'next':items[-1]['cursor'] if len(rows)>20 else None}
 
@@ -614,6 +658,7 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         app.add_api_route('/'+filename,make_document(ROOT/filename),methods=['GET'])
 
     app.state.db=db
+    app.state.lookup_profile=lookup_profile
     app.state.analytics_db=analytics_db
     app.state.analytics_path=analytics_path
     app.state.persistent_analytics_path=persistent_analytics_path

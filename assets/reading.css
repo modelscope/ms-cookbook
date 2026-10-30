@@ -1,4 +1,5 @@
 /* ModelScope logo purple; neutral reading surfaces and text. */
+.article-video{display:block;width:100%;max-height:70vh;aspect-ratio:16/9;background:#17151d;border-radius:8px;margin:20px 0 10px}.article-video:focus-visible{outline:3px solid var(--brand);outline-offset:4px}
 :root{--brand:#624aff;--brand-hover:#5038e6;--selected:#efecff;--surface:#f7f8fa;--heading:#20212b;--text:#343540;--muted:#707482;--border:#e6e8ef;--purple:var(--brand);--violet:var(--brand);--violet-bright:var(--brand);--cyan:#36cfd1;--ink:var(--heading);--rule:var(--border)}
 /* Reading-first edition: quiet pages, purple chapter marks, a compact reading desk. */
 :root{--reading-text:var(--text);--reading-size:19px;--reading-border:var(--border);--reading-accent:var(--brand)}

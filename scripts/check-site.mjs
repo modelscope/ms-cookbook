@@ -21,7 +21,7 @@ assert.equal(new Set(partIds).size,ids.size);
 for(const id of partIds)assert(ids.has(id));
 let imageCount=0,attachmentCount=0;
 function checkLinks(html,base='.'){
-  for(const tag of html.matchAll(/<(?:a|img|script|link)\b[^>]*>/g))for(const m of tag[0].matchAll(/(?:src|href)="([^"]+)"/g)){
+  for(const tag of html.matchAll(/<(?:a|img|video|script|link)\b[^>]*>/g))for(const m of tag[0].matchAll(/(?:src|href)="([^"]+)"/g)){
     const url=m[1];
     assert(!/^(javascript|data|vbscript):/i.test(url),'Unsafe URL');
     if(/^#chapter-/.test(url))assert(ids.has(url.slice(1).split('/')[0]),'Unknown chapter '+url);
