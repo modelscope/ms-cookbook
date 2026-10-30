@@ -52,7 +52,7 @@ def inline(text, speaker=False):
             result.append(f'<a class="event-image" href="{path}" target="_blank" rel="noopener noreferrer" aria-label="放大查看活动图片"><img src="{path}" alt="{html.escape(match.group(1), quote=True)}" loading="lazy"></a>')
         elif match.group(3) is not None:
             url = clean_url(match.group(4))
-            result.append(icon_link(url) if speaker and platform(url) else f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">{html.escape(match.group(3))}</a>')
+            result.append(icon_link(url) if speaker and platform(url) else f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">{html.escape(clean_url(match.group(3)))}</a>')
         elif match.group(5) is not None:
             result.append('<strong>' + html.escape(match.group(5)) + '</strong>')
         else:
@@ -137,14 +137,12 @@ def preview(events):
 
 
 def github_body(event):
-    # Only turn guest profile URLs into logos. All manuscript wording is retained.
-    result = event['body']
-    for kind, _, raw in event['blocks']:
-        if kind == 'speaker':
-            replacement = re.sub(r'https://[^\s<>；]+', lambda match: icon_link(match.group(), '../../') if platform(match.group()) else match.group(), raw)
-            result = result.replace(raw, replacement, 1)
-    result = re.sub(r'(!\[[^\]]*\]\()https://[^)]+/([^/)]+)(\))', r'\1../../assets/events/\2\3', result)
-    return result
+    # GFM treats **label：** followed directly by Chinese as literal asterisks.
+    # Reuse the rendered manuscript so both views preserve the same prose and
+    # URL destinations, including Markdown-escaped underscores in replay URLs.
+    return '\n\n'.join(markup.replace('src="assets/', 'src="../../assets/')
+                       .replace('href="assets/', 'href="../../assets/')
+                       for _, markup, _ in event['blocks'])
 
 
 def github_timeline(events):
