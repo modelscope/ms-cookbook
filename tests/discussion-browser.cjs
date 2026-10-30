@@ -99,10 +99,11 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   assert.equal(await page.locator('.discussion-entry p img').count(),0);
   await page.reload();await page.getByRole('button',{name:'划线与想法',exact:true}).click();await page.locator('.discussion-entry').getByText('仅自己可见').waitFor();
   await page.goto(env.APP_BASE_URL+'/#chapter-2');await page.getByRole('link',{name:'fanxiansheng00的魔搭主页（新窗口）',exact:true}).waitFor();
-  const legacyPopupPromise=context.waitForEvent('page');
+  const legacyPopupPromise=context.waitForEvent('page');const intermediateNavigations=[];
+  context.on('request',request=>{if(request.isNavigationRequest()&&/\/readers\/[^/]+\/profile/.test(request.url()))intermediateNavigations.push(request.url());});
   await context.route('https://modelscope.cn/profile/fanxiansheng00',route=>route.fulfill({body:'Verified fanxiansheng00 profile'}));
   await page.getByRole('link',{name:'fanxiansheng00的魔搭主页（新窗口）',exact:true}).click();
-  const legacyPopup=await legacyPopupPromise;await legacyPopup.waitForLoadState();assert.equal(legacyPopup.url(),'https://modelscope.cn/profile/fanxiansheng00');await legacyPopup.close();
+  const legacyPopup=await legacyPopupPromise;await legacyPopup.waitForURL('https://modelscope.cn/profile/fanxiansheng00');assert.equal(legacyPopup.url(),'https://modelscope.cn/profile/fanxiansheng00');assert.deepEqual(intermediateNavigations,[],'Studio must not wrap an application redirect in an iframe');await legacyPopup.close();
   await page.setViewportSize({width:390,height:844});await page.goto(env.APP_BASE_URL+'/#chapter-1');await page.locator('#chapterDiscussion').scrollIntoViewIfNeeded();
   await page.screenshot({path:'/tmp/purplebook-updates-comments-mobile.png'});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth), 'mobile page overflow');

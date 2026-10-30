@@ -331,8 +331,7 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         except (httpx.HTTPError,ValueError): pass
         return None
 
-    @app.get('/readers/{reader_id}/profile')
-    def reader_profile(reader_id: str):
+    def resolve_reader_profile(reader_id):
         with db() as conn:
             author=conn.execute('SELECT u.name,p.username FROM users u LEFT JOIN user_profiles p ON p.user_id=u.id WHERE u.id=?',(reader_id,)).fetchone()
         if not author: raise HTTPException(404,'读者不存在')
@@ -341,7 +340,15 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         if not author['username']:
             with db() as conn:
                 conn.execute('INSERT OR IGNORE INTO user_profiles VALUES (?,?)',(reader_id,handle))
-        return RedirectResponse(profile_url(handle),status_code=303,headers={'Cache-Control':'no-store'})
+        return profile_url(handle)
+
+    @app.get('/api/readers/{reader_id}/profile')
+    def reader_profile_api(reader_id: str):
+        return {'profileUrl':resolve_reader_profile(reader_id)}
+
+    @app.get('/readers/{reader_id}/profile')
+    def reader_profile(reader_id: str):
+        return RedirectResponse(resolve_reader_profile(reader_id),status_code=303,headers={'Cache-Control':'no-store'})
     def require_user(request):
         u=user(request)
         if not u: raise HTTPException(401,'请先使用魔搭账号登录')
