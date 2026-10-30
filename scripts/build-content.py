@@ -268,6 +268,13 @@ def build(check=False):
                     node.set(attr, value)
                 assert not urlparse(value).scheme or urlparse(value).scheme in {'https', 'http', 'mailto'}, 'Unsafe URL'
         linkify(article)
+        for figure in article.iter('figure'):
+            for attachment in list(figure):
+                if attachment.tag!='a' or not attachment.get('href','').lower().endswith('.mp4'): continue
+                video=ET.Element('video',{'src':attachment.get('href'),'controls':'','preload':'metadata','playsinline':'','class':'article-video','aria-label':plain(attachment)})
+                figure.insert(list(figure).index(attachment),video)
+                attachment.attrib.pop('download',None)
+                attachment.set('target','_blank');attachment.set('rel','noopener noreferrer')
         for parent in list(article.iter()):
             for i, child in enumerate(list(parent)):
                 if child.tag == 'table':

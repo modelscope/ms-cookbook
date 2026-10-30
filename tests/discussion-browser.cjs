@@ -42,16 +42,24 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
     return {links};
   });assert.ok(contentCheck.links>50,JSON.stringify(contentCheck));
   await page.goto(env.APP_BASE_URL+'/#home');
+  await page.locator('.fact-label').filter({hasText:'互动交流'}).waitFor();
+  assert.equal(await page.locator('.home-fact').count(),4);
+  await page.waitForFunction(()=>document.querySelector('#communityCommentCount').textContent==='3');
   assert.equal(await page.locator('[data-fact="tasks"]').textContent(),await page.evaluate(()=>String(BOOK_DATA.scenes.length)));
   assert.equal(await page.locator('[data-fact="contributors"]').textContent(),'17');
   assert.equal(await page.locator('[data-fact="tasks"]').textContent(),'7');
   await page.screenshot({path:'/tmp/purplebook-updates-home-desktop.png'});
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'homepage mobile overflow');
+  const factBounds=await page.locator('.home-fact').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().bottom));
+  assert.ok(factBounds.every(bottom=>bottom<=844),'all four homepage figures should fit the first mobile screen');
   await page.screenshot({path:'/tmp/purplebook-updates-home-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
   await page.goto(env.APP_BASE_URL+'/#practice');
   assert.equal(await page.locator('#sceneGrid .scene').count(),7);
+  assert.equal(await page.locator('#sceneGrid').getByText('阅读实践',{exact:true}).count(),0);
+  assert.equal(await page.locator('#sceneGrid .scene').filter({hasText:'手机巡检助手'}).locator('img').getAttribute('src'),'assets/editorial-art/phone.svg');
+  assert.equal(await page.locator('#sceneGrid .scene').filter({hasText:'教学海报生成'}).locator('img').getAttribute('src'),'assets/editorial-art/poster.svg');
   for(const [title,id] of [['手机巡检助手',21],['教学海报生成',26]]){
     await page.getByRole('heading',{name:title,exact:true}).getByRole('link').click();
     await page.locator('#chapterNumber').getByText('第 '+id+' 章',{exact:true}).waitFor();
@@ -62,6 +70,8 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   assert.equal(await page.locator('#codeContributors > a').count(),4);
   assert.equal(await page.locator('[data-page="contribute"]').getByRole('link',{name:'丰富的共学共建活动',exact:true}).count(),0);
   await page.getByText('吴晨飞',{exact:true}).waitFor();
+  assert.equal(await page.getByText('与 GitHub 仓库名单同步',{exact:true}).count(),0);
+  assert.equal(await page.locator('.contributor-name > nav').count(),13);
   await page.locator('#contentContributors').scrollIntoViewIfNeeded();
   await page.screenshot({path:'/tmp/purplebook-github-sync-community-desktop.png'});
   await page.setViewportSize({width:390,height:844});
@@ -69,6 +79,17 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   await page.locator('#contentContributors').scrollIntoViewIfNeeded();
   await page.screenshot({path:'/tmp/purplebook-github-sync-community-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
+  await page.goto(env.APP_BASE_URL+'/#events');
+  await page.getByRole('link',{name:'感兴趣组织工作坊？',exact:true}).click();
+  await page.getByRole('heading',{name:'加入交流群',exact:true}).waitFor();
+  await page.goto(env.APP_BASE_URL+'/#chapter-23');
+  const videos=page.locator('#articleBody video');assert.equal(await videos.count(),5);
+  for(let i=0;i<5;i++){
+    await videos.nth(i).evaluate(async video=>{video.muted=true;await video.play();});
+    await page.waitForFunction(index=>{const video=document.querySelectorAll('#articleBody video')[index];return video.currentTime>0&&video.videoWidth>0&&video.duration>0;},i);
+    await videos.nth(i).evaluate(video=>video.pause());
+  }
+  assert.equal(await page.locator('#articleBody a[download]').count(),0);
   await page.goto(env.APP_BASE_URL+'/#chapter-1');
   await page.locator('.entry-replies').getByText('收到，这是一条回复',{exact:true}).waitFor();
   const select=async()=>{await page.evaluate(()=>{const p=[...document.querySelectorAll('#articleBody p')].find(p=>p.firstChild?.nodeType===3&&p.firstChild.length>15);const r=document.createRange();r.setStart(p.firstChild,0);r.setEnd(p.firstChild,10);getSelection().removeAllRanges();getSelection().addRange(r);document.dispatchEvent(new KeyboardEvent('keyup',{key:'Shift',bubbles:true}));});};
@@ -77,7 +98,11 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   await page.locator('.discussion-entry').getByText('<img src=x onerror=alert(1)> 这段很有帮助',{exact:true}).waitFor();
   assert.equal(await page.locator('.discussion-entry p img').count(),0);
   await page.reload();await page.getByRole('button',{name:'划线与想法',exact:true}).click();await page.locator('.discussion-entry').getByText('仅自己可见').waitFor();
-  await page.goto(env.APP_BASE_URL+'/#chapter-2');await page.getByText('还没有留言，来分享第一个想法吧。',{exact:true}).waitFor();
+  await page.goto(env.APP_BASE_URL+'/#chapter-2');await page.getByRole('link',{name:'fanxiansheng00的魔搭主页（新窗口）',exact:true}).waitFor();
+  const legacyPopupPromise=context.waitForEvent('page');
+  await context.route('https://modelscope.cn/profile/fanxiansheng00',route=>route.fulfill({body:'Verified fanxiansheng00 profile'}));
+  await page.getByRole('link',{name:'fanxiansheng00的魔搭主页（新窗口）',exact:true}).click();
+  const legacyPopup=await legacyPopupPromise;await legacyPopup.waitForLoadState();assert.equal(legacyPopup.url(),'https://modelscope.cn/profile/fanxiansheng00');await legacyPopup.close();
   await page.setViewportSize({width:390,height:844});await page.goto(env.APP_BASE_URL+'/#chapter-1');await page.locator('#chapterDiscussion').scrollIntoViewIfNeeded();
   await page.screenshot({path:'/tmp/purplebook-updates-comments-mobile.png'});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth), 'mobile page overflow');

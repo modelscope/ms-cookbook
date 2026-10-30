@@ -10,7 +10,7 @@
   const projectLinks = '<a href="https://github.com/modelscope/ms-cookbook" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://modelscope.cn/spotlight" target="_blank" rel="noopener noreferrer">魔搭开发者实践</a><a href="#contribute">社区共建</a>';
   $$('.project-links').forEach(el=>{el.innerHTML=projectLinks;});
   $$('.quiet-footer').forEach(el=>{el.insertAdjacentHTML('beforeend',`<div class="project-links">${projectLinks}</div>`);});
-  const artSource = art => `assets/editorial-art/${art}.png`;
+  const artSource = art => `assets/editorial-art/${art}${art.endsWith('.svg')?'':'.png'}`;
   const paths = {
     beginner: {name:'从零开始',title:'从零开始，跑通第一个模型',art:'seedling',desc:'适合刚接触开源模型的读者。从理解模型，到选择任务，再到看到第一个结果。',brief:'建立基础认知，快速上手实践。',steps:'认识 → 选型 → 运行',link:'开始这条路径',chapters:[1,5,7],labels:['建立基础认知','找到业务任务','跑通第一个示例'],notes:['理解开源模型与使用边界','明确输入、输出与评估方式','完成一次模型运行']},
     model: {name:'深入模型',title:'深入模型，把通用能力变成场景能力',art:'mountain',desc:'适合已经跑通过模型的开发者。从业务数据准备开始，完成轻量微调，并用评测检验模型效果。',brief:'掌握核心技术，提升实践能力。',steps:'数据 → 微调 → 评测',link:'探索核心内容',chapters:[13,14,16],labels:['准备训练数据','完成轻量微调','验证模型效果'],notes:['将业务知识整理成训练样本','用 ms-swift 完成模型训练','比较基线与微调后的表现']},
@@ -18,7 +18,7 @@
     aigc: {name:'AIGC 创作',title:'从生成到定制，探索 AIGC 创作',art:'palette',desc:'面向创作者与 AIGC 实践者。从开源生成模型的案例出发，学习图像 LoRA 定制、商品营销图与教学海报创作，再补充生成模型的理论知识。',brief:'理解生成能力，跑通创作流程。',steps:'案例 → 定制 → 图像创作',link:'开始 AIGC 创作',chapters:[23,24,25,26,28],labels:['认识生成能力','定制图像 LoRA','创作商品营销图','制作教学海报','补充理论基础'],notes:['通过现有案例了解开源模型的创作能力','使用 DiffSynth 训练图像 LoRA','完成图像生成与修改流程','使用 Qwen-Image 生成并校核教学海报','理解 AIGC 相关理论知识']}
   };
   const scenes = data.scenes;
-  $('#contentContributors').innerHTML=data.contributors.content.map(person=>`<article class="contributor-person"><div><strong>${esc(person.name)}</strong>${person.bio?`<p>${esc(person.bio)}</p>`:''}</div><nav aria-label="${esc(person.name)}的主页">${person.links.map(link=>`<a href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(person.name)}的${esc(link.label)}主页（新窗口）" title="${esc(link.label)}"><img src="assets/brand/${esc(link.icon)}" width="20" height="20" alt="${esc(link.label)}"></a>`).join('')}</nav></article>`).join('');
+  $('#contentContributors').innerHTML=data.contributors.content.map(person=>`<article class="contributor-person"><div class="contributor-name"><strong>${esc(person.name)}</strong><nav aria-label="${esc(person.name)}的主页">${person.links.map(link=>`<a href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(person.name)}的${esc(link.label)}主页（新窗口）" title="${esc(link.label)}"><img src="assets/brand/${esc(link.icon)}" width="20" height="20" alt="${esc(link.label)}"></a>`).join('')}</nav></div>${person.bio?`<p>${esc(person.bio)}</p>`:''}</article>`).join('');
   $('#codeContributors').innerHTML=data.contributors.code.map(person=>`<a href="${esc(person.html_url)}" target="_blank" rel="noopener noreferrer" aria-label="访问 ${esc(person.login)} 的 GitHub 主页（新窗口）"><img src="${esc(person.avatar_url)}" alt="" width="56" height="56" loading="lazy"><span><strong>${esc(person.login)}</strong><small>GitHub</small></span></a>`).join('');
   for(const [key,value] of Object.entries(data.stats)){
     const number=$(`[data-fact="${key}"]`);if(!number)continue;
@@ -27,6 +27,15 @@
     number.parentElement.title=key==='words'?`${value.toLocaleString('zh-CN')} 字（汉字逐字计，英文及数字按词计，含代码）`:'根据仓库内容自动统计';
     if(key==='contributors')number.parentElement.title=`GitHub 仓库名单：${data.contributors.content.length} 位内容共建者 + ${data.contributors.code.length} 位代码贡献者`;
   }
+  let countLoading=false;
+  async function refreshCommentCount(){
+    if(countLoading||document.hidden)return;countLoading=true;
+    try{const response=await fetch('/api/community/summary',{cache:'no-store',credentials:'same-origin'});if(!response.ok)return;const summary=await response.json();if(Number.isSafeInteger(summary.comments)&&summary.comments>=0)$('#communityCommentCount').textContent=summary.comments.toLocaleString('zh-CN');}catch{}finally{countLoading=false;}
+  }
+  refreshCommentCount();setInterval(()=>{if(!location.hash||location.hash==='#home')refreshCommentCount();},30000);
+  window.addEventListener('hashchange',()=>{if(location.hash==='#home')refreshCommentCount();});
+  window.addEventListener('focus',refreshCommentCount);document.addEventListener('visibilitychange',refreshCommentCount);
+  window.addEventListener('purplebook:discussion-changed',refreshCommentCount);
   let currentChapter = null;
   let currentView = '';
   let currentPathKey = '';
@@ -40,7 +49,7 @@
   }));
 
   $('#homePaths').innerHTML = Object.entries(paths).map(([key,p]) => `<article><a class="path-art-link" href="#paths/${key}" aria-label="${p.name}"><img src="${artSource(p.art)}" alt="" width="400" height="250"></a><h3>${p.name}</h3><p class="path-brief">${p.brief}</p><p>${p.steps}</p><a class="text-link" href="#paths/${key}">${p.link}</a></article>`).join('');
-  $('#sceneGrid').innerHTML = scenes.map(s=>`<article class="scene"><a class="scene-art" href="#chapter-${s.id}" aria-label="${s.title}"><img src="${artSource(s.art)}" alt="" width="320" height="260" loading="lazy"></a><div class="scene-copy"><h2><a href="#chapter-${s.id}">${s.title}</a></h2><p>${s.desc}</p><div class="scene-meta"><span>第 ${s.id} 章 · ${s.type}</span><a class="text-link" href="#chapter-${s.id}">${chapters.get('chapter-'+s.id).status==='pending'?'查看章节':'阅读实践'}</a></div></div></article>`).join('');
+  $('#sceneGrid').innerHTML = scenes.map(s=>`<article class="scene"><a class="scene-art" href="#chapter-${s.id}" aria-label="${s.title}"><img src="${artSource(s.art)}" alt="" width="320" height="260" loading="lazy"></a><div class="scene-copy"><h2><a href="#chapter-${s.id}">${s.title}</a></h2><p>${s.desc}</p><div class="scene-meta"><span>第 ${s.id} 章 · ${s.type}</span></div></div></article>`).join('');
 
   function highlighted(text,query) {
     if (!query) return esc(text);
