@@ -237,23 +237,21 @@ python3 -m http.server 4173 --bind 127.0.0.1
 
 ### 内容共建者
 
-感谢以下共建者的参与和分享。点击 🔗 图标访问相关页面，悬停可查看链接说明。
+感谢以下共建者的参与和分享。点击魔搭、GitHub 或知乎图标访问相关页面。
 
-| 共建者 | 简介 | 链接 |
-| --- | --- | --- |
-| 刘聪 NLP | 自媒体博主（全网 ID：刘聪NLP）、魔搭社区共建者，曾任某头部 AI 独角兽公司大模型算法专家 | [🔗](https://modelscope.cn/profile/liucong "刘聪 NLP · 魔搭主页") |
-| 杨知铮 | OpenBMB 开源社区开发者关系负责人、魔搭社区共建者 | [🔗](https://modelscope.cn/profile/pzc163 "杨知铮 · 魔搭主页") |
-| 包启明 | AI Research Scientist & Engineer @Xtracta、魔搭社区共建者 | [🔗](https://modelscope.cn/profile/qbao775 "包启明 · 魔搭主页") [🔗](https://github.com/14H034160212 "包启明 · GitHub") |
-| 吴晨飞 | Qwen-Image 负责人、魔搭社区共建者 | [🔗](https://modelscope.cn/profile/Moymix "吴晨飞 · 魔搭主页") [🔗](https://www.zhihu.com/people/wu-chen-fei-54 "吴晨飞 · 知乎") |
-| Artiprocher | — | [🔗](https://modelscope.cn/profile/Artiprocher "Artiprocher · 魔搭主页") |
-| Relakkes（阿江） | Python 开发者兼内容创作者 | [🔗](https://modelscope.cn/profile/relakkes "Relakkes（阿江）· 魔搭主页") |
-| 苍何 | 万星开源项目作者 | [🔗](https://modelscope.cn/profile/canghe "苍何 · 魔搭主页") |
-| 甲木 | — | [🔗](https://modelscope.cn/profile/zuiyn0113 "甲木 · 魔搭主页") |
-| 袋鼠帝 | 公众号「袋鼠帝AI客栈」主理人，10K Star 开源项目 cangjie-skil | [🔗](https://modelscope.cn/profile/kangarooking "袋鼠帝 · 魔搭主页") |
-| 摸鱼小李 | — | [🔗](https://modelscope.cn/profile/Joy19997 "摸鱼小李 · 魔搭主页") |
-| tastelikefeet | — | [🔗](https://modelscope.cn/active/ms-cookbook "tastelikefeet 提供的链接 · 魔搭紫皮书项目页") |
-| 星球收藏家 | — | [🔗](https://modelscope.cn/profile/VoyagerX "星球收藏家 · 魔搭主页") |
-| Yinchao | — | [🔗](https://modelscope.cn/profile/Yinchao "Yinchao · 魔搭主页") |
+- **刘聪 NLP**，自媒体博主（全网 ID：刘聪NLP）、魔搭社区共建者，曾任某头部 AI 独角兽公司大模型算法专家 <a href="https://modelscope.cn/profile/liucong" title="刘聪 NLP · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **杨知铮**，OpenBMB 开源社区开发者关系负责人、魔搭社区共建者 <a href="https://modelscope.cn/profile/pzc163" title="杨知铮 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **包启明**，AI Research Scientist & Engineer @Xtracta、魔搭社区共建者 <a href="https://modelscope.cn/profile/qbao775" title="包启明 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a> <a href="https://github.com/14H034160212" title="包启明 · GitHub"><img src="assets/brand/github.svg" alt="GitHub" width="18" height="18"></a>
+- **吴晨飞**，Qwen-Image 负责人、魔搭社区共建者 <a href="https://modelscope.cn/profile/Moymix" title="吴晨飞 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a> <a href="https://www.zhihu.com/people/wu-chen-fei-54" title="吴晨飞 · 知乎"><img src="assets/brand/zhihu.png" alt="知乎" width="18" height="18"></a>
+- **Artiprocher** <a href="https://modelscope.cn/profile/Artiprocher" title="Artiprocher · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **Relakkes（阿江）**，Python 开发者兼内容创作者 <a href="https://modelscope.cn/profile/relakkes" title="Relakkes（阿江）· 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **苍何**，万星开源项目作者 <a href="https://modelscope.cn/profile/canghe" title="苍何 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **甲木** <a href="https://modelscope.cn/profile/zuiyn0113" title="甲木 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **袋鼠帝**，公众号「袋鼠帝AI客栈」主理人，10K Star 开源项目 cangjie-skil <a href="https://modelscope.cn/profile/kangarooking" title="袋鼠帝 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **摸鱼小李** <a href="https://modelscope.cn/profile/Joy19997" title="摸鱼小李 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **tastelikefeet** <a href="https://modelscope.cn/active/ms-cookbook" title="tastelikefeet 提供的链接 · 魔搭紫皮书项目页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **星球收藏家** <a href="https://modelscope.cn/profile/VoyagerX" title="星球收藏家 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **Yinchao** <a href="https://modelscope.cn/profile/Yinchao" title="Yinchao · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
 
 ### 项目贡献与参考
 
