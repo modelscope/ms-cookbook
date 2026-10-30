@@ -195,8 +195,6 @@ Thank you to the community contributors below. Click a platform logo to visit th
 
 Thank you to [freestylefly](https://github.com/freestylefly), [yingdachen](https://github.com/yingdachen), [liucongg](https://github.com/liucongg), and everyone helping improve the project. [View all contributors →](https://github.com/modelscope/ms-cookbook/graphs/contributors)
 
-Thanks to [Datawhale's Hello-Agents](https://github.com/datawhalechina/hello-agents) for the README organization reference.
-
 ## Maintenance
 
 <details>

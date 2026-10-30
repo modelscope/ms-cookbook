@@ -259,8 +259,6 @@ python3 -m http.server 4173 --bind 127.0.0.1
 
 [查看全部贡献记录 →](https://github.com/modelscope/ms-cookbook/graphs/contributors)
 
-README 的组织方式参考了 [Datawhale Hello-Agents](https://github.com/datawhalechina/hello-agents)，感谢其在开源学习资源建设上的分享。
-
 <details>
 <summary><strong>🛠️ 维护者说明：内容修改与站点校验</strong></summary>
 
