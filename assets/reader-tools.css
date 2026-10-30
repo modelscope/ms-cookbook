@@ -73,7 +73,6 @@ body[data-view="reader"] .article-body :is(h2,h3,h4) { scroll-margin-top: calc(v
 .path-reader-heading > a { flex-shrink: 0; font-size: 12px; color: #80618f; }
 .path-reader-steps { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 12px 0; list-style: none; }
 .path-reader-steps li { display: flex; align-items: center; gap: 8px; }
-.path-reader-steps li + li::before { content: '→'; font-size: 12px; color: #b5a4c5; }
 .path-reader-steps a { display: block; padding: 6px 12px; border: 1px solid #e7dfef; border-radius: 7px; background: #fff; color: #8a769c; font-size: 13px; }
 .path-reader-steps a[aria-current="step"] { border-color: #cfb8f0; color: #7041b4; background: #eee5fa; font-weight: 600; }
 .path-reader-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; }

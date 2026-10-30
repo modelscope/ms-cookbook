@@ -12,7 +12,7 @@
   function renderAccount(){
     input.disabled=!session.user;submit.disabled=!session.user||busy;account.replaceChildren();
     if(session.user){account.textContent='以 '+session.user.name+' 的名字许愿';}
-    else if(session.loginEnabled){const a=el('a','魔搭登录后许愿 ↗');a.href='/auth/login?return_to=%23contribute';a.target='_blank';a.rel='noopener';account.append(a);}
+    else if(session.loginEnabled){const a=el('a','魔搭登录后许愿');a.href='/auth/login?return_to=%23contribute';a.target='_blank';a.rel='noopener';account.append(a);}
     else account.textContent='魔搭登录开放后，就可以投下你的愿望。';
   }
   function acceptSession(value){const changed=session.user?.id!==value.user?.id;session=value;renderAccount();if(changed&&active())load();}

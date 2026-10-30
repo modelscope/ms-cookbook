@@ -42,6 +42,7 @@ def test_guest_wording_and_profile_destinations_survive_rendering():
             assert [link['href'] for link in reader.links] == urls
             assert len(reader.images) == len(urls)
             assert all(image['width'] == image['height'] == '18' for image in reader.images)
+            assert '<strong>' not in markup and '<ul>' not in markup and '<li>' not in markup
 
 
 def test_all_three_platforms_use_their_own_logos():
@@ -64,6 +65,8 @@ def test_markdown_replay_link_and_original_titles():
             assert '](' not in link['href']
         if 'bilibili.com' in event['body']:
             assert any(link.get('class') == 'text-link event-replay' for link in reader.links)
+            assert len([link for link in reader.links if 'bilibili.com' in link['href']]) == 1
+            assert '直播回放：' not in ''.join(reader.text)
 
 
 def test_exhibition_date_range_is_preserved():
@@ -82,3 +85,29 @@ def test_github_renders_chinese_labels_and_replay_urls():
         for link in reader.links:
             assert '\\' not in link['href']
         assert all(image['src'].startswith('../../assets/') for image in reader.images)
+
+
+def test_requested_guest_links_and_punctuation():
+    events = {event['id']: event for event in BUILDER.load_events()}
+    for event_id, urls in {
+        'minicpm-20261015': ['https://modelscope.cn/profile/pzc163'],
+        'qwen-image-20261016': ['https://modelscope.cn/profile/Moymix', 'https://www.zhihu.com/people/wu-chen-fei-54'],
+    }.items():
+        reader = Reader()
+        reader.feed(BUILDER.card(events[event_id]))
+        for url in urls:
+            assert any(link.get('class') == 'event-profile-link' and link['href'] == url for link in reader.links)
+    assert '登陆' in events['yunqi-20261021']['title']
+    assert '；' not in events['aiscientist-20261104']['body']
+    for event in events.values():
+        assert '魔搭社区共建者，https://modelscope.cn/profile/zuiyn0113' not in event['body']
+
+
+def test_activities_only_appear_in_their_tab_and_links_have_no_arrows():
+    page = (ROOT / 'index.html').read_text()
+    homepage = page.split('<main id="homePage"', 1)[1].split('</main>', 1)[0]
+    assert 'events-preview' not in homepage and 'event-node' not in homepage
+    assert '<h1>丰富的共学共建活动</h1>' in page
+    assert '在 GitHub 查看活动记录' not in page
+    for link in re.findall(r'<a\b[^>]*>.*?</a>', page, flags=re.S):
+        assert not re.search(r'[↗↖←→↑↓]|arrow\.svg', link)
