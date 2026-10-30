@@ -137,14 +137,12 @@ def preview(events):
 
 
 def github_body(event):
-    # Only turn guest profile URLs into logos. All manuscript wording is retained.
-    result = event['body']
-    for kind, _, raw in event['blocks']:
-        if kind == 'speaker':
-            replacement = re.sub(r'https://[^\s<>；]+', lambda match: icon_link(match.group(), '../../') if platform(match.group()) else match.group(), raw)
-            result = result.replace(raw, replacement, 1)
-    result = re.sub(r'(!\[[^\]]*\]\()https://[^)]+/([^/)]+)(\))', r'\1../../assets/events/\2\3', result)
-    return result
+    # GFM treats **label：** followed directly by Chinese as literal asterisks.
+    # Reuse the rendered manuscript so both views preserve the same prose and
+    # URL destinations, including Markdown-escaped underscores in replay URLs.
+    return '\n\n'.join(markup.replace('src="assets/', 'src="../../assets/')
+                       .replace('href="assets/', 'href="../../assets/')
+                       for _, markup, _ in event['blocks'])
 
 
 def github_timeline(events):

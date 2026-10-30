@@ -70,3 +70,14 @@ def test_exhibition_date_range_is_preserved():
     exhibition = next(event for event in BUILDER.load_events() if event['id'] == 'yunqi-20261021')
     assert exhibition['start'] == '2026-10-21' and exhibition['end'] == '2026-10-23'
     assert '时间：2026 年 10 月 21 日-23 日' in exhibition['body']
+
+
+def test_github_renders_chinese_labels_and_replay_urls():
+    for event in BUILDER.load_events():
+        rendered = BUILDER.github_body(event)
+        assert '**主讲人：**' not in rendered
+        reader = Reader()
+        reader.feed(rendered)
+        for link in reader.links:
+            assert '\\' not in link['href']
+        assert all(image['src'].startswith('../../assets/') for image in reader.images)
