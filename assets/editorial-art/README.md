@@ -15,5 +15,9 @@
 - voice：声波／末尾短波段
 - campaign：图片视频／播放三角
 - palette：画笔颜料盘／一滴颜料和笔尖
+- phone：手机拍照巡检／底部小指示点
+- poster：教学海报纸张／顶部小图钉
+
+真实任务库统一使用内置 image_gen 生成的 PNG，以同目录现有任务图作为风格参考；不要混用平滑几何 SVG。新增任务图须同时核对主题、缩略图辨识度、粗黑手绘笔触和留白。
 
 原始生成文件保留在 Codex generated_images；上版纯黑细线图保留于 assets/line-art。
