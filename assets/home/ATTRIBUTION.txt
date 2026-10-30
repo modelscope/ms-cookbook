@@ -3,3 +3,5 @@ Noto Serif SC — https://fonts.google.com/noto/specimen/Noto+Serif+SC — SIL O
 Book hero and footer: AI-generated concept artwork based on the selected design.
 
 2026-09-15：community-qr.png 为甲方提供的魔搭紫皮书共学群二维码，按网站 review 建议原样使用。
+
+2026-10-30：assets/ms-cookbook-readme-cover.png 为用户提供并指定用于 README 的紫皮书与紫色搭搭封面图片，保留原始 PNG，未作修改。

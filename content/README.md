@@ -34,3 +34,5 @@ python3 -m http.server 4174 --bind 127.0.0.1
 2026-10-16 在第 25 章之后新增第 26 章「想要教学海报？要不试试让 AI 帮忙画一张」，完整同步飞书原文及 16 张配图。原第 26–37 章顺延为第 27–38 章，既有 `discussionId` 保持不变。来源、原文版本、素材校验值及编号映射见 [Qwen-Image 同步记录](qwen-image-sync-report.json)。
 
 2026-10-22 整合 Mini AI Scientist 社区投稿：保留已合并的 MiniCPM 与 Qwen-Image 章节，将 Mini AI Scientist 编为第 37 章，原第 37–38 章顺延为第 38–39 章。既有正文与 `discussionId` 保持不变；历史同步记录仍保留导入时的编号与证据。
+
+2026-10-30 按确认后的目录将「补充：Agent 框架知识」移至第七篇末尾：原第 36 章产线巡检调整为第 35 章，原第 37 章 Mini AI Scientist 调整为第 36 章，原第 35 章框架知识调整为第 37 章。三篇正文与既有 `discussionId` 保持不变，源文件、Markdown、网站数据及 README 引用同步调整。

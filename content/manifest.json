@@ -310,27 +310,27 @@
     },
     {
       "number": 35,
-      "title": "补充：Agent 框架知识",
-      "partIndex": 6,
-      "file": "source-html/chapter-35.html",
-      "status": "ready",
-      "discussionId": "chapter-30"
-    },
-    {
-      "number": 36,
       "title": "产线巡检 Agent：用 Penguin Harness 快速开发与优化",
       "partIndex": 6,
-      "file": "source-html/chapter-36.html",
+      "file": "source-html/chapter-35.html",
       "status": "ready",
       "discussionId": "penguin-harness-line-inspection"
     },
     {
-      "number": 37,
+      "number": 36,
       "title": "Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律",
+      "partIndex": 6,
+      "file": "source-html/chapter-36.html",
+      "status": "ready",
+      "discussionId": "mini-ai-scientist"
+    },
+    {
+      "number": 37,
+      "title": "补充：Agent 框架知识",
       "partIndex": 6,
       "file": "source-html/chapter-37.html",
       "status": "ready",
-      "discussionId": "mini-ai-scientist"
+      "discussionId": "chapter-30"
     },
     {
       "number": 38,

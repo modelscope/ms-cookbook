@@ -1,0 +1,243 @@
+<p align="right">English · <a href="README.md">简体中文</a></p>
+
+<p align="center">
+  <img src="assets/ms-cookbook-readme-cover.png" width="360" alt="ModelScope Cookbook — purple book cover">
+</p>
+
+<h1 align="center">ModelScope Cookbook</h1>
+<p align="center"><strong>From open-source models to practical AI applications.</strong></p>
+<p align="center">魔搭紫皮书 · Choose a model. Run it. Adapt it. Build with it.</p>
+
+<p align="center">
+  <a href="https://modelscope.cn/studios/ms-cookbook-team/ms-cookbook"><img src="https://img.shields.io/badge/Read_Online-ModelScope-7043DB?style=flat-square" alt="Read online on ModelScope"></a>
+  <a href="https://github.com/modelscope/ms-cookbook/stargazers"><img src="https://img.shields.io/github/stars/modelscope/ms-cookbook?style=flat-square&amp;color=7043DB" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-7043DB?style=flat-square" alt="License: Apache 2.0"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/Contributions-Welcome-287D70?style=flat-square" alt="Contributions welcome"></a>
+</p>
+
+<p align="center">
+  <a href="#overview">Overview</a> ·
+  <a href="#start-reading">Start reading</a> ·
+  <a href="#learning-paths">Learning paths</a> ·
+  <a href="#book-contents">Chapter guide</a> ·
+  <a href="#community">Community</a> ·
+  <a href="#contributing">Contribute</a>
+</p>
+
+---
+
+## Overview
+
+**ModelScope Cookbook is a hands-on, open-source guide to using open-source AI models in real applications.** It brings model selection, inference, data preparation, fine-tuning, evaluation, and application development into one structured learning resource.
+
+A useful model application starts with practical decisions: which model fits the task, what hardware it needs, how to adapt it to your data, and how to judge the result. The cookbook connects these decisions to runnable examples, using tools such as **EvalScope, ms-swift, DiffSynth, and Ollama**, alongside RAG and Agent workflows.
+
+The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, product-image creation, production-line inspection, and AI-driven scientific discovery.
+
+> **8 parts · 39 chapters · 38 available to read**
+
+## Start reading
+
+**[Read online on ModelScope →](https://modelscope.cn/studios/ms-cookbook-team/ms-cookbook)**
+
+No installation is needed for online reading. The website includes full-text keyword search, guided reading paths, chapter navigation, code copying, image enlargement, and rendered mathematical formulas.
+
+For local reading:
+
+```bash
+git clone https://github.com/modelscope/ms-cookbook.git
+cd ms-cookbook
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Open [http://127.0.0.1:4173/#home](http://127.0.0.1:4173/#home). If the port is occupied, use `4174` in both the command and URL. Stop the server with `Ctrl+C`.
+
+Reading locally requires Python 3 and a modern browser; it requires no project dependencies, build step, API key, or GPU. Individual exercises may require model downloads, credentials, software, or compute resources as described in their chapters.
+
+## Learning paths
+
+| Your goal | Recommended chapters | What you will practice |
+| --- | --- | --- |
+| **Get started** | [01](content/chapters/chapter-01.md) → [05](content/chapters/chapter-05.md) → [07](content/chapters/chapter-07.md) | Understand models, define a task, and run a first inference |
+| **Adapt a model** | [13](content/chapters/chapter-13.md) → [14](content/chapters/chapter-14.md) → [16](content/chapters/chapter-16.md) | Prepare training data, fine-tune, and evaluate against a baseline |
+| **Build an application** | [20](content/chapters/chapter-20.md) → [30](content/chapters/chapter-30.md) → [31](content/chapters/chapter-31.md) | Combine knowledge retrieval, external tools, and reusable skills |
+| **Create with generative AI** | [23](content/chapters/chapter-23.md) → [24](content/chapters/chapter-24.md) → [25](content/chapters/chapter-25.md) → [26](content/chapters/chapter-26.md) → [28](content/chapters/chapter-28.md) | Explore examples, customize image LoRA, create product visuals, and study the foundations |
+
+### Who is this for?
+
+- **Developers and students** seeking a practical introduction to open-source model applications.
+- **Application engineers** working on model selection, resource planning, fine-tuning, or evaluation.
+- **AIGC practitioners** exploring image customization, generation, and editing.
+
+Basic Python and command-line familiarity are useful for the coding exercises. Begin with a chapter that fits your current task, check its environment requirements, reproduce the example, and then test it with your own inputs. Record results and limitations before moving on.
+
+## Book contents
+
+Read each chapter on GitHub, or use the [online reading website](https://modelscope.cn/studios/ms-cookbook-team/ms-cookbook). Chapter titles are in Chinese.
+
+| Chapter | Focus |
+| --- | --- |
+| **Part 1 · Understanding open-source models** | |
+| [01 · 开源模型正在改变什么](content/chapters/chapter-01.md) | Openness, capabilities, and licensing |
+| [02 · 开源模型还没用上，先卡在下载这一步？](content/chapters/chapter-02.md) | Model discovery, model cards, and downloads |
+| [03 · 数据，是你要做开源模型微调的基石](content/chapters/chapter-03.md) | Data sources, quality, and preparation |
+| [04 · 没有资源也能玩开源模型，因为这里资源免费](content/chapters/chapter-04.md) | Model and compute resources |
+| **Part 2 · From a problem to a model task** | |
+| [05 · 要把业务问题转换成模型任务问题](content/chapters/chapter-05.md) | Tasks, inputs, outputs, and evaluation criteria |
+| [06 · 先评再选：用 EvalScope 形成开源模型的第一份报告](content/chapters/chapter-06.md) | Model-selection baselines with EvalScope |
+| **Part 3 · Running your first models** | |
+| [07 · 30 分钟带你快速看到第一个结果](content/chapters/chapter-07.md) | A first inference run |
+| [08 · 多大模型，选择什么样的服务器配置](content/chapters/chapter-08.md) | Model size, memory, and server selection |
+| [09 · 笔记本也能跑开源模型，先从 Ollama 开始](content/chapters/chapter-09.md) | Local inference with Ollama |
+| [10 · 把模型放到云端跑，用 Notebook 试试 CPU 和 GPU](content/chapters/chapter-10.md) | CPU and GPU inference in cloud notebooks |
+| [11 · 把自己微调的 MiniCPM 装进手机：从训练拆解到魔搭实践](content/chapters/chapter-11.md) | LoRA fine-tuning, GGUF quantization, and Android deployment |
+| [12 · 模型需要资源太多，量化能帮上什么忙？](content/chapters/chapter-12.md) | Quantization and resource trade-offs |
+| **Part 4 · Fine-tuning and evaluation** | |
+| [13 · 业务素材这么多，怎么变成能训练的数据？](content/chapters/chapter-13.md) | Turning business materials into training data |
+| [14 · 快速用 ms-swift，完成开源模型的轻量微调](content/chapters/chapter-14.md) | Lightweight fine-tuning with ms-swift |
+| [15 · 模型已经会回答了，为什么还要做偏好对齐？](content/chapters/chapter-15.md) | Goals and methods of preference alignment |
+| [16 · 微调有没有用，测才知道？](content/chapters/chapter-16.md) | Comparing baseline and fine-tuned models |
+| **Part 5 · Application systems** | |
+| [17 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-17.md) | Pose estimation and movement comparison |
+| [18 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-18.md) | Call transcription and quality analysis |
+| [19 · 搭建一个能听也能说的语音助手](content/chapters/chapter-19.md) | Speech recognition, Q&A, and synthesis |
+| [20 · 实现一个企业知识问答助手](content/chapters/chapter-20.md) | Knowledge retrieval and RAG |
+| [21 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-21.md) | On-device visual inspection, human confirmation, and offline synchronization |
+| [22 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-22.md) | Invitation to contribute reproducible application tutorials |
+| **Part 6 · Generative AI** | |
+| [23 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-23.md) | Open generative-model use cases |
+| [24 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-24.md) | Image LoRA customization with DiffSynth |
+| [25 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-25.md) | Product-image generation and editing |
+| [26 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-26.md) | Qwen-Image deployment and educational posters on ModelScope |
+| [27 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-27.md) | MiniMax H3 deployment tutorial pending |
+| [28 · 补充：AIGC 理论知识](content/chapters/chapter-28.md) | Image and video generation fundamentals |
+| **Part 7 · Agents** | |
+| [29 · Agent 是什么，它能做什么事？](content/chapters/chapter-29.md) | Agent components, execution loop, and use cases |
+| [30 · MCP：让模型连接外部工具](content/chapters/chapter-30.md) | Connecting models to external tools |
+| [31 · Skill：把任务方法封装成能力](content/chapters/chapter-31.md) | Reusable task methods and workflows |
+| [32 · 快速使用 Claude Code](content/chapters/chapter-32.md) | Getting started with Claude Code |
+| [33 · 快速使用 PI](content/chapters/chapter-33.md) | Getting started with PI |
+| [34 · 快速使用 DeepSeek Harness](content/chapters/chapter-34.md) | Getting started with DeepSeek Harness |
+| [35 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-35.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
+| [36 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-36.md) | Build a verifiable scientific-discovery Agent with Qwen3 and compare model size and thinking mode |
+| [37 · 补充：Agent 框架知识](content/chapters/chapter-37.md) | Agent framework fundamentals |
+| **Part 8 · Supplementary fundamentals** | |
+| [38 · 补充：大模型基础知识](content/chapters/chapter-38.md) | Model architecture, training, inference, and limitations |
+| [39 · 主流 LLM 评测](content/chapters/chapter-39.md) | Invitation to contribute evaluations of mainstream models |
+
+## Application examples
+
+| Example | Workflow explored | Chapter |
+| --- | --- | --- |
+| AI fitness coach | Compare body keypoints and exercise movements | [17](content/chapters/chapter-17.md) |
+| Customer-service quality analysis | Turn call recordings into text and analysis | [18](content/chapters/chapter-18.md) |
+| Speech assistant | Connect speech recognition, model responses, and speech synthesis | [19](content/chapters/chapter-19.md) |
+| Enterprise knowledge assistant | Retrieve reference material for grounded answers | [20](content/chapters/chapter-20.md) |
+| Product marketing visuals | Generate and edit product images | [25](content/chapters/chapter-25.md) |
+| Production-line inspection | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation | [35](content/chapters/chapter-35.md) |
+| Mini AI Scientist | Let open models propose hypotheses, design experiments, and verify discoveries automatically | [36](content/chapters/chapter-36.md) |
+
+## Community
+
+<p align="center">
+  <img src="assets/dada/dada.webp" width="88" alt="Dada community mascot">
+</p>
+
+Share questions, reproduction notes, and practical experience with other readers.
+
+<table>
+  <tr>
+    <td align="center"><img src="assets/community/qr.png" width="200" alt="ModelScope Cookbook community QR code"><br><strong>ModelScope Cookbook community</strong></td>
+    <td align="center"><img src="assets/community/agentwork-qr.png" width="200" alt="AgentWork community QR code"><br><strong>AgentWork community</strong></td>
+  </tr>
+</table>
+
+Scan with WeChat, or save the image and scan it from your photo library. If a code expires, please [open an issue](https://github.com/modelscope/ms-cookbook/issues/new).
+
+## Contributing
+
+There are two ways to share your work:
+
+- **GitHub:** report a problem in [Issues](https://github.com/modelscope/ms-cookbook/issues), or submit a focused [pull request](https://github.com/modelscope/ms-cookbook/pulls). Include the affected chapter or page, supporting references, and verification steps.
+- **ModelScope:** visit [Developer Practices](https://modelscope.cn/spotlight), choose **创建内容** (Create content), and add the topic **#魔搭紫皮书**.
+
+We welcome technical corrections, reproducible application examples, AIGC workflows, and reading-experience improvements. Preserve article wording and structure when making interface changes; content corrections need a clear source or author approval. Never include credentials, personal data, or material you cannot redistribute.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
+
+### English translation contributions
+
+Help translate the cookbook chapters into English so more developers can learn from these examples. You can translate a chapter, review a draft, align terminology, or verify examples.
+
+**[🔗 Join the English translation effort / claim a chapter](https://github.com/modelscope/ms-cookbook/issues/new?title=%5B%E8%8B%B1%E6%96%87%E7%BF%BB%E8%AF%91%E5%85%B1%E5%BB%BA%5D+%E8%AE%A4%E9%A2%86%E7%AB%A0%E8%8A%82+%2F+%E7%BF%BB%E8%AF%91%E5%AE%A1%E6%A0%A1&body=%23%23%23+%E5%B8%8C%E6%9C%9B%E5%8F%82%E4%B8%8E%E7%9A%84%E7%AB%A0%E8%8A%82%0A%E8%AF%B7%E5%A1%AB%E5%86%99%E7%AB%A0%E8%8A%82%E5%90%8D%E7%A7%B0%E4%B8%8E%E4%B8%AD%E6%96%87%E5%8E%9F%E6%96%87%E9%93%BE%E6%8E%A5%E3%80%82%0A%0A%23%23%23+%E5%8F%82%E4%B8%8E%E6%96%B9%E5%BC%8F%0A%E7%BF%BB%E8%AF%91+%2F+%E5%AE%A1%E6%A0%A1+%2F+%E6%9C%AF%E8%AF%AD%E6%95%B4%E7%90%86+%2F+%E7%A4%BA%E4%BE%8B%E6%A0%B8%E9%AA%8C%0A%0A%23%23%23+%E5%BD%93%E5%89%8D%E8%BF%9B%E5%B1%95%0A%E8%AF%B7%E8%AF%B4%E6%98%8E%E8%AE%A1%E5%88%92%E6%88%96%E5%B7%B2%E6%9C%89%E8%AF%91%E7%A8%BF%EF%BC%9B%E5%A6%82%E6%9C%89%E7%9B%B8%E5%85%B3+Issue+%E6%88%96+PR%EF%BC%8C%E8%AF%B7%E9%99%84%E9%93%BE%E6%8E%A5%E3%80%82%0A)**
+
+Open an issue with the chapter and your translation or review plans to coordinate contributions. Include the Chinese source link, preserve technical meaning and code accuracy, and use consistent terminology. Existing drafts can also be submitted as pull requests.
+
+### Community contributors
+
+Thank you to the community contributors below. Click 🔗 to visit their pages; hover over an icon for the link description.
+
+| Contributor | About | Links |
+| --- | --- | --- |
+| 刘聪 NLP | 自媒体博主（全网 ID：刘聪NLP）、魔搭社区共建者，曾任某头部 AI 独角兽公司大模型算法专家 | [🔗](https://modelscope.cn/profile/liucong "刘聪 NLP · 魔搭主页") |
+| 杨知铮 | OpenBMB 开源社区开发者关系负责人、魔搭社区共建者 | [🔗](https://modelscope.cn/profile/pzc163 "杨知铮 · 魔搭主页") |
+| 包启明 | AI Research Scientist & Engineer @Xtracta、魔搭社区共建者 | [🔗](https://modelscope.cn/profile/qbao775 "包启明 · 魔搭主页") [🔗](https://github.com/14H034160212 "包启明 · GitHub") |
+| 吴晨飞 | Qwen-Image 负责人、魔搭社区共建者 | [🔗](https://modelscope.cn/profile/Moymix "吴晨飞 · 魔搭主页") [🔗](https://www.zhihu.com/people/wu-chen-fei-54 "吴晨飞 · 知乎") |
+| Artiprocher | — | [🔗](https://modelscope.cn/profile/Artiprocher "Artiprocher · 魔搭主页") |
+| Relakkes（阿江） | Python 开发者兼内容创作者 | [🔗](https://modelscope.cn/profile/relakkes "Relakkes（阿江）· 魔搭主页") |
+| 苍何 | 万星开源项目作者 | [🔗](https://modelscope.cn/profile/canghe "苍何 · 魔搭主页") |
+| 甲木 | — | [🔗](https://modelscope.cn/profile/zuiyn0113 "甲木 · 魔搭主页") |
+| 袋鼠帝 | 公众号「袋鼠帝AI客栈」主理人，10K Star 开源项目 cangjie-skil | [🔗](https://modelscope.cn/profile/kangarooking "袋鼠帝 · 魔搭主页") |
+| 摸鱼小李 | — | [🔗](https://modelscope.cn/profile/Joy19997 "摸鱼小李 · 魔搭主页") |
+| tastelikefeet | — | [🔗](https://modelscope.cn/active/ms-cookbook "tastelikefeet 提供的链接 · 魔搭紫皮书项目页") |
+| 星球收藏家 | — | [🔗](https://modelscope.cn/profile/VoyagerX "星球收藏家 · 魔搭主页") |
+| Yinchao | — | [🔗](https://modelscope.cn/profile/Yinchao "Yinchao · 魔搭主页") |
+
+### Acknowledgments
+
+Thank you to [freestylefly](https://github.com/freestylefly), [yingdachen](https://github.com/yingdachen), [liucongg](https://github.com/liucongg), and everyone helping improve the project. [View all contributors →](https://github.com/modelscope/ms-cookbook/graphs/contributors)
+
+Thanks to [Datawhale's Hello-Agents](https://github.com/datawhalechina/hello-agents) for the README organization reference.
+
+## Maintenance
+
+<details>
+<summary><strong>Chapter sources, validation, and repository structure</strong></summary>
+
+### Source of truth
+
+- `content/chapters/`: GitHub-readable Markdown chapters, generated during builds.
+- `content/source-html/`: canonical HTML sources that preserve the manuscript structure; make content edits here.
+- `content/manifest.json`: titles, order, status, and snapshot date.
+- `content/sync-report.json`: import-time source revisions and verification evidence.
+- `assets/content.js`: generated chapter data loaded by the website.
+- `index.html`, `assets/paper.js`, and the site stylesheets: reading interface.
+- `assets/dada/` and `assets/community/`: artwork and community QR images.
+- `assets/manuscript-20260914/`: bundled chapter images and attachments.
+
+After an approved chapter edit:
+
+```bash
+python3 scripts/build-content.py
+node scripts/build-content.mjs --check
+node scripts/check-site.mjs
+```
+
+Building uses Python 3; validation also requires Node.js 22 or newer. Commit regenerated data with its sources. Preview affected pages on desktop and mobile. Reading an already-built checkout does not require these steps.
+
+</details>
+
+<details>
+<summary><strong>GitHub → ModelScope automatic deployment</strong></summary>
+
+The [deployment workflow](.github/workflows/deploy-modelscope.yml) publishes changes to site files on `main` to the public Studio `ms-cookbook-team/ms-cookbook`. It can also be triggered manually from GitHub Actions.
+
+The workflow uses the repository secret `MODELSCOPE_API_KEY`, synchronizes committed files to the Studio's `master` branch, prepares a Chinese Studio card, and triggers deployment. It verifies the live page and deployed Git SHA before succeeding. GitHub remains the source of truth for code and content.
+
+</details>
+
+## License
+
+This repository uses the [Apache License 2.0](LICENSE). Referenced models, datasets, and tools have their own licenses and terms. Chapter images and attachments remain subject to the rights of their authors or respective rights holders.
+
+Bundled third-party components retain their licenses: [KaTeX · MIT](assets/katex/LICENSE), [Remix Icon · Apache 2.0](assets/home/REMIX-LICENSE), [Noto Serif SC · SIL OFL 1.1](assets/home/NOTO-LICENSE.txt), and [Dada · MIT](assets/dada/LICENSE). See the [Dada notice](assets/dada/NOTICE.md), [site attribution](assets/paper/ATTRIBUTION.txt), [shared asset attribution](assets/home/ATTRIBUTION.txt), and [artwork notes](assets/review/ATTRIBUTION.md).
