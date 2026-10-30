@@ -1,0 +1,11 @@
+{
+  "events": [
+    {"id": "yunqi-20261021", "sourceIndex": 0, "start": "2026-10-21", "end": "2026-10-23", "type": "展出"},
+    {"id": "minicpm-20261015", "sourceIndex": 1, "start": "2026-10-15", "end": "2026-10-15", "type": "线下工作坊"},
+    {"id": "qwen-image-20261016", "sourceIndex": 2, "start": "2026-10-16", "end": "2026-10-16", "type": "线下工作坊"},
+    {"id": "beginner-20261015", "sourceIndex": 3, "start": "2026-10-15", "end": "2026-10-15", "type": "线上共学营"},
+    {"id": "advanced-20261021", "sourceIndex": 4, "start": "2026-10-21", "end": "2026-10-21", "type": "线上共学营"},
+    {"id": "aigc-20261028", "sourceIndex": 5, "start": "2026-10-28", "end": "2026-10-28", "type": "线上共学营"},
+    {"id": "aiscientist-20261104", "sourceIndex": 6, "start": "2026-11-04", "end": "2026-11-04", "type": "线上共学营"}
+  ]
+}

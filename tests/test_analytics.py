@@ -53,6 +53,14 @@ def test_period_uv_deduplicates_the_same_visitor_across_days(analytics_site):
     assert [item['uv'] for item in summary['daily']]==[1,1]
 
 
+def test_activity_timeline_is_tracked_as_a_named_page(analytics_site):
+    _,client=analytics_site
+    assert client.post('/api/analytics/view',json={'page':'events','visitor':'visitor_aaaaaaaaaaaaaaaa'}).status_code==204
+    summary=client.get('/api/analytics/summary?days=1').json()
+    page=next(item for item in summary['pages'] if item['page']=='events')
+    assert page['title']=='共建活动时间线' and page['pv']==1 and page['uv']==1
+
+
 def test_tracking_validates_origin_page_and_visitor(analytics_site):
     _,client=analytics_site
     body={'page':'home','visitor':'visitor_aaaaaaaaaaaaaaaa'}

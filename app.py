@@ -255,8 +255,8 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
     # Keep notes attached to their original article when display numbers change.
     chapters = {c['id']: c.get('discussionId', c['id']) for c in book_data['chapters'] if c.get('status') != 'pending'}
     admins = set(filter(None, os.getenv('MODERATOR_SUBS','').split(',')))
-    analytics_pages = {'home','contents','paths','practice','contribute'} | {c['id'] for c in book_data['chapters']}
-    analytics_titles = {'home':'首页','contents':'全书目录','paths':'阅读路径','practice':'真实任务库','contribute':'社区共建'}
+    analytics_pages = {'home','contents','paths','practice','events','contribute'} | {c['id'] for c in book_data['chapters']}
+    analytics_titles = {'home':'首页','contents':'全书目录','paths':'阅读路径','practice':'真实任务库','events':'共建活动时间线','contribute':'社区共建'}
     analytics_titles.update({c['id']:c['title'] for c in book_data['chapters']})
     analytics_timezone = ZoneInfo('Asia/Shanghai')
     analytics_lock = threading.Lock()

@@ -23,6 +23,12 @@ Visit [ModelScope Developer Practices](https://modelscope.cn/spotlight), select 
 
 ## Community and credits
 
+### Activity timeline
+
+Keep supplied activity titles, guest titles, descriptions, and agendas verbatim in `content/events/source.md`. Put only dates, identifiers, and activity types in `content/events/manifest.json`. Guest profile links are rendered as platform logos; their destinations are preserved. Activity images are bundled in `assets/events/` using their original filenames.
+
+Run `python3 scripts/build-events.py` to update the website, both Chinese READMEs, and `content/events/README.md` together. Run `python3 scripts/build-events.py --check` to verify that these views match their source. The deployment checks include this verification. Preview the full timeline and homepage on desktop and mobile before submitting changes.
+
 Maintain the two community QR images in `assets/community/qr.png` and `assets/community/agentwork-qr.png`. Preserve their scan quality and verify both desktop and mobile presentation after replacement.
 
 The website's **社区共建** page provides the community QR code, submission routes, and verified code contributor links. Author and reviewer credits are added after names and roles are confirmed.

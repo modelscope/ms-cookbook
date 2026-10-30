@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync, existsSync} from 'node:fs';
 import {resolve, dirname} from 'node:path';
 import vm from 'node:vm';
+import {spawnSync} from 'node:child_process';
 
 const root=resolve(import.meta.dirname,'..');
 const read=path=>readFileSync(resolve(root,path),'utf8');
@@ -43,6 +44,8 @@ for(const chapter of data.chapters){
 }
 assert.equal(imageCount,data.imageCount);assert.equal(attachmentCount,data.attachmentCount);
 checkLinks(read('index.html'));
+const eventsCheck=spawnSync('python3',[resolve(root,'scripts/build-events.py'),'--check'],{encoding:'utf8'});
+assert.equal(eventsCheck.status,0,eventsCheck.stderr||eventsCheck.stdout);
 checkLinks(read('assets/analytics.html'));
 assert(!/feishu\.cn/.test(read('index.html')),'Source UI must point to GitHub');
 assert(!/art:'plane'|paper\/plane\.webp/.test(read('assets/paper.js')+read('index.html')));
