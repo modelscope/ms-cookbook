@@ -23,7 +23,7 @@
     if(!items.length)list.append(el('p','还没有人许愿。你希望紫皮书补上的第一份实践是什么？','wish-empty'));
     for(const wish of items){
       const card=el('article',null,'wish-entry'),header=el('header'),date=el('time',new Date(wish.created*1000).toLocaleDateString('zh-CN'));
-      const author=el(wish.profileUrl?'a':'strong',wish.name);if(wish.profileUrl){author.href=wish.profileUrl;author.target='_blank';author.rel='noopener noreferrer';}
+      const author=el(wish.profileUrl?'a':'strong',wish.name);if(wish.profileUrl){author.href=wish.profileUrl;author.target='_blank';author.rel='noopener noreferrer';window.ReaderProfiles.bind(author);}
       date.dateTime=new Date(wish.created*1000).toISOString();header.append(author,date);card.append(header,el('p',wish.text));
       if(wish.canDelete){const del=el('button','删除','entry-delete');del.type='button';del.onclick=async()=>{if(!confirm('确定删除这条愿望？'))return;del.disabled=true;try{await api('/api/wishes/'+wish.id,{method:'DELETE'});await load();}catch(e){status.textContent=e.message;del.disabled=false;}};card.append(del);}
       list.append(card);

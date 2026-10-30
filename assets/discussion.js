@@ -71,7 +71,7 @@
   }
   function authorLink(entry,cls='discussion-author'){
     const node=el(entry.profileUrl?'a':'strong',entry.name,cls);
-    if(entry.profileUrl){node.href=entry.profileUrl;node.target='_blank';node.rel='noopener noreferrer';node.setAttribute('aria-label',entry.name+'的魔搭主页（新窗口）');}
+    if(entry.profileUrl){node.href=entry.profileUrl;node.target='_blank';node.rel='noopener noreferrer';node.setAttribute('aria-label',entry.name+'的魔搭主页（新窗口）');window.ReaderProfiles.bind(node);}
     return node;
   }
   async function refreshSession(){try{session=await api('/api/session');renderAccount();}catch(e){status.textContent=e.message;renderAccount();}}
@@ -163,6 +163,7 @@
   };
   window.addEventListener('hashchange',()=>{generation++;selectionBar.hidden=true;dialog.close();anchor=null;if(chapter!==chapterKey()){textarea.value='';setReply(null);items=[];next=null;tab='comment';render();}renderAccount();requestAnimationFrame(()=>load());});
   window.addEventListener('focus',async()=>{await refreshSession();await load();});
+  window.addEventListener('purplebook:profile-error',e=>{status.textContent=e.detail;notify(e.detail);});
   refreshSession().then(load);
   if(new URLSearchParams(location.search).get('login')==='failed'){status.textContent='登录未完成，请重新使用魔搭账号登录。';}
 })();
