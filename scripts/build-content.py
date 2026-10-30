@@ -34,6 +34,43 @@ def dump(node):
 def xml_dump(node):
     return ET.tostring(node, encoding='unicode', short_empty_elements=True)
 
+URL_PATTERN = re.compile(r'(?:https?://|www\.)[^\s<>"\'`\u3000-\u303f\u3400-\u9fff\uff00-\uffef]+', re.I)
+
+def linkify(article):
+    """Link visible URLs without changing text, code copying or existing anchors."""
+    def fragments(text):
+        output=[];start=0
+        for match in URL_PATTERN.finditer(text or ''):
+            url=match[0].rstrip('.,;:!?')
+            while url and url[-1] in ')]}' and url.count(url[-1]) > url.count({')':'(',']':'[','}':'{'}[url[-1]]):
+                url=url[:-1]
+            if not url or url.lower() in ('http://','https://','www.'): continue
+            output.append(html.escape(text[start:match.start()]))
+            href=url if not url.lower().startswith('www.') else 'https://'+url
+            output.append('<a href="'+html.escape(href,quote=True)+'" target="_blank" rel="noopener noreferrer">'+html.escape(url)+'</a>')
+            start=match.start()+len(url)
+        output.append(html.escape((text or '')[start:]))
+        return ET.fromstring('<span>'+''.join(output)+'</span>')
+    def walk(node):
+        if node.tag=='a':
+            if re.match(r'https?://',node.get('href',''),re.I):
+                node.set('target','_blank');node.set('rel','noopener noreferrer')
+            return
+        if node.tag=='span' and 'arithmatex' in node.get('class',''): return
+        original=list(node)
+        for child in original: walk(child)
+        content=fragments(node.text);node.text=content.text
+        for index,link in enumerate(content): node.insert(index,link)
+        for child in original:
+            content=fragments(child.tail);child.tail=content.text
+            index=list(node).index(child)+1
+            for offset,link in enumerate(content): node.insert(index+offset,link)
+    walk(article)
+
+def word_count(article):
+    """Count Han characters plus Latin/number words in visible chapter text."""
+    return len(re.findall(r'[\u3400-\u9fff]|[A-Za-z0-9]+(?:[\x27_-][A-Za-z0-9]+)*', plain(article)))
+
 def import_snapshot(snapshot, date):
     from PIL import Image, ImageOps
     catalog = json.loads((snapshot / 'catalog.json').read_text())
@@ -194,6 +231,7 @@ def build(check=False):
                     assert (ROOT / value).is_file(), value
                     node.set(attr, value)
                 assert not urlparse(value).scheme or urlparse(value).scheme in {'https', 'http', 'mailto'}, 'Unsafe URL'
+        linkify(article)
         for parent in list(article.iter()):
             for i, child in enumerate(list(parent)):
                 if child.tag == 'table':
@@ -209,6 +247,15 @@ def build(check=False):
     payload.update(sourceUrl=f'{REPO}/tree/main/content', chapterCount=len(chapters), readyCount=sum(c['status']=='ready' for c in chapters), imageCount=sum(c['imageCount'] for c in chapters), attachmentCount=sum(c['attachmentCount'] for c in chapters))
     payload['parts'] = [{'id': f'part-{i+1:02d}', **p, 'chapters': [f'chapter-{c["number"]}' for c in manifest['chapters'] if c['partIndex']==i]} for i,p in enumerate(manifest['parts'])]
     payload['chapters'] = chapters
+    profiles=json.loads((ROOT/'assets/contributors/profiles.json').read_text())
+    scenes=json.loads((CONTENT/'practice.json').read_text())
+    ready={c['number'] for c in chapters if c['status']=='ready'}
+    payload['scenes']=[s for s in scenes if s['id'] in ready]
+    payload['stats']={
+        'contributors':len({p['handle'].casefold() for p in profiles}),
+        'tasks':len(payload['scenes']),
+        'words':sum(word_count(ET.fromstring((CONTENT/e['file']).read_text())) for e in manifest['chapters'] if e['status']=='ready'),
+    }
     output = 'window.BOOK_DATA = ' + json.dumps(payload, ensure_ascii=False, separators=(',', ':')) + ';\n'
     target = ROOT / 'assets/content.js'
     if check:

@@ -78,7 +78,8 @@ try {
   // Export committed files only. Deployment scripts and credentials stay out of the site.
   const files = ['Dockerfile', 'requirements.txt', 'app.py', 'index.html', 'favicon.svg', 'assets', 'content', 'chapters', 'CONTRIBUTING.md', 'README.md', 'README.zh-CN.md', 'LICENSE'];
   const archive = join(temporary, 'site.tar');
-  run('git', ['archive', '--format=tar', '--output', archive, commit, '--', ...files]);
+  const buildScripts=['scripts/build-content.py','scripts/chapter_markdown.py','scripts/version-assets.mjs'];
+  run('git', ['archive', '--format=tar', '--output', archive, commit, '--', ...files, ...buildScripts]);
   // Sparse paths absent from disk otherwise keep their old index entries.
   // Reset only the three application-owned directories before importing them.
   run('git', ['rm', '-r', '-f', '--cached', '--sparse', '--ignore-unmatch', '--', 'assets', 'chapters', 'content'], target);
@@ -92,6 +93,10 @@ try {
   const oldContent = join(target, 'content');
   if (existsSync(oldContent)) rmSync(oldContent, { recursive: true });
   run('tar', ['-xf', archive, '-C', target]);
+  // Always derive links and homepage counts from this release's committed data.
+  run('python3',['scripts/build-content.py'],target);
+  run('node',['scripts/version-assets.mjs'],target);
+  rmSync(join(target,'scripts'),{recursive:true});
 
   cpSync(join(target, 'README.md'), join(target, 'README.en.md'));
   const chinese = readFileSync(join(target, 'README.zh-CN.md'), 'utf8')

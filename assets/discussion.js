@@ -22,6 +22,10 @@
   const formHint=el('p','留言对所有读者可见。','discussion-hint');
   form.append(label,textarea,formHint,submit);
   const status=el('p',null,'discussion-status'); status.setAttribute('role','status');
+  const replyHint=el('p',null,'discussion-reply-hint'),cancelReply=el('button','取消回复');cancelReply.type='button';
+  form.prepend(replyHint);let replyTo=null;
+  function setReply(entry){replyTo=entry;replyHint.replaceChildren();replyHint.hidden=!entry;label.textContent=entry?'回复 '+entry.name:'读完这一章，你有什么想法？';submit.textContent=entry?'发表回复':'发表留言';if(entry)replyHint.append(el('span','正在回复：'+entry.text),cancelReply);}
+  cancelReply.onclick=()=>setReply(null);setReply(null);
   panel.append(title,hint,tabs,list,more,form,status);
   let tab='comment';
   const discussionJump=el('button','笔记与留言');discussionJump.type='button';discussionJump.onclick=()=>panel.scrollIntoView({block:'start',behavior:'smooth'});$('.reading-tools').append(discussionJump);
@@ -55,7 +59,7 @@
   function renderAccount() {
     account.replaceChildren();
     if(session.user){
-      account.append(el('span',session.user.name,'account-name'));
+      account.append(authorLink(session.user,'account-name'));
       const logout=el('button','退出');logout.type='button';logout.onclick=async()=>{try{await api('/api/logout',{method:'POST'});await refreshSession();await load();}catch(e){status.textContent=e.message;}};account.append(logout);
     }else if(session.loginEnabled) account.append(loginLink('魔搭登录'));
     else {const pending=el('span','魔搭登录','account-pending');pending.title='魔搭登录尚未配置';pending.setAttribute('aria-disabled','true');account.append(pending);}
@@ -63,6 +67,11 @@
     textarea.disabled=!session.user;submit.disabled=!session.user;
     formHint.replaceChildren(el('span','留言对所有读者可见。'));
     if(!session.user) formHint.append(' ',session.loginEnabled?loginLink('登录后参与讨论'):el('span','登录开放后即可参与讨论。'));
+  }
+  function authorLink(entry,cls='discussion-author'){
+    const node=el(entry.profileUrl?'a':'strong',entry.name,cls);
+    if(entry.profileUrl){node.href=entry.profileUrl;node.target='_blank';node.rel='noopener noreferrer';node.setAttribute('aria-label',entry.name+'的魔搭主页（新窗口）');}
+    return node;
   }
   async function refreshSession(){try{session=await api('/api/session');renderAccount();}catch(e){status.textContent=e.message;renderAccount();}}
   function chapterKey(){return location.hash.slice(1).split('?')[0].split('/')[0];}
@@ -96,14 +105,24 @@
     form.hidden=tab!=='comment';list.replaceChildren();
     const visible=items.filter(i=>tab==='comment'?i.kind==='comment':i.kind!=='comment');
     if(!visible.length)list.append(el('p',tab==='comment'?'还没有留言，来分享第一个想法吧。':'还没有划线或想法。选中正文后即可开始。','discussion-empty'));
+    const cards=new Map();
     for(const entry of visible){
-      const card=el('article',null,'discussion-entry');const header=el('header');
-      header.append(el('strong',entry.name),el('span',entry.kind==='highlight'?'仅自己可见':new Date(entry.created*1000).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})));
+      const card=el('article',null,'discussion-entry');card.id='entry-'+entry.id;cards.set(entry.id,card);const header=el('header');
+      header.append(authorLink(entry),el('span',entry.kind==='highlight'?'仅自己可见':new Date(entry.created*1000).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})));
       card.append(header);
+      if(entry.replyTo)card.append(el('blockquote',entry.replyTo.id?'回复 '+entry.replyTo.name+'：'+entry.replyTo.text:'回复的原留言已删除','reply-context'));
       if(entry.quote){const jump=el('button',entry.quote,'quoted-passage');jump.type='button';jump.onclick=()=>{const r=rangeFor(entry);if(!r){status.textContent='正文已更新，暂时无法定位这段原文。';return;}blocks[entry.block].scrollIntoView({block:'center',behavior:'smooth'});getSelection().removeAllRanges();getSelection().addRange(r);};card.append(jump);}
       if(entry.text)card.append(el('p',entry.text));
+      if(entry.kind==='comment'){const reply=el('button','回复','entry-reply');reply.type='button';reply.onclick=()=>{if(!canWrite())return;setReply(entry);form.scrollIntoView({block:'center',behavior:'smooth'});textarea.focus({preventScroll:true});};card.append(reply);}
       if(entry.canDelete){const del=el('button',entry.kind==='highlight'?'取消划线':'删除','entry-delete');del.type='button';del.onclick=async()=>{if(!confirm('确定删除这条'+(entry.kind==='highlight'?'划线':'内容')+'？'))return;del.disabled=true;try{await api('/api/entries/'+entry.id,{method:'DELETE'});await load();}catch(e){status.textContent=e.message;del.disabled=false;}};card.append(del);}
       list.append(card);
+    }
+    // Keep loaded replies under their original comment. Replies whose parent is
+    // on an older page retain the quoted context until that page is loaded.
+    for(const entry of [...visible].reverse()){
+      const parent=cards.get(entry.replyTo?.id);if(!parent)continue;
+      let replies=parent.querySelector(':scope > .entry-replies');if(!replies){replies=el('div',null,'entry-replies');parent.append(replies);}
+      replies.append(cards.get(entry.id));
     }
     more.hidden=!next;paint();
   }
@@ -139,9 +158,9 @@
     try{await api(`/api/chapters/${anchor.chapter}/entries`,{method:'POST',body:JSON.stringify({...anchor,kind:'annotation',text:dText.value})});dialog.close();showTab('annotation');getSelection().removeAllRanges();await load();}catch(error){dStatus.textContent=error.message;}finally{busy=false;dSubmit.disabled=false;}
   };
   form.onsubmit=async e=>{e.preventDefault();if(!canWrite()||busy||!textarea.value.trim())return;busy=true;submit.disabled=true;const target=chapterKey();
-    try{await api(`/api/chapters/${target}/entries`,{method:'POST',body:JSON.stringify({kind:'comment',text:textarea.value})});if(chapterKey()===target){textarea.value='';await load();status.textContent='留言已发表。';}}catch(error){status.textContent=error.message;}finally{busy=false;submit.disabled=!session.user;}
+    try{await api(`/api/chapters/${target}/entries`,{method:'POST',body:JSON.stringify({kind:'comment',text:textarea.value,parentId:replyTo?.id})});if(chapterKey()===target){textarea.value='';setReply(null);await load();status.textContent='留言已发表。';}}catch(error){status.textContent=error.message;}finally{busy=false;submit.disabled=!session.user;}
   };
-  window.addEventListener('hashchange',()=>{generation++;selectionBar.hidden=true;dialog.close();anchor=null;if(chapter!==chapterKey()){textarea.value='';items=[];next=null;tab='comment';render();}renderAccount();requestAnimationFrame(()=>load());});
+  window.addEventListener('hashchange',()=>{generation++;selectionBar.hidden=true;dialog.close();anchor=null;if(chapter!==chapterKey()){textarea.value='';setReply(null);items=[];next=null;tab='comment';render();}renderAccount();requestAnimationFrame(()=>load());});
   window.addEventListener('focus',async()=>{await refreshSession();await load();});
   refreshSession().then(load);
   if(new URLSearchParams(location.search).get('login')==='failed'){status.textContent='登录未完成，请重新使用魔搭账号登录。';}

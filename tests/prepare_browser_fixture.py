@@ -10,6 +10,7 @@ from app import create_app
 app=create_app()
 with app.state.db() as db:
     db.execute('INSERT INTO users VALUES (?,?,?)',('browser-reader','test-sub','测试读者'))
+    db.execute('INSERT INTO user_profiles VALUES (?,?)',('browser-reader','test-reader'))
     db.execute('INSERT INTO sessions VALUES (?,?,?)',('browser-session','browser-reader',int(time.time())+600))
 payload=base64.b64encode(json.dumps({'sid':'browser-session','csrf':'browser-csrf'}).encode())
 cookie=TimestampSigner((Path(os.environ['DATA_DIR'])/'session.key').read_text()).sign(payload).decode()

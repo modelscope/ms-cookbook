@@ -17,13 +17,13 @@
     application: {name:'走向应用',title:'带着真实任务，探索模型的应用方式',art:'cubes',desc:'从企业知识问答到 MCP 与 Skill。结合任务选择章节，理解模型与工具怎样协同工作。',brief:'将模型能力转化为实际价值。',steps:'知识问答 → 工具 → Agent',link:'查看应用实践',chapters:[20,30,31],labels:['知识问答','连接工具','封装能力'],notes:['结合知识库生成有依据的回答','通过 MCP 连接外部工具','用 Skill 组织可复用的任务方法']},
     aigc: {name:'AIGC 创作',title:'从生成到定制，探索 AIGC 创作',art:'palette',desc:'面向创作者与 AIGC 实践者。从开源生成模型的案例出发，学习图像 LoRA 定制、商品营销图与教学海报创作，再补充生成模型的理论知识。',brief:'理解生成能力，跑通创作流程。',steps:'案例 → 定制 → 图像创作',link:'开始 AIGC 创作',chapters:[23,24,25,26,28],labels:['认识生成能力','定制图像 LoRA','创作商品营销图','制作教学海报','补充理论基础'],notes:['通过现有案例了解开源模型的创作能力','使用 DiffSynth 训练图像 LoRA','完成图像生成与修改流程','使用 Qwen-Image 生成并校核教学海报','理解 AIGC 相关理论知识']}
   };
-  const scenes = [
-    {id:17,title:'AI 健身教练',desc:'识别人体关键点，对比跟练动作与示范。',type:'视觉',art:'fitness'},
-    {id:18,title:'智能客服质检',desc:'从通话转写到服务过程分析。',type:'语音分析',art:'service'},
-    {id:19,title:'能听也能说的语音助手',desc:'串联语音识别、模型问答与语音合成。',type:'语音',art:'speech'},
-    {id:20,title:'企业知识问答助手',desc:'结合知识库，让回答有据可查。',type:'RAG',art:'knowledge'},
-    {id:25,title:'商品营销图',desc:'从图像生成到修改，完成商品视觉创作。',type:'AIGC',art:'product'}
-  ];
+  const scenes = data.scenes;
+  for(const [key,value] of Object.entries(data.stats)){
+    const number=$(`[data-fact="${key}"]`);if(!number)continue;
+    number.textContent=key==='words'&&value>=10000?(value/10000).toFixed(2):value.toLocaleString('zh-CN');
+    number.nextElementSibling.textContent=key==='words'?(value>=10000?' 万字':' 字'):key==='contributors'?' 人':' 个';
+    number.parentElement.title=key==='words'?`${value.toLocaleString('zh-CN')} 字（汉字逐字计，英文及数字按词计，含代码）`:'根据仓库内容自动统计';
+  }
   let currentChapter = null;
   let currentView = '';
   let currentPathKey = '';
