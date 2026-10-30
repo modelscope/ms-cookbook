@@ -16,8 +16,7 @@
 
 ## Qwen-Image-2.1介绍
 
-Qwen-Image-2.1发布以来，收到社区很多关注。Qwen-Image-2.1将文生图与图像编辑统一在一个模型中。模型视觉生成部分仅 <strong>7B 参数</strong>，采用 <strong>32 层 Single-Stream DiT</strong>，在官方 Qwen-Image-Bench 公开评测中获得 <strong>60.28 分</strong>，并原生支持透明图生成与<strong>最多 10 张参考图编辑。社区内评价不错，我们以这个模型为例跑一遍部署和场景的实践。</strong><br>
-<strong>补充相关介绍</strong>
+Qwen-Image-2.1发布以来，收到社区很多关注。Qwen-Image-2.1将文生图与图像编辑统一在一个模型中。模型视觉生成部分仅 <strong>7B 参数</strong>，采用 <strong>32 层 Single-Stream DiT</strong>，在官方 Qwen-Image-Bench 公开评测中获得 <strong>60.28 分</strong>，并原生支持透明图生成与<strong>最多 10 张参考图编辑。社区内评价不错，我们以这个模型为例跑一遍部署和场景的实践。</strong>
 
 <p></p>
 
