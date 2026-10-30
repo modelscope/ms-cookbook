@@ -70,6 +70,18 @@ python3 -m http.server 4173 --bind 127.0.0.1
 - 🎨 **探索 AIGC 创作：** 实践图像 LoRA、商品图生成与编辑、教学海报制作，理解生成模型的基础知识。
 - 🤖 **入门 Agent 开发：** 理解 Agent、MCP 与 Skill，结合开发工具和巡检案例探索任务执行与效果优化。
 
+<a id="events"></a>
+
+## 共建活动
+
+<!-- events-preview:start -->
+- **11.04 · 线上共学营**　[魔搭紫皮书共学营 Vol 4：小模型也能搞科研？4B参数也玩起了科学发现～用Qwen3搭建Mini AIScientist全流程，从提出假设到验证结论](content/events/README.md#aiscientist-20261104)
+- **10.28 · 线上共学营**　[魔搭紫皮书共学营·AIGC 专场：从出图、改图到做漫剧：魔搭紫皮书 AIGC 解读与实战](content/events/README.md#aigc-20261028)
+- **10.21 · 线上共学营**　[魔搭紫皮书共学营·进阶实践：模型跑通了，怎么变好用？  选型、评测、微调与企业知识问答实战](content/events/README.md#advanced-20261021)
+
+[查看完整活动时间线 →](content/events/README.md)
+<!-- events-preview:end -->
+
 <a id="contents"></a>
 
 ## 📖 内容导航

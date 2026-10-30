@@ -307,7 +307,7 @@
     const pathChanged=currentPathKey!==pathKey;
     currentPathKey=pathKey;
     const chapter=chapters.get(name);
-    const view=chapter?'reader':['contents','paths','practice','contribute'].includes(name)?name:'home';
+    const view=chapter?'reader':['contents','paths','practice','events','contribute'].includes(name)?name:'home';
     const samePath=currentView==='paths'&&view==='paths';
     closeDialogs();
     $$('[data-page]').forEach(p=>p.hidden=p.dataset.page!==view);
@@ -319,7 +319,7 @@
       if(currentChapter?.id!==chapter.id||currentView!=='reader'||pathChanged)renderChapter(chapter);
     } else {
       if(headingObserver)headingObserver.disconnect();
-      document.title=({home:'让开源模型，从知识走向实践',contents:'全书目录',paths:'阅读路径',practice:'场景实践',contribute:'社区共建'}[view])+'｜魔搭紫皮书';
+      document.title=({home:'让开源模型，从知识走向实践',contents:'全书目录',paths:'阅读路径',practice:'场景实践',events:'共建活动时间线',contribute:'社区共建'}[view])+'｜魔搭紫皮书';
       if(view==='contents')renderIndex();if(view==='paths')renderPath(sub);
     }
     currentView=view;
@@ -327,6 +327,7 @@
     if(analyticsPage!==previousPage)window.dispatchEvent(new CustomEvent('purplebook:route',{detail:{page:analyticsPage}}));
     requestAnimationFrame(()=>{
       if(view==='reader'&&sub){const target=document.getElementById(sub);if(target){target.scrollIntoView({block:'start',behavior:'instant'});target.tabIndex=-1;target.focus({preventScroll:true});}}
+      else if(view==='events'&&sub){const target=document.getElementById('event-'+sub);if(target){target.scrollIntoView({block:'start',behavior:'instant'});target.tabIndex=-1;target.focus({preventScroll:true});}else window.scrollTo({top:0,behavior:'instant'});}
       else if(!samePath)window.scrollTo({top:0,behavior:'instant'});
       if(view==='reader')ensureCurrentChapterVisible();
       updateProgress();
