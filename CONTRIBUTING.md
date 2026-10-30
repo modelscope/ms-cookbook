@@ -19,6 +19,8 @@ Never include credentials, document passwords, access tokens, private data, or m
 
 ## Share a practice on ModelScope
 
+For application cases, read the [场景 Case 共建指引 (Case Contribution Guide, in Chinese)](https://www.modelscope.cn/learn/437604) before submitting. It covers case selection, reproducibility requirements, article structure, screenshots, and a pre-submission checklist. Base your case on a workflow you have actually run, and provide complete code, sample inputs, real outputs, and clear acceptance criteria.
+
 Visit [ModelScope Developer Practices](https://modelscope.cn/spotlight), select **创建内容**, and add the topic **#魔搭紫皮书**. Include the task, environment, reproducible steps, outputs, limitations, and source attribution as appropriate to your contribution.
 
 ## Community and credits
@@ -44,5 +46,7 @@ AIGC contribution directions include image and brand LoRA, image editing, video 
 请保持原稿内容、标题层级与段落顺序，正文勘误需附依据或作者确认。界面修复与内容编辑分开提交。配图、代码、公式及附件均需核对，禁止提交密钥、密码或隐私信息。
 
 也可前往[魔搭开发者实践](https://modelscope.cn/spotlight)，选择「创建内容」，添加专题 **#魔搭紫皮书** 后投稿。署名与审校角色确认后再进入贡献者目录。
+
+提交场景案例前，请阅读 **[场景 Case 共建指引](https://www.modelscope.cn/learn/437604)**，了解案例选题、运行与复现要求、正文结构、截图规范和提交前自查清单。Case 应来自真实跑通的实践，并提供完整代码、样例输入、运行结果及明确的验收标准。
 
 场景案例请提供任务与目标用户、运行环境、可复现步骤、效果验证与局限。MCP、Skill、LoRA 等通用技术教程归入对应阅读路径，案例可引用这些技术。
