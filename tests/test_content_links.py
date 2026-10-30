@@ -34,14 +34,26 @@ def test_repository_changes_recompute_homepage_counts(tmp_path,monkeypatch):
               'chapters':[{'number':1,'title':'标题','file':'chapter.html','status':'ready','partIndex':0}]}
     (content/'manifest.json').write_text(json.dumps(manifest))
     (content/'practice.json').write_text('[{"id":1},{"id":2}]')
-    (profiles/'profiles.json').write_text('[{"handle":"Alice"},{"handle":"alice"},{"handle":"Bob"}]')
+    (profiles/'github.json').write_text('{"contributors":[{"login":"code-reader"}]}')
+    readme='<!-- practice-cases:start -->\n- [案例](content/chapters/chapter-01.md)\n<!-- practice-cases:end -->\n### 内容共建者\n- **Alice**\n- **Bob**\n### 项目贡献与参考\n'
+    (tmp_path/'README.md').write_text(readme)
     monkeypatch.setattr(builder,'ROOT',tmp_path);monkeypatch.setattr(builder,'CONTENT',content)
     def stats():
         builder.build()
         payload=(tmp_path/'assets/content.js').read_text().removeprefix('window.BOOK_DATA = ').removesuffix(';\n')
         return json.loads(payload)['stats']
-    assert stats()=={'contributors':2,'tasks':1,'words':5}
+    assert stats()=={'contributors':3,'tasks':1,'words':5}
     (content/'chapter.html').write_text('<article><h1>标题</h1><p>你好世界 AI</p></article>')
-    (profiles/'profiles.json').write_text('[{"handle":"Alice"}]')
-    (content/'practice.json').write_text('[]')
-    assert stats()=={'contributors':1,'tasks':0,'words':7}
+    (tmp_path/'README.md').write_text(readme.replace('- **Bob**\n','').replace('- [案例](content/chapters/chapter-01.md)\n',''))
+    assert stats()=={'contributors':2,'tasks':0,'words':7}
+
+def test_contributor_bios_and_platforms_follow_readme():
+    readme='### 内容共建者\n- **吴晨飞**，Qwen-image负责人 <a href="https://modelscope.cn/profile/Moymix"><img alt="魔搭"></a> <a href="https://www.zhihu.com/people/example"><img alt="知乎"></a>\n### 项目贡献与参考\n'
+    person=builder.readme_community(readme,{'contributors':[]})['content'][0]
+    assert person['name']=='吴晨飞' and person['bio']=='Qwen-image负责人'
+    assert [link['label'] for link in person['links']]==['魔搭','知乎']
+
+def test_new_readme_case_needs_no_separate_display_entry():
+    scenes=builder.readme_scenes('<!-- practice-cases:start -->[新案例](content/chapters/chapter-26.md)<!-- practice-cases:end -->',
+                                [{'number':26,'title':'教学海报','status':'ready'}],[])
+    assert scenes[0]['id']==26 and scenes[0]['title']=='教学海报'
