@@ -239,18 +239,18 @@ python3 -m http.server 4173 --bind 127.0.0.1
 
 感谢以下共建者的参与和分享。点击魔搭、GitHub 或知乎图标访问相关页面。
 
-- **刘聪 NLP**，自媒体博主（全网 ID：刘聪NLP）、魔搭社区共建者，曾任某头部 AI 独角兽公司大模型算法专家 <a href="https://modelscope.cn/profile/liucong" title="刘聪 NLP · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **刘聪 NLP**，自媒体博主（全网ID-刘聪NLP）、魔搭社区共建者，曾任某头部AI独角兽公司大模型算法专家 <a href="https://modelscope.cn/profile/liucong" title="刘聪 NLP · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
 - **杨知铮**，OpenBMB 开源社区开发者关系负责人、魔搭社区共建者 <a href="https://modelscope.cn/profile/pzc163" title="杨知铮 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **包启明**，AI Research Scientist & Engineer @Xtracta、魔搭社区共建者 <a href="https://modelscope.cn/profile/qbao775" title="包启明 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a> <a href="https://github.com/14H034160212" title="包启明 · GitHub"><img src="assets/brand/github.svg" alt="GitHub" width="18" height="18"></a>
-- **吴晨飞**，Qwen-Image 负责人、魔搭社区共建者 <a href="https://modelscope.cn/profile/Moymix" title="吴晨飞 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a> <a href="https://www.zhihu.com/people/wu-chen-fei-54" title="吴晨飞 · 知乎"><img src="assets/brand/zhihu.png" alt="知乎" width="18" height="18"></a>
+- **包启明**，AI Research Scientist&Engineer @Xtracta，魔搭社区共建者 <a href="https://modelscope.cn/profile/qbao775" title="包启明 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a> <a href="https://github.com/14H034160212" title="包启明 · GitHub"><img src="assets/brand/github.svg" alt="GitHub" width="18" height="18"></a>
+- **吴晨飞**，Qwen-image负责人、魔搭社区共建者 <a href="https://modelscope.cn/profile/Moymix" title="吴晨飞 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a> <a href="https://www.zhihu.com/people/wu-chen-fei-54" title="吴晨飞 · 知乎"><img src="assets/brand/zhihu.png" alt="知乎" width="18" height="18"></a>
+- **Relakkes（阿江）**，开源作者，Python开发者，内容创作者 <a href="https://modelscope.cn/profile/relakkes" title="Relakkes（阿江） · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a> <a href="https://github.com/NanmiCoder" title="Relakkes（阿江） · GitHub"><img src="assets/brand/github.svg" alt="GitHub" width="18" height="18"></a>
+- **苍何**，科技自媒体（全网 ID-苍何），万星开源项目作者 <a href="https://modelscope.cn/profile/canghe" title="苍何 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **甲木**，自媒体博主（全网ID「甲木未来派」），魔搭社区共建者 <a href="https://modelscope.cn/profile/zuiyn0113" title="甲木 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **袋鼠帝**，公众号「袋鼠帝AI客栈」主理人 ，10K Star开源项目cangjie-skil <a href="https://modelscope.cn/profile/kangarooking" title="袋鼠帝 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **摸鱼小李**，科技自媒体（ID-摸鱼小李） <a href="https://modelscope.cn/profile/Joy19997" title="摸鱼小李 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **tastelikefeet** <a href="https://modelscope.cn/active/ms-cookbook" title="tastelikefeet · 魔搭紫皮书项目页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
 - **Artiprocher** <a href="https://modelscope.cn/profile/Artiprocher" title="Artiprocher · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **Relakkes（阿江）**，Python 开发者兼内容创作者 <a href="https://modelscope.cn/profile/relakkes" title="Relakkes（阿江）· 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **苍何**，万星开源项目作者 <a href="https://modelscope.cn/profile/canghe" title="苍何 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **甲木** <a href="https://modelscope.cn/profile/zuiyn0113" title="甲木 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **袋鼠帝**，公众号「袋鼠帝AI客栈」主理人，10K Star 开源项目 cangjie-skil <a href="https://modelscope.cn/profile/kangarooking" title="袋鼠帝 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **摸鱼小李** <a href="https://modelscope.cn/profile/Joy19997" title="摸鱼小李 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **tastelikefeet** <a href="https://modelscope.cn/active/ms-cookbook" title="tastelikefeet 提供的链接 · 魔搭紫皮书项目页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
-- **星球收藏家** <a href="https://modelscope.cn/profile/VoyagerX" title="星球收藏家 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
+- **星球收藏家**，UCL Geomatic Engineering 博0学生 <a href="https://modelscope.cn/profile/VoyagerX" title="星球收藏家 · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
 - **Yinchao** <a href="https://modelscope.cn/profile/Yinchao" title="Yinchao · 魔搭主页"><img src="assets/brand/modelscope.png" alt="魔搭" width="18" height="18"></a>
 
 ### 项目贡献与参考
