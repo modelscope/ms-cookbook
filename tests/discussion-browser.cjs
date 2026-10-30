@@ -43,11 +43,31 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   });assert.ok(contentCheck.links>50,JSON.stringify(contentCheck));
   await page.goto(env.APP_BASE_URL+'/#home');
   assert.equal(await page.locator('[data-fact="tasks"]').textContent(),await page.evaluate(()=>String(BOOK_DATA.scenes.length)));
-  assert.equal(await page.locator('[data-fact="contributors"]').textContent(),'10');
+  assert.equal(await page.locator('[data-fact="contributors"]').textContent(),'17');
+  assert.equal(await page.locator('[data-fact="tasks"]').textContent(),'7');
   await page.screenshot({path:'/tmp/purplebook-updates-home-desktop.png'});
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'homepage mobile overflow');
   await page.screenshot({path:'/tmp/purplebook-updates-home-mobile.png'});
+  await page.setViewportSize({width:1280,height:900});
+  await page.goto(env.APP_BASE_URL+'/#practice');
+  assert.equal(await page.locator('#sceneGrid .scene').count(),7);
+  for(const [title,id] of [['手机巡检助手',21],['教学海报生成',26]]){
+    await page.getByRole('heading',{name:title,exact:true}).getByRole('link').click();
+    await page.locator('#chapterNumber').getByText('第 '+id+' 章',{exact:true}).waitFor();
+    await page.goto(env.APP_BASE_URL+'/#practice');
+  }
+  await page.goto(env.APP_BASE_URL+'/#contribute');
+  assert.equal(await page.locator('#contentContributors .contributor-person').count(),13);
+  assert.equal(await page.locator('#codeContributors > a').count(),4);
+  assert.equal(await page.locator('[data-page="contribute"]').getByRole('link',{name:'丰富的共学共建活动',exact:true}).count(),0);
+  await page.getByText('吴晨飞',{exact:true}).waitFor();
+  await page.locator('#contentContributors').scrollIntoViewIfNeeded();
+  await page.screenshot({path:'/tmp/purplebook-github-sync-community-desktop.png'});
+  await page.setViewportSize({width:390,height:844});
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'contributors mobile overflow');
+  await page.locator('#contentContributors').scrollIntoViewIfNeeded();
+  await page.screenshot({path:'/tmp/purplebook-github-sync-community-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
   await page.goto(env.APP_BASE_URL+'/#chapter-1');
   await page.locator('.entry-replies').getByText('收到，这是一条回复',{exact:true}).waitFor();

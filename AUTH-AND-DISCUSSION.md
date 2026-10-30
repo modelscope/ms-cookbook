@@ -85,4 +85,6 @@ node tests/discussion-browser.cjs
 
 构建时自动把正文及代码里的裸 HTTP(S)/www 网址转换为可点击链接，保留文字、代码复制内容和原有链接。外部链接在新窗口打开。
 
-首页数字随每次仓库部署重新生成：社区共建按 `assets/contributors/profiles.json` 的 handle 去重；真实任务按 `content/practice.json` 中指向已开放章节的任务计数；合计字数统计所有已开放章节（含标题与代码），汉字逐字计、英文及数字按词计，符号和空白不计。首页以万字显示两位小数，悬停可见精确数字。新任务需加入 `content/practice.json`，任务卡片和首页数量使用同一份数据。
+首页数字随每次仓库部署重新生成：社区共建按 GitHub `README.md` 中的“内容共建者”名单与 `assets/contributors/github.json` 的代码贡献者名单条目合计，不跨平台推断身份；介绍、主页链接与社区页面使用同一份生成数据。旧名片索引 `assets/contributors/profiles.json` 不再用于计数或展示名单。真实任务取自 `README.md` 的 `practice-cases` 名单，仅统计已开放章节；`content/practice.json` 只定制卡片文案和配图，新增案例未填写定制信息时仍可显示并计数。合计字数统计所有已开放章节（含标题与代码），汉字逐字计、英文及数字按词计，符号和空白不计。首页以万字显示两位小数，悬停可见精确数字。
+
+GitHub `main` 合入后由 Actions 生成内容、校验并部署，创空间并非即时读取 GitHub。可用 `/deployment.json` 的 `commit` 核对线上对应的 GitHub 版本；部署完成才代表同步成功。

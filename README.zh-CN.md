@@ -82,6 +82,18 @@ python3 -m http.server 4173 --bind 127.0.0.1
 [查看丰富的共学共建活动](content/events/README.md)
 <!-- events-preview:end -->
 
+## 🧩 真实任务库
+
+<!-- practice-cases:start -->
+- [17 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-17.md)
+- [18 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-18.md)
+- [19 · 搭建一个能听也能说的语音助手](content/chapters/chapter-19.md)
+- [20 · 实现一个企业知识问答助手](content/chapters/chapter-20.md)
+- [21 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-21.md)
+- [25 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-25.md)
+- [26 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-26.md)
+<!-- practice-cases:end -->
+
 <a id="contents"></a>
 
 ## 📖 内容导航
@@ -281,6 +293,7 @@ node scripts/check-site.mjs
 构建使用 Python 3，校验需要 Node.js 22 或更新版本。请同时提交源文件和生成文件，并预览受影响的桌面与手机页面。
 
 站点由 [GitHub Actions 工作流](.github/workflows/deploy-modelscope.yml)从 GitHub 同步至魔搭创空间。
+以 GitHub `main` 为发布源，合入后自动构建和部署，通常需要数分钟。网站任务库取自上方“真实任务库”名单；共建者介绍取自本 README 的“内容共建者”，代码贡献者取自 `assets/contributors/github.json` 的仓库名单。首页共建人数按这两份名单的条目合计（当前 13 + 4 = 17，不跨平台推断同一身份）。任务卡片说明与配图可在 `content/practice.json` 定制，新案例未提供定制信息时使用章节标题及默认展示。请同时更新 `README.zh-CN.md`。
 
 </details>
 

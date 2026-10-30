@@ -12,6 +12,7 @@ import json
 import re
 import shutil
 import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
 from chapter_markdown import to_markdown
@@ -70,6 +71,41 @@ def linkify(article):
 def word_count(article):
     """Count Han characters plus Latin/number words in visible chapter text."""
     return len(re.findall(r'[\u3400-\u9fff]|[A-Za-z0-9]+(?:[\x27_-][A-Za-z0-9]+)*', plain(article)))
+
+def readme_community(readme, github):
+    """Use the repository's published acknowledgments, including all bios/links."""
+    class Links(HTMLParser):
+        def __init__(self): super().__init__();self.links=[]
+        def handle_starttag(self,tag,attrs):
+            attrs=dict(attrs)
+            if tag=='a':
+                url=attrs.get('href','');host=(urlparse(url).hostname or '').removeprefix('www.')
+                icons={'modelscope.cn':('魔搭','modelscope.ico'),'github.com':('GitHub','github.svg'),'zhihu.com':('知乎','zhihu.ico')}
+                if urlparse(url).scheme=='https' and host in icons:
+                    label,icon=icons[host];self.links.append({'url':url,'label':label,'icon':icon})
+    section=re.search(r'^### 内容共建者\s*\n(.*?)(?=^### |\Z)',readme,re.M|re.S)
+    if not section: raise ValueError('README.md must contain the 内容共建者 section')
+    contributors=[]
+    for name,body in re.findall(r'^- \*\*(.+?)\*\*(.*)$',section[1],re.M):
+        links=Links();links.feed(body)
+        bio=html.unescape(re.sub(r'<a\b.*?</a>','',body)).strip(' ，,')
+        contributors.append({'name':name,'bio':bio,'links':links.links})
+    if not contributors: raise ValueError('README content contributor list is empty')
+    return {'content':contributors,'code':github['contributors']}
+
+def readme_scenes(readme, chapters, metadata):
+    section=re.search(r'<!-- practice-cases:start -->(.*?)<!-- practice-cases:end -->',readme,re.S)
+    if not section: raise ValueError('README.md must contain the practice-cases list')
+    numbers=[int(n) for n in re.findall(r'\]\(content/chapters/chapter-(\d+)\.md\)',section[1])]
+    if len(numbers)!=len(set(numbers)): raise ValueError('Duplicate case in README.md')
+    settings={s['id']:s for s in metadata};by_number={c['number']:c for c in chapters}
+    scenes=[]
+    for number in numbers:
+        chapter=by_number.get(number)
+        if not chapter: raise ValueError(f'Unknown practice chapter: {number}')
+        if chapter['status']!='ready': continue
+        scenes.append({'id':number,'title':chapter['title'],'desc':'从实际场景出发，按章节复现模型应用。','type':'场景实践','art':'cubes',**settings.get(number,{})})
+    return scenes
 
 def import_snapshot(snapshot, date):
     from PIL import Image, ImageOps
@@ -247,12 +283,12 @@ def build(check=False):
     payload.update(sourceUrl=f'{REPO}/tree/main/content', chapterCount=len(chapters), readyCount=sum(c['status']=='ready' for c in chapters), imageCount=sum(c['imageCount'] for c in chapters), attachmentCount=sum(c['attachmentCount'] for c in chapters))
     payload['parts'] = [{'id': f'part-{i+1:02d}', **p, 'chapters': [f'chapter-{c["number"]}' for c in manifest['chapters'] if c['partIndex']==i]} for i,p in enumerate(manifest['parts'])]
     payload['chapters'] = chapters
-    profiles=json.loads((ROOT/'assets/contributors/profiles.json').read_text())
-    scenes=json.loads((CONTENT/'practice.json').read_text())
-    ready={c['number'] for c in chapters if c['status']=='ready'}
-    payload['scenes']=[s for s in scenes if s['id'] in ready]
+    readme=(ROOT/'README.md').read_text()
+    github=json.loads((ROOT/'assets/contributors/github.json').read_text())
+    payload['contributors']=readme_community(readme,github)
+    payload['scenes']=readme_scenes(readme,chapters,json.loads((CONTENT/'practice.json').read_text()))
     payload['stats']={
-        'contributors':len({p['handle'].casefold() for p in profiles}),
+        'contributors':len(payload['contributors']['content'])+len(payload['contributors']['code']),
         'tasks':len(payload['scenes']),
         'words':sum(word_count(ET.fromstring((CONTENT/e['file']).read_text())) for e in manifest['chapters'] if e['status']=='ready'),
     }
