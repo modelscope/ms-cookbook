@@ -76,6 +76,7 @@ def test_github_renders_chinese_labels_and_replay_urls():
     for event in BUILDER.load_events():
         rendered = BUILDER.github_body(event)
         assert '**主讲人：**' not in rendered
+        assert '\\_' not in rendered
         reader = Reader()
         reader.feed(rendered)
         for link in reader.links:

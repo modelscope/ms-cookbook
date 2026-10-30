@@ -52,7 +52,7 @@ def inline(text, speaker=False):
             result.append(f'<a class="event-image" href="{path}" target="_blank" rel="noopener noreferrer" aria-label="放大查看活动图片"><img src="{path}" alt="{html.escape(match.group(1), quote=True)}" loading="lazy"></a>')
         elif match.group(3) is not None:
             url = clean_url(match.group(4))
-            result.append(icon_link(url) if speaker and platform(url) else f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">{html.escape(match.group(3))}</a>')
+            result.append(icon_link(url) if speaker and platform(url) else f'<a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener noreferrer">{html.escape(clean_url(match.group(3)))}</a>')
         elif match.group(5) is not None:
             result.append('<strong>' + html.escape(match.group(5)) + '</strong>')
         else:
