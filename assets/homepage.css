@@ -14,6 +14,7 @@
 .home-fact+.home-fact{border-left:1px solid var(--border)}
 .home-facts strong{font-size:44px;font-weight:550;line-height:1.2;color:var(--brand);white-space:nowrap;font-variant-numeric:tabular-nums}
 .home-facts strong>span{font-size:16px;font-weight:400}
+.home-facts [data-fact]{font-weight:inherit}
 .fact-label{font-size:19px;white-space:nowrap}.fact-label small{display:block;font:10px/1.6 ui-monospace,monospace;letter-spacing:.15em;color:var(--muted);margin-top:6px}
 #homePage .landing-paths{margin-top:40px;padding-top:0}
 @media(max-width:1000px){#homePage .landing-hero{padding:44px 30px;min-height:420px}.home-fact{gap:16px;padding-inline:8px}.home-facts strong{font-size:36px}.fact-label{font-size:16px}}

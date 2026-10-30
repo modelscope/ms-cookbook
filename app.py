@@ -12,7 +12,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 from zoneinfo import ZoneInfo
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
@@ -37,6 +37,7 @@ CREATE INDEX IF NOT EXISTS analytics_visitors_hour ON analytics_visitor_hourly(h
 
 class Entry(BaseModel):
     kind: str
+    parentId: str | None = Field(default=None, max_length=64)
     text: str = Field(default='', max_length=2000)
     quote: str = Field(default='', max_length=2000)
     block: int = Field(default=0, ge=0, le=100000)
@@ -88,6 +89,8 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         CREATE INDEX IF NOT EXISTS entries_user_time ON entries(user_id, created);
         CREATE TABLE IF NOT EXISTS wishes(id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), text TEXT NOT NULL, created INTEGER NOT NULL);
         CREATE INDEX IF NOT EXISTS wishes_user_time ON wishes(user_id, created);
+        CREATE TABLE IF NOT EXISTS user_profiles(user_id TEXT PRIMARY KEY REFERENCES users(id), username TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS entry_replies(entry_id TEXT PRIMARY KEY REFERENCES entries(id) ON DELETE CASCADE, parent_id TEXT REFERENCES entries(id) ON DELETE SET NULL);
         ''')
 
     @contextmanager
@@ -306,7 +309,12 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
             row = conn.execute('SELECT users.* FROM sessions JOIN users ON users.id=sessions.user_id WHERE sessions.id=? AND expires>?', (sid,int(time.time()))).fetchone()
         return dict(row) if row else None
     def public_user(u):
-        return {'id':u['id'],'name':u['name'],'moderator':u['sub'] in admins} if u else None
+        if not u: return None
+        with db() as conn:
+            profile=conn.execute('SELECT username FROM user_profiles WHERE user_id=?',(u['id'],)).fetchone()
+        return {'id':u['id'],'name':u['name'],'moderator':u['sub'] in admins,'profileUrl':profile_url(profile['username']) if profile else None}
+    def profile_url(username):
+        return 'https://modelscope.cn/profile/'+quote(username,safe='') if username else None
     def require_user(request):
         u=user(request)
         if not u: raise HTTPException(401,'请先使用魔搭账号登录')
@@ -467,6 +475,12 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
             token = await oauth.modelscope.authorize_access_token(request)
             info = token.get('userinfo')
             if not info or not info.get('sub'): raise ValueError('Missing validated identity')
+            # ID tokens may omit profile claims. Fetch them server-side and bind
+            # the result to the already validated subject before saving a handle.
+            if not info.get('preferred_username') and token.get('access_token'):
+                profile = await oauth.modelscope.userinfo(token=token)
+                if str(profile.get('sub')) != str(info['sub']): raise ValueError('Identity mismatch')
+                info = {**info, **profile}
         except (OAuthError, ValueError):
             return RedirectResponse('/?login=failed#home',status_code=303)
         sub=str(info['sub'])
@@ -475,6 +489,9 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         with db() as conn:
             conn.execute('INSERT INTO users VALUES (?,?,?) ON CONFLICT(sub) DO UPDATE SET name=excluded.name',(secrets.token_hex(16),sub,name))
             uid=conn.execute('SELECT id FROM users WHERE sub=?',(sub,)).fetchone()['id']
+            username=info.get('preferred_username')
+            if isinstance(username,str) and username.strip():
+                conn.execute('INSERT INTO user_profiles VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET username=excluded.username',(uid,username.strip()))
             conn.execute('DELETE FROM sessions WHERE expires<=? OR id=?',(now,request.session.get('sid','')))
             conn.execute('INSERT INTO sessions VALUES (?,?,?)',(sid,uid,now+7*86400))
         target=request.session.get('return_to','#home')
@@ -494,11 +511,19 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
         storage_chapter=check_chapter(chapter); u=user(request); uid=u['id'] if u else ''
         # Rowid cursor remains stable even when multiple entries share a timestamp.
         with db() as conn:
-            rows=conn.execute('SELECT e.rowid cursor,e.*,u.name FROM entries e JOIN users u ON u.id=e.user_id WHERE e.chapter=? AND (e.kind!=\'highlight\' OR e.user_id=?) AND (?=0 OR e.rowid<?) ORDER BY e.rowid DESC LIMIT 101',(storage_chapter,uid,before,before)).fetchall()
+            rows=conn.execute('''SELECT e.rowid cursor,e.*,u.name,p.username,r.entry_id reply_id,r.parent_id,
+                parent.text parent_text,author.name parent_name FROM entries e JOIN users u ON u.id=e.user_id
+                LEFT JOIN user_profiles p ON p.user_id=u.id LEFT JOIN entry_replies r ON r.entry_id=e.id
+                LEFT JOIN entries parent ON parent.id=r.parent_id LEFT JOIN users author ON author.id=parent.user_id
+                WHERE e.chapter=? AND (e.kind!='highlight' OR e.user_id=?) AND (?=0 OR e.rowid<?)
+                ORDER BY e.rowid DESC LIMIT 101''',(storage_chapter,uid,before,before)).fetchall()
         items=[]
         for row in rows[:100]:
             item=dict(row); item['chapter']=chapter; item['mine']=item['user_id']==uid
             item['canDelete']=item['mine'] or bool(u and u['sub'] in admins)
+            item['profileUrl']=profile_url(item.pop('username'))
+            item['replyTo']={'id':item.pop('parent_id'),'name':item.pop('parent_name'),'text':item.pop('parent_text')} if item.pop('reply_id') else None
+            for field in ('parent_id','parent_name','parent_text'): item.pop(field,None)
             item.pop('user_id'); items.append(item)
         return {'items':items,'next':items[-1]['cursor'] if len(rows)>100 else None}
 
@@ -506,17 +531,22 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
     def add_entry(chapter: str, entry: Entry, request: Request):
         u=require_user(request); chapter=check_chapter(chapter)
         if entry.kind not in ('highlight','annotation','comment'): raise HTTPException(422,'不支持的笔记类型')
+        if entry.parentId and entry.kind!='comment': raise HTTPException(422,'只能回复公开留言')
         if entry.kind!='highlight' and not entry.text.strip(): raise HTTPException(422,'请填写内容')
         if entry.kind!='comment' and (not entry.quote.strip() or entry.end<=entry.start): raise HTTPException(422,'请先选择正文中的文字')
         now=int(time.time()); eid=secrets.token_hex(16)
         with db() as conn:
             conn.execute('BEGIN IMMEDIATE')
+            if entry.parentId:
+                parent=conn.execute('SELECT chapter,kind FROM entries WHERE id=?',(entry.parentId,)).fetchone()
+                if not parent or parent['chapter']!=chapter or parent['kind']!='comment': raise HTTPException(422,'这条留言已删除或不在本章')
             count=conn.execute('SELECT count(*) FROM entries WHERE user_id=? AND created>?',(u['id'],now-60)).fetchone()[0]
             if count>=10: raise HTTPException(429,'操作太频繁，请稍后再试')
             if entry.kind=='highlight':
                 existing=conn.execute('SELECT id FROM entries WHERE chapter=? AND user_id=? AND kind=? AND block=? AND start=? AND end=? AND quote=?',(chapter,u['id'],entry.kind,entry.block,entry.start,entry.end,entry.quote)).fetchone()
                 if existing: return {'id':existing['id']}
             conn.execute('INSERT INTO entries VALUES (?,?,?,?,?,?,?,?,?,?)',(eid,chapter,u['id'],entry.kind,entry.text.strip(),entry.quote,entry.block,entry.start,entry.end,now))
+            if entry.parentId: conn.execute('INSERT INTO entry_replies VALUES (?,?)',(eid,entry.parentId))
         return {'id':eid}
 
     @app.delete('/api/entries/{entry_id}')
@@ -533,11 +563,12 @@ def create_app(data_dir=None, analytics_runtime_dir=None):
     def list_wishes(request: Request, before: int = 0):
         u=user(request)
         with db() as conn:
-            rows=conn.execute('SELECT w.rowid cursor,w.*,u.name FROM wishes w JOIN users u ON u.id=w.user_id WHERE (?=0 OR w.rowid<?) ORDER BY w.rowid DESC LIMIT 21',(before,before)).fetchall()
+            rows=conn.execute('SELECT w.rowid cursor,w.*,u.name,p.username FROM wishes w JOIN users u ON u.id=w.user_id LEFT JOIN user_profiles p ON p.user_id=u.id WHERE (?=0 OR w.rowid<?) ORDER BY w.rowid DESC LIMIT 21',(before,before)).fetchall()
         items=[]
         for row in rows[:20]:
             item=dict(row)
             item['canDelete']=bool(u and (item['user_id']==u['id'] or u['sub'] in admins))
+            item['profileUrl']=profile_url(item.pop('username'))
             item.pop('user_id'); items.append(item)
         return {'items':items,'next':items[-1]['cursor'] if len(rows)>20 else None}
 

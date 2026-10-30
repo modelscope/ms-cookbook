@@ -98,12 +98,56 @@ def test_oauth_validated_identity_and_return_path(site,monkeypatch):
     monkeypatch.setenv('OAUTH_CLIENT_ID','test-client');monkeypatch.setenv('OAUTH_CLIENT_SECRET','test-secret')
     app=create_app(site[1]); c=TestClient(app,base_url='http://127.0.0.1:7860')
     # Only replace the external provider exchange; no test login endpoint exists.
-    app.state.oauth.modelscope.authorize_access_token=AsyncMock(return_value={'userinfo':{'sub':'provider-sub','name':'测试读者'},'access_token':'never-store-this'})
+    app.state.oauth.modelscope.authorize_access_token=AsyncMock(return_value={'userinfo':{'sub':'provider-sub','name':'测试读者','preferred_username':'test-reader'},'access_token':'never-store-this'})
     r=c.get('/auth/callback',follow_redirects=False)
     assert r.status_code==303 and r.headers['location']=='/#home'
     state=c.get('/api/session').json();assert state['user']['name']=='测试读者'
+    assert state['user']['profileUrl']=='https://modelscope.cn/profile/test-reader'
     assert 'provider-sub' not in r.headers['set-cookie'] and 'never-store-this' not in r.headers['set-cookie']
     assert state['csrf']
+
+def test_profile_from_userinfo_and_subject_binding(site,monkeypatch):
+    monkeypatch.setenv('OAUTH_CLIENT_ID','test-client');monkeypatch.setenv('OAUTH_CLIENT_SECRET','test-secret')
+    app=create_app(site[1]);c=TestClient(app,base_url='http://127.0.0.1:7860')
+    provider=app.state.oauth.modelscope
+    provider.authorize_access_token=AsyncMock(return_value={'userinfo':{'sub':'stable-sub','name':'昵称不是用户名'},'access_token':'secret'})
+    provider.userinfo=AsyncMock(return_value={'sub':'stable-sub','preferred_username':'real-handle'})
+    assert c.get('/auth/callback',follow_redirects=False).status_code==303
+    state=c.get('/api/session').json()
+    c.headers.update({'origin':'http://127.0.0.1:7860','x-csrf-token':state['csrf']})
+    c.post(ENDPOINT,json={'kind':'comment','text':'我的评论'})
+    c.post('/api/wishes',json={'text':'我的愿望'})
+    for url in (ENDPOINT,'/api/wishes'):
+        item=TestClient(app).get(url).json()['items'][0]
+        assert item['profileUrl']=='https://modelscope.cn/profile/real-handle'
+        assert 'stable-sub' not in json.dumps(item)
+    original_id=state['user']['id']
+    provider.userinfo=AsyncMock(return_value={'sub':'stable-sub','preferred_username':'renamed-handle'})
+    c.get('/auth/callback',follow_redirects=False)
+    assert c.get('/api/session').json()['user']['id']==original_id
+    assert TestClient(app).get(ENDPOINT).json()['items'][0]['profileUrl']=='https://modelscope.cn/profile/renamed-handle'
+    provider.userinfo=AsyncMock(return_value={'sub':'different-sub','preferred_username':'wrong-person'})
+    stranger=TestClient(app)
+    assert 'login=failed' in stranger.get('/auth/callback',follow_redirects=False).headers['location']
+    assert stranger.get('/api/session').json()['user'] is None
+
+def test_replies_validate_parent_and_preserve_context_after_delete(site):
+    alice=reader(site);bob=reader(site,'bob');guest=TestClient(site[0])
+    parent=alice.post(ENDPOINT,json={'kind':'comment','text':'原留言'}).json()['id']
+    private=alice.post(ENDPOINT,json={'kind':'highlight','quote':'hello','end':5}).json()['id']
+    for target in [private,'missing']:
+        assert bob.post(ENDPOINT,json={'kind':'comment','text':'回复','parentId':target}).status_code==422
+    assert bob.post('/api/chapters/chapter-2/entries',json={'kind':'comment','text':'回复','parentId':parent}).status_code==422
+    assert guest.post(ENDPOINT,json={'kind':'comment','text':'回复','parentId':parent}).status_code==401
+    reply=bob.post(ENDPOINT,json={'kind':'comment','text':'一条回复','parentId':parent}).json()['id']
+    item=guest.get(ENDPOINT).json()['items'][0]
+    assert item['replyTo']=={'id':parent,'name':'alice','text':'原留言'}
+    restarted=TestClient(create_app(site[1]))
+    assert restarted.get(ENDPOINT).json()['items'][0]['id']==reply
+    alice.delete('/api/entries/'+parent)
+    item=guest.get(ENDPOINT).json()['items'][0]
+    assert item['id']==reply and item['replyTo']['id'] is None
+    assert bob.delete('/api/entries/'+reply).status_code==200
 
 def test_oauth_rejects_missing_state(site,monkeypatch):
     monkeypatch.setenv('OAUTH_CLIENT_ID','test-client');monkeypatch.setenv('OAUTH_CLIENT_SECRET','test-secret')

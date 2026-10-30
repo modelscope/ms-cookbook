@@ -15,6 +15,7 @@ on:
       - 'chapters/**'
       - 'CONTRIBUTING.md'
       - 'scripts/build-content.py'
+      - 'scripts/version-assets.mjs'
       - 'scripts/chapter_markdown.py'
       - 'scripts/test_chapter_markdown.py'
       - 'scripts/build-content.mjs'
@@ -56,6 +57,8 @@ jobs:
           .venv/bin/python -m pytest tests -q
       - name: Verify chapter data and local resources
         run: |
+          python3 scripts/build-content.py
+          node scripts/version-assets.mjs
           python3 scripts/test_chapter_markdown.py
           node scripts/build-content.mjs --check
           node scripts/check-site.mjs
