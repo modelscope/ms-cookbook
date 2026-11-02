@@ -47,7 +47,7 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   await page.waitForFunction(()=>document.querySelector('#communityCommentCount').textContent==='3');
   assert.equal(await page.locator('[data-fact="tasks"]').textContent(),await page.evaluate(()=>String(BOOK_DATA.scenes.length)));
   assert.equal(await page.locator('[data-fact="contributors"]').textContent(),'17');
-  assert.equal(await page.locator('[data-fact="tasks"]').textContent(),'7');
+  assert.equal(await page.locator('[data-fact="tasks"]').textContent(),'8');
   await page.screenshot({path:'/tmp/purplebook-updates-home-desktop.png'});
   await page.setViewportSize({width:390,height:844});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'homepage mobile overflow');
@@ -56,11 +56,12 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   await page.screenshot({path:'/tmp/purplebook-updates-home-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
   await page.goto(env.APP_BASE_URL+'/#practice');
-  assert.equal(await page.locator('#sceneGrid .scene').count(),7);
+  assert.equal(await page.locator('#sceneGrid .scene').count(),8);
   assert.equal(await page.locator('#sceneGrid').getByText('阅读实践',{exact:true}).count(),0);
   assert.equal(await page.locator('#sceneGrid .scene').filter({hasText:'手机巡检助手'}).locator('img').getAttribute('src'),'assets/editorial-art/phone.png');
   assert.equal(await page.locator('#sceneGrid .scene').filter({hasText:'教学海报生成'}).locator('img').getAttribute('src'),'assets/editorial-art/poster.png');
-  for(const title of ['手机巡检助手','教学海报生成']){
+  assert.equal(await page.locator('#sceneGrid .scene').filter({hasText:'产线巡检 Agent'}).locator('img').getAttribute('src'),'assets/editorial-art/inspection.png');
+  for(const title of ['手机巡检助手','教学海报生成','产线巡检 Agent']){
     const image=page.locator('#sceneGrid .scene').filter({hasText:title}).locator('img');
     await image.scrollIntoViewIfNeeded();
     await image.evaluate(image=>image.decode());
@@ -71,7 +72,7 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'practice mobile overflow');
   await page.locator('#sceneGrid').screenshot({path:'/tmp/purplebook-practice-art-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
-  for(const [title,id] of [['手机巡检助手',21],['教学海报生成',26]]){
+  for(const [title,id] of [['手机巡检助手',21],['教学海报生成',26],['产线巡检 Agent：用 Penguin Harness 快速开发与优化',35]]){
     await page.getByRole('heading',{name:title,exact:true}).getByRole('link').click();
     await page.locator('#chapterNumber').getByText('第 '+id+' 章',{exact:true}).waitFor();
     await page.goto(env.APP_BASE_URL+'/#practice');
