@@ -1,8 +1,10 @@
 """Protect the activity manuscript while its links become platform icons."""
 import importlib.util
 import re
+import pytest
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location('activity_builder', ROOT / 'scripts/build-events.py')
@@ -111,3 +113,16 @@ def test_activities_only_appear_in_their_tab_and_links_have_no_arrows():
     assert '在 GitHub 查看活动记录' not in page
     for link in re.findall(r'<a\b[^>]*>.*?</a>', page, flags=re.S):
         assert not re.search(r'[↗↖←→↑↓]|arrow\.svg', link)
+
+
+def test_local_workshop_photos_resolve_in_website_and_github_views():
+    event = next(event for event in BUILDER.load_events() if event['id'] == 'shandong-lora-20261101')
+    for markup, base in [(BUILDER.card(event), ROOT), (BUILDER.github_body(event), ROOT / 'content/events')]:
+        reader = Reader()
+        reader.feed(markup)
+        assert len(reader.images) == 2
+        for image, link in zip(reader.images, reader.links):
+            assert image['src'] == link['href']
+            assert (base / unquote(image['src'])).is_file()
+    with pytest.raises(ValueError, match='Missing activity image'):
+        BUILDER.inline('![outside](../../assets/events/%2e%2e/brand/github.svg)')
