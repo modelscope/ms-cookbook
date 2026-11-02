@@ -72,7 +72,7 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'practice mobile overflow');
   await page.locator('#sceneGrid').screenshot({path:'/tmp/purplebook-practice-art-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
-  for(const [title,id] of [['手机巡检助手',21],['教学海报生成',26],['产线巡检 Agent：用 Penguin Harness 快速开发与优化',35]]){
+  for(const [title,id] of [['手机巡检助手',21],['教学海报生成',26],['产线巡检 Agent',35]]){
     await page.getByRole('heading',{name:title,exact:true}).getByRole('link').click();
     await page.locator('#chapterNumber').getByText('第 '+id+' 章',{exact:true}).waitFor();
     await page.goto(env.APP_BASE_URL+'/#practice');
