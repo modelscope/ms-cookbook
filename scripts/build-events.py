@@ -10,7 +10,7 @@ import html
 import json
 import re
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'content/events/source.md'
@@ -20,7 +20,7 @@ PLATFORMS = {
     'github.com': ('GitHub', 'github.svg'),
     'zhihu.com': ('知乎', 'zhihu.ico'),
 }
-TOKEN = re.compile(r'!\[([^\]]*)\]\((https://[^)]+)\)|\[([^\]]+)\]\((https://[^)]+)\)|https://[^\s<>；]+|\*\*([^*]+)\*\*')
+TOKEN = re.compile(r'!\[([^\]]*)\]\(((?:https://|\.\./\.\./assets/events/)[^)]+)\)|\[([^\]]+)\]\((https://[^)]+)\)|https://[^\s<>；]+|\*\*([^*]+)\*\*')
 
 
 def clean_url(url):
@@ -48,9 +48,11 @@ def inline(text, speaker=False):
         result.append(html.escape(text[offset:match.start()]))
         if match.group(1) is not None:
             url = clean_url(match.group(2))
-            path = 'assets/events/' + url.rsplit('/', 1)[-1]
-            if not (ROOT / path).is_file():
+            path = url.removeprefix('../../') if url.startswith('../../assets/events/') else 'assets/events/' + url.rsplit('/', 1)[-1]
+            image_path = (ROOT / unquote(path)).resolve()
+            if not image_path.is_relative_to(ROOT / 'assets/events') or not image_path.is_file():
                 raise ValueError(f'Missing activity image: {path}')
+            path = html.escape(path, quote=True)
             result.append(f'<a class="event-image" href="{path}" target="_blank" rel="noopener noreferrer" aria-label="放大查看活动图片"><img src="{path}" alt="{html.escape(match.group(1), quote=True)}" loading="lazy"></a>')
         elif match.group(3) is not None:
             url = clean_url(match.group(4))

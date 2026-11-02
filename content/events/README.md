@@ -28,6 +28,24 @@
 
 ---
 
+<a id="shandong-lora-20261101"></a>
+
+## 2026-11-01 · 线下工作坊
+
+### 工作坊：LoRA定制校园主题图：让同一个创作对象，走进不同场景
+
+<p>主讲人：</p><p>汤政洋、杨蓝柱</p>
+
+<p>地点：山东大学 工训大楼301</p>
+
+<p>时间：2026 年 11 月 1 日 14:30—17:00</p>
+
+<div class="event-gallery"><a class="event-image" href="../../assets/events/工作坊-山东大学.jpg" target="_blank" rel="noopener noreferrer" aria-label="放大查看活动图片"><img src="../../assets/events/工作坊-山东大学.jpg" alt="工作坊-山东大学.jpg" loading="lazy"></a></div>
+
+<div class="event-gallery"><a class="event-image" href="../../assets/events/工作坊-山东大学%203.jpg" target="_blank" rel="noopener noreferrer" aria-label="放大查看活动图片"><img src="../../assets/events/工作坊-山东大学%203.jpg" alt="工作坊-山东大学 3.jpg" loading="lazy"></a></div>
+
+---
+
 <a id="aigc-20261028"></a>
 
 ## 2026-10-28 · 线上共学营
