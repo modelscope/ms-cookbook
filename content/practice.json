@@ -5,5 +5,6 @@
   {"id":20,"title":"企业知识问答助手","desc":"结合知识库，让回答有据可查。","type":"RAG","art":"knowledge"},
   {"id":21,"title":"手机巡检助手","desc":"用 MiniCPM-V 拍照生成现场记录，支持人工确认与离线保存。","type":"端侧多模态","art":"phone"},
   {"id":25,"title":"商品营销图","desc":"从图像生成到修改，完成商品视觉创作。","type":"AIGC","art":"product"},
-  {"id":26,"title":"教学海报生成","desc":"使用 Qwen-Image 生成教学海报，校核文字、布局与教学内容。","type":"AIGC","art":"poster"}
+  {"id":26,"title":"教学海报生成","desc":"使用 Qwen-Image 生成教学海报，校核文字、布局与教学内容。","type":"AIGC","art":"poster"},
+  {"id":35,"title":"产线巡检 Agent：用 Penguin Harness 快速开发与优化","desc":"用 Penguin Harness 开发产线巡检 Agent，接入 MCP 工具，并通过评测反馈持续优化。","type":"Agent","art":"inspection"}
 ]

@@ -1,5 +1,11 @@
 使用内置 image_gen 生成，沿用 Anthropic-art 手绘风格。场景专用配图，替换通用图标。
 
+## inspection
+
+2026-11-02 使用内置 image_gen 生成。参考本目录 fitness.png、product.png 及 anthropic-art 的三张风格参考；遵循项目白底与少量魔搭紫覆盖约定。
+
+Use case: stylized-concept. Asset type: one website practice-library editorial icon, landscape 4:3. Primary request: industrial production-line inspection Agent, shown through one recognizable short conveyor belt carrying two simple boxes, with one small magnifying glass inspecting the foremost box and a tiny purple checkmark at its lens. The conveyor belt and inspection glass form ONE sparse cohesive focal cluster, no other objects. Match fitness.png and product.png for stroke weight, simplicity and white canvas; the three anthropic-art references supply only the gestural ink language. Thick near-black #141413 hand-drawn irregular outlines, rounded ends, imperfect varying-width contours, deliberate asymmetry, flat ivory #FAF9F5 inside object silhouettes. Opaque pure white #FFFFFF outer canvas to every corner. One tiny ModelScope purple #624AFF checkmark, less than 1% of canvas. Centered composition occupying about 65% of image height with generous breathing room, readable at 120px thumbnail. A chunky rounded conveyor loop with three rollers and two feet, two unbranded cartons above. No people, hands, characters, robot, penguin, mascot, lettering, logo, watermark, arrows, gradients, shadow, lighting, texture, 3D or fine technical detail.
+
 ## phone
 
 2026-10-30 使用内置 image_gen 生成。参考现有 fitness.png、product.png 及 anthropic-art 技能的三张风格参考；白底为本项目既有用户覆盖。
