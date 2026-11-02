@@ -91,8 +91,9 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   await page.screenshot({path:'/tmp/purplebook-github-sync-community-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
   await page.goto(env.APP_BASE_URL+'/#events');
-  await page.getByRole('link',{name:'感兴趣组织工作坊？',exact:true}).click();
-  await page.getByRole('heading',{name:'加入交流群',exact:true}).waitFor();
+  await page.getByRole('button',{name:'感兴趣组织工作坊？',exact:true}).click();
+  await page.getByRole('dialog',{name:'一起组织一场工作坊',exact:true}).waitFor();
+  await page.getByRole('button',{name:'关闭工作坊支持',exact:true}).click();
   await page.goto(env.APP_BASE_URL+'/#chapter-23');
   const videos=page.locator('#articleBody video');assert.equal(await videos.count(),5);
   for(let i=0;i<5;i++){

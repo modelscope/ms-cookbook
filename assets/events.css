@@ -1,6 +1,30 @@
 /* Activity dates form the spine; manuscript titles and guest titles stay intact. */
 .events-banner{background:#f6f4fc;border-block:1px solid var(--border);padding:62px 0 42px}
 .events-banner h1{font-size:clamp(32px,4vw,48px);font-weight:550;margin:0}
+.workshop-trigger{border:0;background:transparent;padding:0;cursor:pointer;font:inherit}
+.workshop-drawer{position:fixed;inset:0 0 0 auto;margin:0;width:min(620px,100%);height:100dvh;max-width:100%;max-height:100dvh;padding:0;border:0;border-left:1px solid var(--border);background:#fff;color:var(--ink);overflow:hidden}
+.workshop-drawer[open]{display:flex;flex-direction:column;animation:workshop-enter .22s ease-out}
+.workshop-drawer::backdrop{background:#27194355;backdrop-filter:blur(3px)}
+.workshop-drawer-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:32px;border-bottom:1px solid var(--border);flex-shrink:0}
+.workshop-eyebrow{margin:0 0 10px;font-size:13px;color:var(--brand)}
+.workshop-drawer-heading h2{margin:0;font-size:28px;line-height:1.45;font-weight:550}
+.workshop-drawer-content{padding:24px 32px;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.workshop-drawer-content>p{margin:0 0 24px;font-size:15px;line-height:1.8;color:var(--muted)}
+.workshop-support-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:15px;line-height:1.85;overflow-wrap:anywhere}
+.workshop-support-table th,.workshop-support-table td{padding:18px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+.workshop-support-table th:first-child{width:108px;font-weight:550}
+.workshop-support-table thead{background:#f6f4fc;color:var(--muted);font-size:13px}
+.workshop-support-table tbody tr:last-child>*{border-bottom:0}
+.workshop-support-table ul{margin:10px 0 0;padding-left:18px}
+.workshop-support-table li+li{margin-top:10px}
+.workshop-drawer-footer{padding:22px 32px max(22px,env(safe-area-inset-bottom));border-top:1px solid var(--border);background:#faf9fd;flex-shrink:0}
+.workshop-drawer-footer>p:first-child{margin:0 0 14px;font-size:16px}
+.workshop-drawer-footer .primary-button{min-height:46px}
+.workshop-drawer-footer [aria-disabled=true]{opacity:.5;cursor:default}
+.workshop-apply-help{margin:10px 0 0;font-size:12px;color:var(--muted);line-height:1.6}
+@keyframes workshop-enter{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){.workshop-drawer[open]{animation:none}}
+@media(max-width:700px){.workshop-drawer-heading{padding:24px 20px}.workshop-drawer-heading h2{font-size:23px}.workshop-drawer-content{padding:20px}.workshop-support-table{font-size:14px}.workshop-support-table th,.workshop-support-table td{padding:15px 10px}.workshop-support-table th:first-child{width:88px}.workshop-drawer-footer{padding:18px 20px max(18px,env(safe-area-inset-bottom))}}
 .events-layout{max-width:1100px;padding-block:40px 60px}
 .event-month{margin-bottom:36px}
 .event-month>h2{font-size:18px;font-weight:550;color:var(--muted);margin:0 0 28px;padding-left:150px}

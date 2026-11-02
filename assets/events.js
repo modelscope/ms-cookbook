@@ -1,5 +1,11 @@
 (() => {
   'use strict';
+  const workshopDrawer = document.getElementById('workshopSupportDialog');
+  const workshopTrigger = document.getElementById('workshopSupportButton');
+  workshopTrigger.addEventListener('click', () => {
+    workshopDrawer.showModal();
+    document.body.classList.add('modal-open');
+  });
   const today = () => new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(new Date());
