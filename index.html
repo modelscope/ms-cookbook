@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="assets/navigation.css?v=c591df5e4053">
   <link rel="stylesheet" href="assets/wishes.css?v=f4309abc0794">
   <link rel="stylesheet" href="assets/homepage.css?v=93a41f405915">
-  <link rel="stylesheet" href="assets/events.css?v=ae883df35d9a">
+  <link rel="stylesheet" href="assets/events.css?v=dbbe2e4bd455">
   <link rel="stylesheet" href="assets/katex/katex.min.css?v=50d9c78e03da">
   <title>魔搭紫皮书</title>
 </head>
@@ -65,7 +65,7 @@
   <section class="page-banner"><div class="container"><h1>从一个真实任务开始</h1><p>把模型能力，放进你关心的应用场景。</p></div></section><div class="scene-grid container" id="sceneGrid"></div><section class="contribution-note container"><h2>视频场景 · 待更新</h2><p>第 27 章的视频教程仍在准备中，欢迎分享视频生成与工作流实践。</p><a class="text-link" href="#chapter-27">查看章节状态</a><a class="text-link" href="#contribute">参与场景共建</a></section><section class="practice-cta container"><h2>还想系统学习？</h2><a class="primary-button" href="#paths">查看阅读路径</a></section><footer class="quiet-footer">魔搭紫皮书 · 开源模型实践</footer>
 </main>
 <main data-page="events" hidden>
-  <section class="events-banner"><div class="container"><h1>丰富的共学共建活动</h1><p><a class="text-link" href="#contribute">感兴趣组织工作坊？</a></p></div></section>
+  <section class="events-banner"><div class="container"><h1>丰富的共学共建活动</h1><p><button class="text-link workshop-trigger" id="workshopSupportButton" type="button" aria-haspopup="dialog" aria-controls="workshopSupportDialog">感兴趣组织工作坊？</button></p></div></section>
   <div class="events-layout container">
 <!-- events-timeline:start -->
 <section class="event-month" data-month="2026-11"><h2>2026 年 11 月</h2><ol class="event-timeline"><li class="event-node" id="event-aiscientist-20261104" data-start="2026-11-04" data-end="2026-11-04"><div class="event-date"><time datetime="2026-11-04">11.04</time></div><article class="event-card"><div class="event-kicker"><span>线上共学营</span><span class="event-status"></span></div><h3>魔搭紫皮书共学营 Vol 4：小模型也能搞科研？4B参数也玩起了科学发现～用Qwen3搭建Mini AIScientist全流程，从提出假设到验证结论</h3><div class="event-intro"><p>直播时间：2026 年11 月 4 日 晚 7 点</p><p>主讲人：</p><p>包启明，AI Research Scientist&amp;Engineer@Xtracta，魔搭社区共建者 <a class="event-profile-link" href="https://modelscope.cn/profile/qbao775" target="_blank" rel="noopener noreferrer" title="魔搭" aria-label="魔搭（新窗口）"><img src="assets/brand/modelscope.ico" width="18" height="18" alt="魔搭"></a> <a class="event-profile-link" href="https://github.com/14H034160212" target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub（新窗口）"><img src="assets/brand/github.svg" width="18" height="18" alt="GitHub"></a></p></div><details class="event-details"><summary>活动详情</summary><div class="event-body"><p><strong>面向人群：</strong>想用开源模型搭建 Agent、探索 AI 科研与推理评测的朋友。</p><p>直播内容：</p><ul><li>给 AI 一台黑盒机器，它能找出隐藏规律吗</li></ul><ul><li>提假设、做实验、验结果，搭建最小科研闭环</li></ul><ul><li>模型更大，还是多想一会儿，谁更管用</li></ul><ul><li>结论和实验数据矛盾，Agent 该怎么改</li></ul><ul><li>AI 说“发现了”，怎样验证它真的找对了</li></ul></div></details></article></li></ol></section>
@@ -114,6 +114,24 @@
   <main class="reader"><article class="article" id="article"><nav class="path-reader-nav" data-path-reader aria-label="阅读路径导航" hidden></nav><div class="reading-tools" role="group" aria-label="阅读设置"><button data-reader-search aria-label="搜索全书">搜索</button><label for="readingSize">字号</label><select id="readingSize" aria-label="正文字号"><option value="17">小</option><option value="19" selected>标准</option><option value="21">大</option></select><button id="focusReading" aria-pressed="false">专注阅读</button><span id="readingPercent" aria-label="本章阅读进度">0%</span></div><header class="chapter-header"><p class="chapter-kicker" id="partLabel"></p><h1 id="chapterTitle"></h1><p class="chapter-meta"><span id="chapterNumber"></span><span id="readTime"></span><a id="chapterSource" target="_blank" rel="noopener noreferrer">GitHub 原文</a><a id="chapterEdit" target="_blank" rel="noopener noreferrer">参与改进</a></p><img class="chapter-art" src="assets/reading-dada-illustrations/01-reading-v2.png" alt="浅紫搭搭翻书阅读"></header><div class="article-body" id="articleBody"></div><nav class="path-reader-nav path-reader-bottom" data-path-reader aria-label="继续沿路径阅读" hidden></nav><nav class="chapter-pager" aria-label="章节翻页"><a id="previousChapter" class="pager-link previous"><small>上一章</small><span></span></a><a id="nextChapter" class="pager-link next"><small>下一章</small><span></span></a></nav><div class="reader-community"><a href="#contribute">加入社区 · 参与共建</a></div></article><aside class="local-toc" aria-label="本章目录"><h2>本章目录</h2><nav id="localToc"></nav><a class="back-top" href="#" id="backTop">返回顶部</a></aside></main>
   <nav class="mobile-reader-bar" aria-label="阅读操作"><a id="mobilePrevious">上一章</a><button id="tocButton" aria-haspopup="dialog">本章目录</button><a id="mobileNext">下一章</a></nav>
 </div>
+<dialog id="workshopSupportDialog" class="workshop-drawer" aria-labelledby="workshopSupportTitle" aria-describedby="workshopSupportIntro">
+  <header class="workshop-drawer-heading"><div><p class="workshop-eyebrow">魔搭紫皮书 · 工作坊支持</p><h2 id="workshopSupportTitle">一起组织一场工作坊</h2></div><button class="icon-button" type="button" data-close="workshopSupportDialog" aria-label="关闭工作坊支持" autofocus><img src="assets/paper/close.svg" alt=""></button></header>
+  <div class="workshop-drawer-content">
+    <p id="workshopSupportIntro">围绕《魔搭紫皮书》开展共学实践，我们提供以下支持。</p>
+    <table class="workshop-support-table">
+      <caption class="sr-only">工作坊支持类型与内容</caption>
+      <thead><tr><th scope="col">支持类型</th><th scope="col">支持内容</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">培训支持</th><td>讲师培训、在线技术答疑支持</td></tr>
+        <tr><th scope="row">标准物料</th><td>工作坊标准 PPT</td></tr>
+        <tr><th scope="row">周边礼品</th><td>可申请用于参与者互动、奖励的魔搭周边</td></tr>
+        <tr><th scope="row">活动场地</th><td>可申请免费使用如下城市空间：<ul><li>杭州 · 魔搭社区（杭州）开发者中心</li><li>南京 · 阿里中心（南京市建邺区永初路8号）</li></ul></td></tr>
+        <tr><th scope="row">算力保障</th><td>魔搭 Notebook 支持在线运行</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <footer class="workshop-drawer-footer"><p>有了工作坊的想法？告诉我们。</p><a id="workshopApplyLink" class="primary-button" href="https://alidocs.dingtalk.com/notable/share/form/v01jKqmJQ7M1z5DYOw1_dv19yqvsgs3oebp3pcjys_1qX0QQ0?source=link" aria-describedby="workshopApplyHelp" target="_blank" rel="noopener noreferrer">告诉我们</a><p id="workshopApplyHelp" class="workshop-apply-help">前往钉钉表单，提交工作坊支持申请</p></footer>
+</dialog>
 <dialog id="bookSearchDialog" class="book-search-dialog" aria-labelledby="bookSearchTitle">
   <div class="dialog-heading"><div><h2 id="bookSearchTitle">搜索全书</h2><p>查找章节、知识点或代码关键词</p></div><button class="icon-button" data-close="bookSearchDialog" aria-label="关闭全书搜索"><img src="assets/paper/close.svg" alt=""></button></div>
   <label class="book-search-input"><img src="assets/paper/search.svg" alt=""><span class="sr-only">搜索全书内容</span><input id="bookSearchInput" type="search" placeholder="试试 LoRA、RAG、准备训练数据…" autocomplete="off" maxlength="120" autofocus aria-describedby="bookSearchStatus"></label>
@@ -127,5 +145,5 @@
 <script src="assets/reader-profiles.js?v=116f764a39b5"></script>
 <script src="assets/content.js?v=c6d4e85f94b9"></script><script src="assets/katex/katex.min.js?v=10a91b479cd9"></script><script src="assets/book-search.js?v=7579d53dd639"></script><script src="assets/reader-routes.js?v=b55d8df3bc82"></script><script src="assets/analytics.js?v=a43d60631cb4"></script><script src="assets/paper.js?v=29a6e30b1831"></script><script src="assets/reading.js?v=63668e0639af"></script><script src="assets/discussion.js?v=86487d9e0bf6"></script>
 <script src="assets/wishes.js?v=335c7942ba84"></script>
-<script src="assets/events.js?v=4f451f64123f"></script>
+<script src="assets/events.js?v=051030c90c21"></script>
 </body></html>
