@@ -93,6 +93,7 @@ python3 -m http.server 4173 --bind 127.0.0.1
 - [25 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-25.md)
 - [26 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-26.md)
 - [35 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-35.md)
+- [36 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-36.md)
 <!-- practice-cases:end -->
 
 <a id="contents"></a>
