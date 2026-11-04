@@ -2,6 +2,8 @@
 
 # Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律
 
+作者：<strong>包启明</strong>，AI Research Scientist&amp;Engineer <span>@</span>Xtracta，魔搭社区共建者 [<img class="author-link-icon" src="../../assets/brand/modelscope.png" alt="魔搭主页" width="20" height="20">](<https://modelscope.cn/profile/qbao775>) [<img class="author-link-icon" src="../../assets/brand/github.svg" alt="GitHub 主页" width="20" height="20">](<https://github.com/14H034160212>)
+
 <a id="c36-s1"></a>
 
 ## 1\. 背景

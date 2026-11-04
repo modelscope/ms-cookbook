@@ -1,5 +1,6 @@
 <article>
 <h1>Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律</h1>
+<p class="chapter-author"><span>作者：<strong>包启明</strong>，AI Research Scientist&amp;Engineer @Xtracta，魔搭社区共建者</span> <span class="author-links"><a href="https://modelscope.cn/profile/qbao775" target="_blank" rel="noopener noreferrer" aria-label="包启明的魔搭主页（新窗口）" title="魔搭主页"><img class="author-link-icon" src="../../assets/brand/modelscope.png" alt="魔搭主页" width="20" height="20" /></a> <a href="https://github.com/14H034160212" target="_blank" rel="noopener noreferrer" aria-label="包启明的 GitHub 主页（新窗口）" title="GitHub 主页"><img class="author-link-icon" src="../../assets/brand/github.svg" alt="GitHub 主页" width="20" height="20" /></a></span></p>
 <h2>1. 背景</h2>
 <p>"AI Scientist"是近来 Agent 方向的热门话题：让大模型自己提出假设、设计实验、分析数据，最后得出结论。但如果直接让模型做开放式科研，很快会遇到两个问题：一是小模型很难完成；二是结果<strong>无法判断对错</strong>——模型说"我发现了 X"，却没有标准答案可以核对，也就没法比较不同模型、不同 Agent 设计的好坏。</p>
 <p>我们换一个思路：先把科研压缩成一个<strong>最小但完整、而且可以自动验证</strong>的闭环。研究对象是一台"黑盒机器"，输入两个整数 a、b（0～20），输出一个整数，内部规则未知，可能还带条件分支，例如"a 为偶数时输出 a+b，否则输出 a×b"。模型只能通过做实验来了解它，最后提交一条规则。因为输入只有 21×21=441 种，提交的规则可以在全部输入上逐一核对，<strong>不需要 LLM 当裁判</strong>。</p>

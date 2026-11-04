@@ -68,6 +68,10 @@ def to_markdown(article, number):
                 return '\n\n```math\n' + formula + ('' if formula.endswith('\n') else '\n') + '```\n\n'
             return '$`' + formula + '`$'
         if tag == 'img':
+            if node.get('width') or node.get('height'):
+                image = copy.deepcopy(node)
+                image.tail = None
+                return ET.tostring(image, encoding='unicode', method='html')
             alt = escape(node.get('alt', ''))
             return f'![{alt}](<{destination(node.get("src", ""))}>)'
         if tag == 'a':
