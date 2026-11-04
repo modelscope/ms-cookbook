@@ -318,10 +318,19 @@ python scripts/analyze.py results/sweep    # 生成 summary.md 与 solve_rate.pn
 
 - 在灵感流打开：[https://modelscope.cn/gallery/ms-cookbook-team/mini-ai-scientist](<https://modelscope.cn/gallery/ms-cookbook-team/mini-ai-scientist>)
 - 代码仓库：[mini-ai-scientist](<https://github.com/14H034160212/mini-ai-scientist>)，包含 `mini_scientist/` 源码、`scripts/`、带真实输出的 Notebook，以及 `results/sweep/` 下 17 个配置的完整逐轮记录。
+- 课堂 Notebook：[lecture&#95;handson.ipynb](<https://github.com/14H034160212/mini-ai-scientist/blob/main/lecture_handson.ipynb>)，面向一小时公开课的精简版，代码与第 4 节一一对应，用法见下方「课堂教学」。
 - 数据：无外部数据。12 条规则定义在 `mini_scientist/lab.py` 中，开局观测由随机种子生成。
 - 模型（Apache-2.0）：[Qwen3-4B](<https://modelscope.cn/models/Qwen/Qwen3-4B>)、[Qwen3-8B](<https://modelscope.cn/models/Qwen/Qwen3-8B>)、[Qwen3-1.7B](<https://modelscope.cn/models/Qwen/Qwen3-1.7B>)、[Qwen3-0.6B](<https://modelscope.cn/models/Qwen/Qwen3-0.6B>)。
 - 推理框架：[vLLM](<https://github.com/vllm-project/vllm>)（Apache-2.0）。
 - 相关工作：Sakana AI 的 The AI Scientist；BoxingGym（实验设计基准）；Popper（LLM Agent 的可证伪检验）。
+
+<strong>课堂教学</strong>
+
+如果要把本章用作一小时的公开课，可以使用 `lecture_handson.ipynb`：第一部分（Step 1–5）只需 CPU，不用安装 vLLM、不用下载模型，学生每个单元格几秒钟就能跑完；第二部分（Step 6–10）需要 GPU，Notebook 中保存了已跑完的真实输出，课上直接讲解即可，不必现场运行。批量评测一次约 15 分钟（独占一张 A100），与他人共用 GPU 时可能超过 1 小时，一节课等不起。
+
+<table><thead><tr><th><p>时间</p></th><th><p>内容</p></th><th><p>方式</p></th></tr></thead><tbody><tr><td><p>0–10 分钟</p></td><td><p>为什么 LLM 问答不等于科学发现；黑盒实验室与四种工具</p></td><td><p>讲解</p></td></tr><tr><td><p>10–30 分钟</p></td><td><p>Step 1–5：自检、实验室、<code>check</code> 与 <code>verify</code>、安全沙箱、用假模型空跑 Agent 循环；穿插一个让学生自己猜 <code>threshold_b</code> 规则的小练习</p></td><td><p>学生动手（仅 CPU）</p></td></tr><tr><td><p>30–40 分钟</p></td><td><p>Step 6–8：Qwen3-4B 完整做一次研究，重点看模型如何先猜错、再用实验推翻并改对</p></td><td><p>讲解 Notebook 中已保存的输出</p></td></tr><tr><td><p>40–50 分钟</p></td><td><p>Step 9–10：12 条规则的批量评测与第 5 节的完整实验结果</p></td><td><p>讲解 Notebook 中已保存的输出</p></td></tr><tr><td><p>50–60 分钟</p></td><td><p>失败分析、可复用方向与答疑</p></td><td><p>讨论</p></td></tr></tbody></table>
+
+Notebook 中保存的一次实测（单卡 A100，Qwen3-4B 思考模式）：Step 8 用 4 轮提交了正确规则；Step 9 解出 7/12（Tier 1 4/4、Tier 2 2/4、Tier 3 1/4）。采样有随机性，每次运行的过程和成绩会有波动。
 
 <a id="c36-s24"></a>
 
