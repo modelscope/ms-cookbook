@@ -88,3 +88,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
 .home-community>img{width:220px;height:auto;aspect-ratio:16/9;object-fit:contain}
 .community-credits>img{width:240px;height:auto;aspect-ratio:16/9;object-fit:contain}
 @media(max-width:700px){.home-community{grid-template-columns:110px minmax(0,1fr)}.home-community>img{width:110px;height:auto}.community-credits>img{width:220px;height:auto}}
+
+.article-body .chapter-author{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.chapter-author>span{min-width:0;overflow-wrap:anywhere}
+.chapter-author .author-links{display:inline-flex;align-items:center;gap:4px}
+.chapter-author .author-links a{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:4px}
+.chapter-author .author-links a:hover{background:var(--selected)}
+.chapter-author .author-link-icon{display:block;width:20px;height:20px;object-fit:contain}

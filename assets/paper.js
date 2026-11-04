@@ -271,7 +271,7 @@
     $('#localToc').scrollTop=0;activeHeading='';
     $$('.chapter-nav details').forEach(d=>{d.open=Number(d.dataset.part)===partIndex;});
     $$('[data-chapter]').forEach(a=>{const active=a.dataset.chapter===chapter.id;a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-    $$('#articleBody img').forEach(img=> {
+    $$('#articleBody img:not(.author-link-icon)').forEach(img=> {
       img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','放大查看图片');
       const show=()=>{$('#viewerImage').src=img.src;$('#viewerImage').alt=img.alt;openDialog('#imageViewer');};
       img.addEventListener('click',show);img.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();show();}});

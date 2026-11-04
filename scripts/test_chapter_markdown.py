@@ -29,6 +29,10 @@ class MarkdownTests(unittest.TestCase):
         self.assertIn('[下一节](<chapter-02.md#c2-s1>)', text)
         self.assertIn('![配图](<../../assets/test.png>)', text)
 
+    def test_profile_link_icons_keep_small_dimensions_and_adjacent_text(self):
+        text = self.render('<p>作者 <a href="https://github.com/example"><img src="../../assets/brand/github.svg" alt="GitHub 主页" width="20" height="20" /> 主页</a> 后文</p>')
+        self.assertIn('[<img src="../../assets/brand/github.svg" alt="GitHub 主页" width="20" height="20"> 主页](<https://github.com/example>) 后文', text)
+
     def test_emphasis_around_block_math(self):
         text = self.render('<p><em>前<span class="arithmatex display-math">\\(x\n\\)</span>后</em></p>')
         self.assertIn('<em>前</em>\n\n```math\nx\n```\n\n<em>后</em>', text)
