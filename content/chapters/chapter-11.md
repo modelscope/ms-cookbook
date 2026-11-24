@@ -266,3 +266,9 @@ B300 的算力和显存带宽都高得多，逐个发送已经比 A10 快 7 倍�
 <p></p>
 
 想换其他模型或硬件，可以参考 [SGLang Cookbook](<https://docs.sglang.io/cookbook/intro>)，选好 GPU 型号、模型大小和精度，页面会生成对应的启动命令。想了解推理框架内部的原理，可以看 Datawhale 的开源课程 [zero-to-sglang](<https://github.com/datawhalechina/zero-to-sglang>)。
+
+<p></p>
+
+此章节所涉及的全部实验过程，具体可参照：https://modelscope.cn/gallery/Ccyest/sglang-serving
+
+<p></p>
