@@ -85,21 +85,21 @@ python3 -m http.server 4173 --bind 127.0.0.1
 ## 🧩 真实任务库
 
 <!-- practice-cases:start -->
-- [17 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-17.md)
-- [18 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-18.md)
-- [19 · 搭建一个能听也能说的语音助手](content/chapters/chapter-19.md)
-- [20 · 实现一个企业知识问答助手](content/chapters/chapter-20.md)
-- [21 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-21.md)
-- [22 · 我们每天都在做决策，AI 能帮我们做吗？](content/chapters/chapter-22.md)
-- [26 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-26.md)
-- [27 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-27.md)
+- [18 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-18.md)
+- [19 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-19.md)
+- [20 · 搭建一个能听也能说的语音助手](content/chapters/chapter-20.md)
+- [21 · 实现一个企业知识问答助手](content/chapters/chapter-21.md)
+- [22 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-22.md)
+- [23 · 我们每天都在做决策，AI 能帮我们做吗？](content/chapters/chapter-23.md)
+- [27 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-27.md)
+- [28 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-28.md)
 <!-- practice-cases:end -->
 
 <a id="contents"></a>
 
 ## 📖 内容导航
 
-全书按 **8 篇主题、40 个章节**组织，覆盖从认识模型到场景应用的学习过程。点击章节可在 GitHub 阅读正文，也可前往[在线阅读网站](https://modelscope.cn/active/ms-cookbook)。
+全书按 **8 篇主题、41 个章节**组织，覆盖从认识模型到场景应用的学习过程。点击章节可在 GitHub 阅读正文，也可前往[在线阅读网站](https://modelscope.cn/active/ms-cookbook)。
 
 **状态说明：** ✅ 可读 · 🚧 待更新 · 🤝 共建入口。共建入口用于征集案例或评测内容。
 
@@ -118,41 +118,42 @@ python3 -m http.server 4173 --bind 127.0.0.1
 | [08 · 多大模型，选择什么样的服务器配置](content/chapters/chapter-08.md) | 参数规模、显存与服务器选型 | ✅ 可读 |
 | [09 · 笔记本也能跑开源模型，先从 Ollama 开始](content/chapters/chapter-09.md) | 使用 Ollama 开展本地推理 | ✅ 可读 |
 | [10 · 把模型放到云端跑，用 Notebook 试试 CPU 和 GPU](content/chapters/chapter-10.md) | 在云端 Notebook 中运行模型 | ✅ 可读 |
-| [11 · 把自己微调的 MiniCPM 装进手机：从训练拆解到魔搭实践](content/chapters/chapter-11.md) | LoRA 微调、GGUF 量化与 Android 手机部署 | ✅ 可读 |
-| [12 · 模型需要资源太多，量化能帮上什么忙？](content/chapters/chapter-12.md) | 量化精度与资源开销 | ✅ 可读 |
+| [11 · 大量用户同时提问，如何让模型答得更快？基于 SGLang 的实践](content/chapters/chapter-11.md) | 用 SGLang 部署推理服务，对比逐个与并发请求 | ✅ 可读 |
+| [12 · 把自己微调的 MiniCPM 装进手机：从训练拆解到魔搭实践](content/chapters/chapter-12.md) | LoRA 微调、GGUF 量化与 Android 手机部署 | ✅ 可读 |
+| [13 · 模型需要资源太多，量化能帮上什么忙？](content/chapters/chapter-13.md) | 量化精度与资源开销 | ✅ 可读 |
 | **第四篇　调得好：把通用模型变成场景模型** | | |
-| [13 · 业务素材这么多，怎么变成能训练的数据？](content/chapters/chapter-13.md) | 从业务资料整理训练样本 | ✅ 可读 |
-| [14 · 快速用 ms-swift，完成开源模型的轻量微调](content/chapters/chapter-14.md) | 使用 ms-swift 开展轻量微调 | ✅ 可读 |
-| [15 · 模型已经会回答了，为什么还要做偏好对齐？](content/chapters/chapter-15.md) | 理解偏好对齐的目标与方法 | ✅ 可读 |
-| [16 · 微调有没有用，测才知道？](content/chapters/chapter-16.md) | 对比微调前后的模型效果 | ✅ 可读 |
+| [14 · 业务素材这么多，怎么变成能训练的数据？](content/chapters/chapter-14.md) | 从业务资料整理训练样本 | ✅ 可读 |
+| [15 · 快速用 ms-swift，完成开源模型的轻量微调](content/chapters/chapter-15.md) | 使用 ms-swift 开展轻量微调 | ✅ 可读 |
+| [16 · 模型已经会回答了，为什么还要做偏好对齐？](content/chapters/chapter-16.md) | 理解偏好对齐的目标与方法 | ✅ 可读 |
+| [17 · 微调有没有用，测才知道？](content/chapters/chapter-17.md) | 对比微调前后的模型效果 | ✅ 可读 |
 | **第五篇　场景篇：从模型走向完整业务系统** | | |
-| [17 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-17.md) | 人体关键点与动作对比 | ✅ 可读 |
-| [18 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-18.md) | 通话转写与服务质量分析 | ✅ 可读 |
-| [19 · 搭建一个能听也能说的语音助手](content/chapters/chapter-19.md) | 串联语音识别、问答与合成 | ✅ 可读 |
-| [20 · 实现一个企业知识问答助手](content/chapters/chapter-20.md) | 知识库检索与 RAG 问答 | ✅ 可读 |
-| [21 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-21.md) | 端侧图像推理、人工确认与离线同步 | ✅ 可读 |
-| [22 · 我们每天都在做决策，AI 能帮我们做吗？](content/chapters/chapter-22.md) | 用开源中文决策模型处理工作消息判断与情感分析 | ✅ 可读 |
-| [23 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-23.md) | 可复现业务场景的共建邀请 | 🤝 共建入口 |
+| [18 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-18.md) | 人体关键点与动作对比 | ✅ 可读 |
+| [19 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-19.md) | 通话转写与服务质量分析 | ✅ 可读 |
+| [20 · 搭建一个能听也能说的语音助手](content/chapters/chapter-20.md) | 串联语音识别、问答与合成 | ✅ 可读 |
+| [21 · 实现一个企业知识问答助手](content/chapters/chapter-21.md) | 知识库检索与 RAG 问答 | ✅ 可读 |
+| [22 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-22.md) | 端侧图像推理、人工确认与离线同步 | ✅ 可读 |
+| [23 · 我们每天都在做决策，AI 能帮我们做吗？](content/chapters/chapter-23.md) | 用开源中文决策模型处理工作消息判断与情感分析 | ✅ 可读 |
+| [24 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-24.md) | 可复现业务场景的共建邀请 | 🤝 共建入口 |
 | **第六篇　AIGC 特別篇** | | |
-| [24 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-24.md) | 开源生成模型的应用案例 | ✅ 可读 |
-| [25 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-25.md) | 使用 DiffSynth 定制图像 LoRA | ✅ 可读 |
-| [26 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-26.md) | 商品图生成与编辑 | ✅ 可读 |
-| [27 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-27.md) | Qwen-Image 本地部署与 ModelScope 教学海报生成 | ✅ 可读 |
-| [28 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-28.md) | 视频模型部署实践，正文待补充 | 🚧 待更新 |
-| [29 · 补充：AIGC 理论知识](content/chapters/chapter-29.md) | 图像与视频生成基础 | ✅ 可读 |
+| [25 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-25.md) | 开源生成模型的应用案例 | ✅ 可读 |
+| [26 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-26.md) | 使用 DiffSynth 定制图像 LoRA | ✅ 可读 |
+| [27 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-27.md) | 商品图生成与编辑 | ✅ 可读 |
+| [28 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-28.md) | Qwen-Image 本地部署与 ModelScope 教学海报生成 | ✅ 可读 |
+| [29 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-29.md) | 视频模型部署实践，正文待补充 | 🚧 待更新 |
+| [30 · 补充：AIGC 理论知识](content/chapters/chapter-30.md) | 图像与视频生成基础 | ✅ 可读 |
 | **第七篇　Agent 特别篇** | | |
-| [30 · Agent 是什么，它能做什么事？](content/chapters/chapter-30.md) | Agent 的组成、执行流程与适用场景 | ✅ 可读 |
-| [31 · MCP：让模型连接外部工具](content/chapters/chapter-31.md) | 连接模型与外部工具 | ✅ 可读 |
-| [32 · Skill：把任务方法封装成能力](content/chapters/chapter-32.md) | 组织可复用的任务方法 | ✅ 可读 |
-| [33 · 快速使用 Claude Code](content/chapters/chapter-33.md) | Claude Code 入门 | ✅ 可读 |
-| [34 · 快速使用 PI](content/chapters/chapter-34.md) | PI 入门 | ✅ 可读 |
-| [35 · 快速使用 DeepSeek Harness](content/chapters/chapter-35.md) | DeepSeek Harness 入门 | ✅ 可读 |
-| [36 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-36.md) | 用 Penguin Harness 开发产线巡检 Agent，并通过评测优化 | ✅ 可读 |
-| [37 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-37.md) | 用 Qwen3 搭建可验证的科学发现 Agent，对比模型规模与思考模式 | ✅ 可读 |
-| [38 · 补充：Agent 框架知识](content/chapters/chapter-38.md) | Agent 框架基础 | ✅ 可读 |
+| [31 · Agent 是什么，它能做什么事？](content/chapters/chapter-31.md) | Agent 的组成、执行流程与适用场景 | ✅ 可读 |
+| [32 · MCP：让模型连接外部工具](content/chapters/chapter-32.md) | 连接模型与外部工具 | ✅ 可读 |
+| [33 · Skill：把任务方法封装成能力](content/chapters/chapter-33.md) | 组织可复用的任务方法 | ✅ 可读 |
+| [34 · 快速使用 Claude Code](content/chapters/chapter-34.md) | Claude Code 入门 | ✅ 可读 |
+| [35 · 快速使用 PI](content/chapters/chapter-35.md) | PI 入门 | ✅ 可读 |
+| [36 · 快速使用 DeepSeek Harness](content/chapters/chapter-36.md) | DeepSeek Harness 入门 | ✅ 可读 |
+| [37 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-37.md) | 用 Penguin Harness 开发产线巡检 Agent，并通过评测优化 | ✅ 可读 |
+| [38 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-38.md) | 用 Qwen3 搭建可验证的科学发现 Agent，对比模型规模与思考模式 | ✅ 可读 |
+| [39 · 补充：Agent 框架知识](content/chapters/chapter-39.md) | Agent 框架基础 | ✅ 可读 |
 | **第八篇 补充内容** | | |
-| [39 · 补充：大模型基础知识](content/chapters/chapter-39.md) | 模型结构、训练、推理与局限 | ✅ 可读 |
-| [40 · 主流 LLM 评测](content/chapters/chapter-40.md) | 主流模型评测的共建邀请 | 🤝 共建入口 |
+| [40 · 补充：大模型基础知识](content/chapters/chapter-40.md) | 模型结构、训练、推理与局限 | ✅ 可读 |
+| [41 · 主流 LLM 评测](content/chapters/chapter-41.md) | 主流模型评测的共建邀请 | 🤝 共建入口 |
 
 ### 🚀 从一个具体案例开始
 
@@ -160,13 +161,13 @@ python3 -m http.server 4173 --bind 127.0.0.1
 
 | 我想做什么 | 可以从哪里开始 | 实践重点 |
 | --- | --- | --- |
-| 做一个能听也能说的助手 | [第 19 章 · 语音助手](content/chapters/chapter-19.md) | 串联语音识别、模型问答与语音合成 |
-| 让模型回答企业资料中的问题 | [第 20 章 · 企业知识问答](content/chapters/chapter-20.md) | 知识检索与 RAG 问答 |
-| 用手机拍照生成巡检记录 | [第 21 章 · 手机巡检助手](content/chapters/chapter-21.md) | 端侧视觉推理、人工确认与离线同步 |
-| 为商品制作营销图片 | [第 26 章 · 商品营销图](content/chapters/chapter-26.md) | 图像生成与编辑 |
-| 为教学内容制作一张海报 | [第 27 章 · 教学海报](content/chapters/chapter-27.md) | Qwen-Image 部署与海报生成 |
-| 开发并优化一个巡检 Agent | [第 36 章 · 产线巡检 Agent](content/chapters/chapter-36.md) | 用 Penguin Harness 开发，通过评测迭代 |
-| 让模型提出假设并自动验证 | [第 37 章 · Mini AI Scientist](content/chapters/chapter-37.md) | 设计实验、调用工具，验证隐藏规律 |
+| 做一个能听也能说的助手 | [第 20 章 · 语音助手](content/chapters/chapter-20.md) | 串联语音识别、模型问答与语音合成 |
+| 让模型回答企业资料中的问题 | [第 21 章 · 企业知识问答](content/chapters/chapter-21.md) | 知识检索与 RAG 问答 |
+| 用手机拍照生成巡检记录 | [第 22 章 · 手机巡检助手](content/chapters/chapter-22.md) | 端侧视觉推理、人工确认与离线同步 |
+| 为商品制作营销图片 | [第 27 章 · 商品营销图](content/chapters/chapter-27.md) | 图像生成与编辑 |
+| 为教学内容制作一张海报 | [第 28 章 · 教学海报](content/chapters/chapter-28.md) | Qwen-Image 部署与海报生成 |
+| 开发并优化一个巡检 Agent | [第 37 章 · 产线巡检 Agent](content/chapters/chapter-37.md) | 用 Penguin Harness 开发，通过评测迭代 |
+| 让模型提出假设并自动验证 | [第 38 章 · Mini AI Scientist](content/chapters/chapter-38.md) | 设计实验、调用工具，验证隐藏规律 |
 
 <a id="learning"></a>
 
@@ -179,17 +180,17 @@ python3 -m http.server 4173 --bind 127.0.0.1
 - **AIGC 创作者与实践者：** 希望探索图像定制、生成与编辑工作流。
 - **对 Agent 感兴趣的学习者：** 希望理解工具调用、任务方法与应用开发的关系。
 
-代码实践建议具备基础 Python 和命令行知识。模型基础不熟悉时，可以先阅读[第 39 章 · 大模型基础知识](content/chapters/chapter-39.md)，再进入相应实践。
+代码实践建议具备基础 Python 和命令行知识。模型基础不熟悉时，可以先阅读[第 40 章 · 大模型基础知识](content/chapters/chapter-40.md)，再进入相应实践。
 
 ### 按目标选择路线
 
 | 学习目标 | 推荐顺序 | 学完后尝试做什么 |
 | --- | --- | --- |
 | **完成第一次模型推理** | [01 · 认识模型](content/chapters/chapter-01.md) → [05 · 定义任务](content/chapters/chapter-05.md) → [07 · 首次推理](content/chapters/chapter-07.md) | 换一份输入，观察模型输出和适用范围 |
-| **让模型适应自己的数据** | [13 · 数据准备](content/chapters/chapter-13.md) → [14 · 轻量微调](content/chapters/chapter-14.md) → [16 · 效果评测](content/chapters/chapter-16.md) | 用同一组测试样本对比微调前后的效果 |
-| **搭建知识问答应用** | [05 · 定义任务](content/chapters/chapter-05.md) → [07 · 首次推理](content/chapters/chapter-07.md) → [20 · 企业知识问答](content/chapters/chapter-20.md) | 替换成自己的文档，检查检索与回答是否准确 |
-| **探索图像生成与定制** | [24 · 应用案例](content/chapters/chapter-24.md) → [25 · 图像 LoRA](content/chapters/chapter-25.md) → [26 · 商品图](content/chapters/chapter-26.md) → [27 · 教学海报](content/chapters/chapter-27.md) | 为自己的素材设计一套生成或编辑流程；需要时补读[第 29 章 · 理论知识](content/chapters/chapter-29.md) |
-| **入门 Agent 应用开发** | [30 · Agent 基础](content/chapters/chapter-30.md) → [31 · MCP](content/chapters/chapter-31.md) → [32 · Skill](content/chapters/chapter-32.md) → [36 · 巡检 Agent](content/chapters/chapter-36.md) | 选择第 33—35 章中与自己所用工具相符的内容补充练习，需要时参阅[第 38 章 · Agent 框架知识](content/chapters/chapter-38.md)，再尝试完成一个小任务 |
+| **让模型适应自己的数据** | [14 · 数据准备](content/chapters/chapter-14.md) → [15 · 轻量微调](content/chapters/chapter-15.md) → [17 · 效果评测](content/chapters/chapter-17.md) | 用同一组测试样本对比微调前后的效果 |
+| **搭建知识问答应用** | [05 · 定义任务](content/chapters/chapter-05.md) → [07 · 首次推理](content/chapters/chapter-07.md) → [21 · 企业知识问答](content/chapters/chapter-21.md) | 替换成自己的文档，检查检索与回答是否准确 |
+| **探索图像生成与定制** | [25 · 应用案例](content/chapters/chapter-25.md) → [26 · 图像 LoRA](content/chapters/chapter-26.md) → [27 · 商品图](content/chapters/chapter-27.md) → [28 · 教学海报](content/chapters/chapter-28.md) | 为自己的素材设计一套生成或编辑流程；需要时补读[第 30 章 · 理论知识](content/chapters/chapter-30.md) |
+| **入门 Agent 应用开发** | [31 · Agent 基础](content/chapters/chapter-31.md) → [32 · MCP](content/chapters/chapter-32.md) → [33 · Skill](content/chapters/chapter-33.md) → [37 · 巡检 Agent](content/chapters/chapter-37.md) | 选择第 34—36 章中与自己所用工具相符的内容补充练习，需要时参阅[第 39 章 · Agent 框架知识](content/chapters/chapter-39.md)，再尝试完成一个小任务 |
 
 ### 把每次阅读变成一次实践
 
@@ -236,7 +237,7 @@ python3 -m http.server 4173 --bind 127.0.0.1
 
 前往[魔搭开发者实践](https://modelscope.cn/spotlight)，选择 **「创建内容」**，添加专题 **#魔搭紫皮书** 后投稿。
 
-正在寻找共建方向？可以从[场景案例征集](content/chapters/chapter-23.md)、[视频生成实践](content/chapters/chapter-28.md)或[主流 LLM 评测](content/chapters/chapter-40.md)开始。欢迎把你跑通过、验证过的方法写下来，帮助更多人迈出第一步。
+正在寻找共建方向？可以从[场景案例征集](content/chapters/chapter-24.md)、[视频生成实践](content/chapters/chapter-29.md)或[主流 LLM 评测](content/chapters/chapter-41.md)开始。欢迎把你跑通过、验证过的方法写下来，帮助更多人迈出第一步。
 
 <a id="community"></a>
 

@@ -1,346 +1,544 @@
 <!-- Generated from ../source-html/chapter-21.html; do not edit independently. -->
 
-# 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录
+# 实现一个企业知识问答助手
 
-配套实践包：[MiniCPM&#95;魔搭紫皮书&#95;章节与实践包&#95;v0.1.zip](<../../assets/minicpm-20261015/minicpm-practice-v0.1.zip>)
-
-做物业巡检时，发现问题后会拍下一张照片，并且把事情记清楚。比如，走廊里的灯罩破损了，照片可以留下现场的样子，但具体在哪一层、哪个位置、发现了什么问题，都要人工补录很多文字信息，才能方便后续人员查看和处理。
-
-如果这些信息能在现场整理好，就不用再回头一张张对着照片补写；遇到网络不好的地方，也希望先把记录保存在手机上，等有网络时再提交。对于巡检人员来说，拍照、填写和保存直接一次性完成，不用在几个界面之间来回切换。
-
-围绕这个场景，我们尝试用 MiniCPM-V 搭建一个手机巡检助手。
-
-先在魔搭 Notebook 中验证图片理解效果，再接入 Android 手机，让模型在手机上生成观察草稿。工作人员确认后，记录保存在本地，有网络时再同步到台账，供后续查看和处理。我们希望把拍照之后的记录工作做得更方便，同时保留工作人员检查和修改的机会。
+通用大模型虽然具备较强的知识问答能力，但在企业实际应用中，很多问题涉及企业内部的产品资料、技术文档、业务制度和操作手册等内容。这些知识通常没有包含在模型的训练数据中，而且还会随着业务不断更新。
 
 <a id="c21-s1"></a>
 
-## 1\. 把巡检需求变成明确的模型任务
+## RAG，让模型先查资料再开口
 
-首个版本只处理公共区域中可以拍到的表面现象，例如灯罩破损、地面散落物和墙面可见污迹。它不从照片确定电路是否损坏，也不决定是否需要停机、维修或更换设备。
+RAG（Retrieval-Augmented Generation，检索增强生成）提供了一种解决方案，在大模型回答问题之前，先从企业知识库中检索与问题相关的内容，再将检索结果提供给大模型生成答案。
 
-假设照片中可见破损灯罩，用户输入位置“二层东侧走廊”，模型草稿的目标结构是：
+RAG 的核心思想可以概括为：先检索，再回答。传统的大模型问答主要依赖模型参数中已经学习到的知识。例如，当用户提出一个问题时，模型会根据训练阶段学习到的信息直接生成答案。RAG 在这个过程中增加了一个知识检索步骤。当用户提出问题后，系统首先从外部知识库中查找与问题相关的内容，然后将用户问题和检索到的知识一起发送给大模型，由模型结合这些内容生成最终答案。
 
-```json
-{
-  "object": "灯罩",
-  "visible_issue": "灯罩表面可见破损",
-  "needs_retake": false,
-  "missing_fields": []
-}
-```
-
-这是期望输出示例，不是模型实测回答。若图片暗到无法确认，契约允许返回：
-
-```json
-{
-  "object": null,
-  "visible_issue": null,
-  "needs_retake": true,
-  "missing_fields": ["object", "visible_issue"]
-}
-```
-
-`needs_retake` 只是一条模型建议，没有校准概率的含义。即使它为 false，也仍然需要人员查看照片与字段。清晰的正常场景可以描述“未见明显表面异常”，这表示照片范围内的观察，不等于设备整体正常。
+一个基本的 RAG 流程可以表示为：用户问题 → 知识检索 → 获取相关内容 → LLM 生成答案 → 返回结果。RAG 并不是让模型重新学习这些知识，而是在模型回答问题时，临时为模型提供当前问题所需要的参考资料。
 
 <a id="c21-s2"></a>
 
-### 字段来自哪里
+## 知识经常更新，什么时候适合用 RAG？
 
-<table><thead><tr><th><p>字段</p></th><th><p>产生者</p></th><th><p>约束</p></th></tr></thead><tbody><tr><td><p>对象 object、可见现象 visible_issue</p></td><td><p>模型提出、人员修改确认</p></td><td><p>只写有图像依据的信息；无法确认时留空</p></td></tr><tr><td><p>是否建议重拍、缺失字段</p></td><td><p>模型与应用校验</p></td><td><p>提醒用户补拍或补录；不作为诊断结论</p></td></tr><tr><td><p>拍摄时间 captured_at</p></td><td><p>应用</p></td><td><p>保存带时区的时间；说明是否来自现场相机或相册导入</p></td></tr><tr><td><p>位置 location</p></td><td><p>用户选择或输入</p></td><td><p>第一版不用模型猜测楼层，不把未经授权定位当成默认输入</p></td></tr><tr><td><p>记录 ID</p></td><td><p>应用</p></td><td><p>创建后固定，重试同步仍使用同一 ID</p></td></tr><tr><td><p>图片 SHA256、模型版本</p></td><td><p>应用</p></td><td><p>用于关联原始输入与推理产物</p></td></tr><tr><td><p>确认人、确认时间</p></td><td><p>人员操作与应用</p></td><td><p>只有点击确认后生成正式记录</p></td></tr><tr><td><p>处理状态、服务端版本</p></td><td><p>台账</p></td><td><p>待处理、处理中、已关闭，独立于模型草稿</p></td></tr></tbody></table>
+RAG 并不是所有大模型应用都必须使用，但对于企业知识问答、智能客服和文档助手等场景非常常见。
 
-位置先由用户输入，不把它交给模型生成，能避免照片里没有楼层信息却产生一个貌似完整的位置。拍摄时间也应来自业务应用，不依赖模型对“现在”的判断。
+如果业务知识需要持续更新，通常比较适合使用 RAG。例如企业的产品说明、业务制度和操作规范可能会不断调整。如果将这些知识通过模型训练的方式写入模型，每次知识发生变化都重新训练模型，成本较高，也不方便维护。
+
+RAG 可以直接更新外部知识库。当文档发生变化后，只需要重新处理相关文档并更新索引，不需要重新训练整个大模型。如果回答需要提供来源依据，RAG 也比较适合。由于模型的回答是基于检索到的文档生成的，因此可以同时返回文档名称、章节、页码或者原文片段，让用户知道答案来自哪里。
 
 <a id="c21-s3"></a>
 
-## 2\. 先在 Notebook 中验证单图理解
+## 该补知识，还是该微调模型？
 
-模型入口为 [魔搭 MiniCPM-V 4.6](<https://modelscope.cn/models/OpenBMB/MiniCPM-V-4.6>)。它支持图像、视频与文本输入。本章只使用单张图片，不同时引入语音、视频流和工具调用。
+RAG 和模型微调都可以用于提升大模型在实际业务中的表现，但两者解决问题的思路不同。RAG 主要解决“模型缺少相关知识”的问题，而模型微调主要解决“模型不能按照要求完成任务”的问题。
 
-在魔搭 Notebook 中打开配套 `notebooks/02_minicpmv_inspection_baseline.ipynb`，下载固定模型版本，上传一张自己拥有使用权限的图片。模型代码采用官方的 Transformers 路线：
+RAG 并不会修改模型本身的参数，而是在模型回答问题之前，先从外部知识库中检索与问题相关的内容，再将这些内容提供给模型作为回答依据。
 
-```bash
-python -m pip install 'transformers==5.7.0' 'modelscope==1.33.0' \
-  accelerate Pillow torchvision av
-```
+模型微调的方式则不同。微调需要使用特定的训练数据进一步训练模型，并在训练过程中调整模型参数，使模型逐渐学习特定任务的处理方式。例如第九章中提到的实体识别任务，需要模型输出固定格式的回答。当任务要求发生较大变化时，通常需要准备新的训练数据并重新进行微调。
 
-保留与 Notebook CUDA 相匹配的 PyTorch / torchvision 组合，避免为了一个单图实验升级整个 CUDA 软件栈。本章初稿未记录 GPU 峰值显存，应在正式验证中填写。官方仓库根目录的旧 requirements 包含早期模型依赖，不应直接替代 4.6 对应的推理说明。
-
-运行下载单元格后，使用配套脚本：
-
-```bash
-python examples/vision_baseline.py \
-  --model models/minicpm-v-4.6 \
-  --image 自己的现场照片.jpg \
-  --downsample 16x \
-  --out results/inspection-one.json
-```
-
-脚本的核心调用如下：
-
-```python
-inputs = processor.apply_chat_template(
-    messages, tokenize=True, add_generation_prompt=True,
-    enable_thinking=False, return_dict=True, return_tensors="pt",
-    downsample_mode="16x", max_slice_nums=1
-).to(model.device)
-
-generated_ids = model.generate(
-    **inputs, downsample_mode="16x",
-    do_sample=False, max_new_tokens=384
-)
-```
-
-使用与当前模型匹配的 `AutoProcessor`、`AutoModelForImageTextToText` 和系统提示。`downsample_mode` 必须在预处理和生成两处保持一致，否则图像占位与视觉特征可能不匹配。
-
-16x 与 4x 是精度和计算开销的取舍，不能用一般性的“更快”承诺替代具体巡检图片测试。初始设置 `max_slice_nums=1` 是为了限制资源；细小文字、远处裂痕或大场景可能需要增加切片、改用 4x 或重新近距离拍摄。手机工程使用自己的视觉处理接口，不应把 Notebook 的参数名直接假定为手机中同名设置。
-
-脚本同时保存原始回答和结构校验结果。合法 JSON 只证明结构满足要求，是否看对图片需要人工标注与核对。如果原始输出不合法，保留错误，允许重新生成或手工填写，不将非法输出“修一下”后计为识别成功。
+在实际应用中，可以根据需要解决的问题选择不同的方法：需要补充或更新知识时，更适合使用 RAG；需要调整模型的任务能力、输出格式或行为方式时，更适合使用模型微调。RAG 和模型微调两者可以结合使用。例如，可以通过微调让模型掌握问答或指令遵循能力，再通过 RAG 为模型提供领域内的知识，使模型既能够按照业务要求完成任务，又能够基于最新的领域知识生成回答。
 
 <a id="c21-s4"></a>
 
-## 3\. 组织现场图片与标准记录
+## 从一份文档开始，搭起问答系统
 
-首轮至少覆盖清晰、暗光、模糊、遮挡、正常场景和缺少位置的输入。样本使用自己拍摄且可公开的照片，或已有明确授权的图片；配套包未附带真实巡检照片，不能把 JSON 示例当成视觉测试集。数据集链接：https://modelscope.cn/datasets/pzc163/minicpm-v-inspection-part5
-
-为每张图片建立标注记录：
-
-```json
-{
-  "sample_id": "inspection-001",
-  "image": "images/inspection-001.jpg",
-  "location_input": "二层东侧走廊",
-  "acceptable_objects": ["灯罩"],
-  "required_observations": ["可见破损"],
-  "unsupported_claims": ["电路故障", "必须更换整灯"],
-  "quality_group": "clear",
-  "source": "自有拍摄并获授权",
-  "license": "由图片作者填写实际许可"
-}
-```
-
-同一处对象连拍的照片应属于同一划分，不能一张调试、一张最终测试，以免把相近图片重复算成泛化能力。标准答案允许必要的同义表述，语义准确率由人工或明确规则判定；只有固定字段和类型适合完全自动校验。
-
-将可公开的图片、标注、许可与划分说明上传魔搭数据集仓库，Notebook 先从这个数据版本下载。真实业务照片可继续保留在设备上，不需要为了托管教学资产公开客户现场资料。
+一个完整的 RAG 系统通常可以分为两个主要阶段：知识库构建和在线问答。知识库构建主要负责将 PDF、Word、Markdown、网页等原始资料处理成可以被检索的知识。在线问答则是在用户提出问题之后，从已经建立的知识库中寻找相关内容，本次实验采用网上公开的《中华人民共和国道路交通安全法实施条例》作为文档库来源，搭建关于交通安全法问答的 RAG 系统。
 
 <a id="c21-s5"></a>
 
-## 4\. 让真实手机完成图像推理
+### 先把 PDF、Word 里的内容读出来
 
-主路线复用 [MiniCPM-V Apps 的 Android 工程](<https://github.com/OpenBMB/MiniCPM-V-Apps/tree/d1aac05eecaac64b7fc35f1cc93a06b726ce10e3>)。先安装官方 Demo，选择 MiniCPM-V 4.6，下载相匹配的语言模型 GGUF 与视觉投影文件 `mmproj-model-f16.gguf`。视觉组件缺失、版本不匹配或加载失败时，文本模型能回答问题不代表图像推理已经工作。
+企业知识通常分散在 PDF、Word、Excel、Markdown、网页等不同类型的文件中。由于不同文件的格式和内部结构存在较大差异，在构建 RAG 知识库之前，通常需要先将这些文档转换为统一、可处理的文本或结构化数据，这一过程称为文档解析。对于 RAG 系统而言，一个较好的文档解析工具不仅只是识别文本中的文字，还需要尽可能识别和保留原始文档中的结构信息，例如：文档标题、文档段落、表格、图片、公式等等。
 
-本章在移动端优先复用官方发布且被该工程支持的模型包，不自行重做视觉转换。把下载来源、固定版本、两个文件的哈希与应用提交记录到部署清单。若要重新转换视觉模型，须使用模型团队确认的转换器与投影配置，再重新做实机验收，不能沿用文本模型的单文件转换脚本。
+目前已经有许多开源工具可以用于文档解析，比较常见的包括：
 
-进行业务界面开发时，克隆并固定工程：
+<strong>1）</strong>MinerU 是一个面向复杂文档的开源解析工具，可以将 PDF、图片、Word、PPT、Excel 等文档转换为 Markdown、JSON 等机器可读格式。它能够识别标题、正文、表格、图片、公式等内容，并尽可能按照人类阅读顺序还原文档结构，因此比较适合作为 RAG 系统中的文档预处理工具，[opendatalab/MinerU](<https://github.com/opendatalab/MinerU?utm_source=chatgpt.com>)
 
-```bash
-git clone https://github.com/OpenBMB/MiniCPM-V-Apps.git vendor/MiniCPM-V-Apps
-git -C vendor/MiniCPM-V-Apps checkout d1aac05eecaac64b7fc35f1cc93a06b726ce10e3
-git -C vendor/MiniCPM-V-Apps submodule update --init --recursive
+<strong>2）</strong>MonkeyOCR 是一个基于多模态模型的文档解析项目，通过结构识别、内容识别和关系建模对文档进行解析，能够处理文本、表格、公式等复杂内容，并支持中文和英文文档。对于版式比较复杂、传统文本提取工具效果不理想的 PDF，可以考虑使用这类基于视觉模型的解析方法，[Yuliang-Liu/MonkeyOCR](<https://github.com/Yuliang-Liu/MonkeyOCR?utm_source=chatgpt.com>)
+
+<strong>3）</strong>Dolphin 是字节跳动开源的文档图像解析模型，采用“先分析、再解析”的方式处理文档。它能够先识别页面布局和阅读顺序，再进一步解析文本、表格、公式、代码等不同类型的文档元素，适合处理布局复杂的 PDF 或扫描类文档，[ByteDance/Dolphin](<https://github.com/ByteDance/Dolphin?utm_source=chatgpt.com>)
+
+<strong>4）</strong>PaddleOCR 是 PaddlePaddle 开源的 OCR 与文档解析工具。除了常见的文字识别之外，还提供版面分析、表格识别以及文档结构化解析等能力，可以将 PDF 和图片中的内容转换为更适合后续 AI 系统处理的结构化数据。对于扫描 PDF、图片型文档以及包含大量中文文字的文档，PaddleOCR 是一种常见的选择，[PaddlePaddle/PaddleOCR](<https://github.com/PaddlePaddle/PaddleOCR?utm_source=chatgpt.com>)
+
+不同文档解析工具各有特点，并不存在一种工具能够适用于所有文档。在实际构建 RAG 系统时，可以根据文档的类型、版式复杂程度、解析准确率以及部署成本等因素选择合适的解析工具。
+
+本次实验采用 MinerU 进行文档解析，首先在 ModelScope 的 Notebook 环境中安装 MinerU，执行命令如下：
+
+```text
+pip install -U "mineru[all]"
 ```
 
-将 `android/InspectionRunner.kt` 和 `android/InspectionRecordStore.kt` 复制到工程同包名的 Kotlin 源码目录。它们分别封装模型草稿生成、严格字段解析、本地确认记录和显式同步。组件用于接入已有 Android 界面，本初稿没有提供完整巡检 APK。
+![正文配图](<../../assets/manuscript-20260914/c19-4634a78ab4ee88.webp>)
 
-官方引擎提供的调用链是：
+安装完成后，可以直接对文档解析，输入需要解析的文件路径，执行命令如下：
 
-```kotlin
-engine.setEnableThinking(false)
-engine.clearContext()
-engine.setSystemPrompt(InspectionContract.PROMPT)
-engine.prefillImage(jpegBytes)
-engine.sendUserPrompt("请提取图中可见的对象和现象。", predictLength = 384)
+```text
+mineru -p /mnt/workspace/RAG/data -o /mnt/workspace/RAG/output 
 ```
 
-实际代码由 `InspectionRunner.generate` 收集流式结果后进行解析。它要求模型和视觉组件已经加载，并用互斥锁保证同一引擎不会同时处理两张图片。每条巡检先清除历史上下文，避免上一处设备的观察混入下一条记录。
+其中：-p 是输入文件路径，-o 是模型输出的文件路径，也就是解析后的文本。
 
-`isVisionSupported` 必须为 true 才能进入业务推理。当前工程在视觉组件加载失败时可能继续文本模式，因此业务层要明确拦截这一状态。
+![正文配图](<../../assets/manuscript-20260914/c19-8d82808cdcf0d9.webp>)
+
+解析后的文件如下，里面包括了很多中间文件，可以按需选择，本次实验我们选择 md 文件作为文档源，里面包括了文本的段落格式信息。
+
+![正文配图](<../../assets/manuscript-20260914/c19-fa3ebd62d3431c.webp>)
 
 <a id="c21-s6"></a>
 
-## 5\. 从 Demo 变成现场工作界面
+### 文档太长，怎么切成合适的片段？
 
-第一版界面可以由“采集、草稿确认、记录列表”三个页面组成。按照顺序实现以下行为：
+完成文档解析后，需要将较长的文档拆分成多个较小的文本片段，这些文本片段通常称为 Chunk。在 RAG 系统中，Embedding 和检索通常以 Chunk 为基本单位，因此合理的文档切分有助于提高后续检索的准确性。
 
-1. 调用相机或选择相册图片，立刻复制到应用私有文件目录并建立草稿 ID。保留原图，推理使用校正 EXIF 方向后的 JPEG 副本；显示预览并提供重拍。
-2. 用户选择位置。现场拍照记录应用采集时间；相册导入保留导入来源，照片时间未知时提示人员核对，不能把导入时间伪装成原始拍摄时间。
-3. 点击生成后，显示模型加载、图片预处理和生成状态。先保证照片与输入已保存，再运行模型；失败或中断不能丢掉已拍照片。
-4. 把模型对象与可见现象放进可编辑表单。JSON 非法、字段缺失或建议重拍时，展示相应提示，允许重拍或手工填写。
-5. 用户核对图片、位置与观察后点击确认，生成冻结的正式记录，在一个本地数据库事务中保存记录与待同步状态。
-6. 在记录列表明确区分“仅保存在手机”“同步成功”“同步失败”，点击同步按钮才发送确认过的记录。
+对于解析后的 Markdown 文档，可以先按照空行将内容拆分成段落，再按照设定的 `chunk_size` 将相邻段落依次合并。当内容超过指定长度时，则生成一个新的 Chunk。
 
-照片处理时可先使用长边 1280 像素作为候选，而不是把大图不加限制地交给手机。应记录实际压缩参数，并用细小缺陷与暗光样例检查信息是否被压缩丢失。为防止重复推理和修改时错配，按钮状态、图片哈希与草稿 ID 应一起管理。
+为了避免切分位置造成上下文信息丢失，还可以设置 `chunk_overlap`，让相邻 Chunk 之间保留少量重复内容。例如：chunk&#95;size = 500，chunk&#95;overlap = 50，表示每个 Chunk 控制在 500 个字符左右，相邻 Chunk 保留约 50 个字符的重叠内容。切分完成后，可以为每个 Chunk 保存 `id`、`content` 和 `file` 等信息，方便后续进行向量化、检索以及答案来源定位。
 
-下面展示已加载引擎上的生成入口。`jpegBytes` 是上一步准备好的图片，`scope` 为页面生命周期作用域：
+下面是切分 chunk 的代码
 
-```kotlin
-val runner = InspectionRunner(engine) // 页面保留同一个实例
-scope.launch {
-    try {
-        val draft = runner.generate(jpegBytes)
-        // 将字段绑定到可编辑表单；不在这里自动确认或同步。
-        showEditableDraft(draft)
-    } catch (e: Exception) {
-        // 保存照片与位置，显示重新生成、重拍或手工填写入口。
-        showGenerationFailure()
-    }
-}
+```python
+import os
+import json
+def load_markdown(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+def split_markdown(text, chunk_size=500, chunk_overlap=50):
+    """
+    将 Markdown 文本切分成多个 Chunk
+    chunk_size:每个 Chunk 大约包含多少个字符
+    chunk_overlap:相邻 Chunk 之间保留多少个重复字符
+    """
+    paragraphs = text.split("\n\n")
+
+    chunks = []
+    current_chunk = ""
+
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
+        if not paragraph:
+            continue
+        if len(current_chunk) + len(paragraph) <= chunk_size:
+            if current_chunk:
+                current_chunk += "\n\n" + paragraph
+            else:
+                current_chunk = paragraph
+
+        else:
+
+            if current_chunk:
+                chunks.append(current_chunk)
+            overlap_text = current_chunk[-chunk_overlap:] if current_chunk else ""
+
+            current_chunk = overlap_text + "\n\n" + paragraph
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
+
+def save_chunks(chunks, source_file, output_file):
+    """
+    将 Chunk 保存为 JSONL 文件
+    """
+    file_name = os.path.basename(source_file)
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        for i, chunk in enumerate(chunks):
+            data = {"id": i,"content": chunk,"file": file_name
+            }
+
+            f.write(
+                json.dumps(data, ensure_ascii=False) + "\n"
+            )
+
+if __name__ == "__main__":
+
+    file_path = "./output/中华人民共和国道路交通安全法实施条例/hybrid_auto/中华人民共和国道路交通安全法实施条例.md"
+
+    text = load_markdown(file_path)
+    chunks = split_markdown(
+        text,
+        chunk_size=500,
+        chunk_overlap=50
+    )
+    print("Chunk 数量：", len(chunks))
+    save_chunks(
+        chunks,
+        source_file=file_path,
+        output_file="output/chunks.jsonl"
+    )
 ```
 
-`showEditableDraft`、`showGenerationFailure` 是界面事件示意，需要按所用 Activity 或 Fragment 实现。完整应用定稿时，应连同相机权限、相册选择、旋转恢复、图片预处理和按钮事件一起构建验证。
+执行完之后，可以看到刚才解析的 md 文件中，共切分出 39 个 chunk。
 
-保存正式记录时，应用生成 UUID、图片哈希、确认人和确认时间，将人员核对后的观察写入 `InspectionRecordStore.saveConfirmed`。两项观察字段仍为空时，不进入同步队列；若人员选择手工填写，记录其实际确认动作。正式记录一旦确认不再原地改写，后续更正以新记录关联原记录，避免同步重试提交不同内容。
+![正文配图](<../../assets/manuscript-20260914/c19-c4e1759f0c6f34.webp>)
 
 <a id="c21-s7"></a>
 
-## 6\. 实现离线保存和联网同步
-
-手机本地数据库保存确认记录和待同步队列，图片仍在设备私有目录。本示例同步结构化观察、位置和图片哈希，不上传原图。哈希只能用于关联与校验，后台不能凭哈希查看照片；若业务需要查看照片，应另做由用户选择的附件上传并记录同步范围。
-
-配套提供标准库实现的模拟台账：
-
-```bash
-python examples/ledger.py --bind 127.0.0.1 --port 8787 --db ledger.sqlite3
-```
-
-为了先学习业务链路，不依赖 GPU，在第二个终端用示例确认记录运行：
-
-```bash
-python examples/offline_queue.py add data/inspection_confirmed_example.json
-python examples/offline_queue.py pending
-python examples/offline_queue.py sync --url http://127.0.0.1:8787
-```
-
-这个 JSON 是教学夹具：图片哈希为占位值，模型版本标注 `teaching-fixture-no-inference`。这些命令验证保存、同步和接口，不验证视觉模型，也不证明手机部署。
-
-手机连接时可使用 USB 调试的端口反向映射，让手机上的回环地址转发到电脑台账：
-
-```bash
-adb reverse tcp:8787 tcp:8787
-```
-
-为本地教学的 HTTP 连接在 Debug 构建配置相应的网络策略；正式服务使用 TLS 和业务账号鉴权。本地服务默认只监听电脑回环地址。应用中的同步操作需要在 IO 线程运行：
-
-```kotlin
-scope.launch {
-    val result = withContext(Dispatchers.IO) {
-        recordStore.syncPending("http://127.0.0.1:8787")
-    }
-    showSyncResults(result)
-}
-```
+### 用 Embedding，把文档变成可检索的向量
 
 <a id="c21-s8"></a>
 
-### 用记录 ID 防止重复提交
+#### Embedding 模型
 
-手机同步时不能假定“请求超时就意味着后台没有保存”。一种常见情况是后台已经写入，回复在传输中丢失。如果手机重新生成 ID 再提交，会出现两条相同记录。
+完成文档切分后，需要进一步构建可检索的文档库。由于计算机无法直接根据自然语言的语义进行检索，因此需要使用 Embedding 模型将每个 Chunk 转换为向量表示。Embedding 模型可以将文本映射到高维向量空间，语义越相近的文本，其向量在空间中的距离也越接近。因此，在用户提出问题后，可以将问题同样转换为向量，再与文档库中的 Chunk 向量进行比较，从而检索出与问题语义最相关的内容。
 
-本示例采用以下约定：同一正式记录始终使用同一 UUID；相同 ID、相同内容的重复 POST 返回已经存在的记录；相同 ID、不同内容返回 409 冲突。手机只有收到 200 或 201 且确认回复中的记录内容相同，才把队列项标为同步成功。超时、鉴权失败和冲突都保留待同步项。
+目前开源社区已经提供了多种 Embedding 模型，比如 BGE-M3 和 Qwen3-Embedding。BGE-M3 是 BAAI 推出的多语言 Embedding 模型，支持 100 多种语言以及最长 8192 Token 的文本输入。与普通的 Dense Embedding 模型相比，BGE-M3 同时支持稠密检索、稀疏检索和 Multi-Vector 检索，因此既可以用于常见的向量语义检索，也可以用于混合检索等场景 [FlagEmbedding](<https://github.com/FlagOpen/FlagEmbedding>)。
 
-<table><thead><tr><th><p>接口</p></th><th><p>输入</p></th><th><p>行为</p></th></tr></thead><tbody><tr><td><p><code>POST /records</code></p></td><td><p>人工确认过的完整记录</p></td><td><p>新记录返回 201；相同内容重试返回 200；内容冲突返回 409</p></td></tr><tr><td><p><code>GET /records</code></p></td><td><p>无</p></td><td><p>返回台账列表与处理状态</p></td></tr><tr><td><p><code>GET /records/{record_id}</code></p></td><td><p>记录 ID</p></td><td><p>返回该记录和当前服务端版本</p></td></tr><tr><td><p><code>PATCH /records/{record_id}/status</code></p></td><td><p><code>status</code>、<code>expected_version</code></p></td><td><p>更新状态并增加版本；旧版本更新返回 409</p></td></tr></tbody></table>
+Qwen3-Embedding 是 Qwen 团队推出的文本向量模型系列，基于 Qwen3 架构构建，主要面向文本检索、文本聚类、文本分类和代码检索等任务。Qwen3-Embedding 提供 0.6B、4B 和 8B 等不同参数规模，可以根据模型效果和计算资源进行选择，同时具有较好的多语言和长文本处理能力 [Qwen3-Embedding](<https://github.com/QwenLM/Qwen3-Embedding>)。
 
-台账将处理状态保存在观察内容之外。后台从 `pending` 改为 `in_progress` 或 `closed` 时，不覆盖模型观察或人员确认字段。手机通过 `refreshStatus` 显式刷新处理结果。
+本节采用 Qwen3-Embedding-0.6B 作为 Embedding 模型进行实验，第九章已经介绍过 ms-swift，除了大模型训练和微调之外，ms-swift 也支持 Qwen3-Embedding 系列的训练和推理。因此，本节继续使用 ms-swift 启动 Qwen3-Embedding-0.6B，并通过接口的方式完成文档 Chunk 和用户问题的向量化。
 
-可以先用 `GET /records` 找到实际 ID 和当前版本，再更新状态：
+可以使用如下命令启动 Embedding 服务：
 
-```bash
-curl http://127.0.0.1:8787/records
-curl -X PATCH \
-  http://127.0.0.1:8787/records/e30ac04c-56d6-4c8e-b005-1d62c567e247/status \
-  -H 'Content-Type: application/json' \
-  -d '{"status":"closed","expected_version":1}'
+```text
+CUDA_VISIBLE_DEVICES=0 \
+swift deploy \
+    --model Qwen/Qwen3-Embedding-0.6B \
+    --task_type embedding \
+    --vllm_gpu_memory_utilization 0.2 \
+    --vllm_max_model_len 512 \
+    --host 0.0.0.0 \
+    --port 18000
 ```
 
-上面的 UUID 只对应配套教学夹具，现场记录应使用手机生成的实际 ID。再读取台账或刷新手机状态，即可观察已关闭状态。模拟服务没有完整的人员组织、工单权限和生产审计功能，不能直接作为生产台账部署。
+服务启动后，显示如下信息：
+
+![正文配图](<../../assets/manuscript-20260914/c19-1ea5a862527b52.webp>)
 
 <a id="c21-s9"></a>
 
-## 7\. 分别验证识别效果、手机表现和业务闭环
+#### 向量检索工具
 
-三类验证回答不同问题：模型有没有看对、手机能不能稳定运行、记录有没有可靠地流转。任何一项成功都不能替代其余两项。
+目前常用的向量检索工具包括 Faiss 和 Milvus。Faiss 是 Meta 开源的向量相似度检索库，主要用于高效地进行向量索引和近邻搜索。它部署简单，不需要单独启动数据库服务，可以直接在 Python 程序中使用，比较适合学习、实验以及中小规模 RAG 系统。Milvus 是面向大规模向量数据的向量数据库，除了向量检索之外，还提供数据持久化、分布式存储、索引管理和多种查询能力，更适合数据规模较大、需要长期运行和工程化部署的场景。相比 Faiss，Milvus 的功能更加完整，但部署和使用过程也相对复杂。
+
+本实验采用 Faiss 进行向量存储和相似度检索，首先安装 faiss 库，执行命令如下：
+
+```text
+pip install faiss-cpu
+```
+
+![正文配图](<../../assets/manuscript-20260914/c19-c07144937fca5a.webp>)
+
+安装完成后，可以将上一节生成的 Chunk 依次发送给 Embedding 接口，获得对应的向量，并将向量与 Chunk 的 `id`、`content`、`file` 等信息建立对应关系。为了后续能够快速完成相似度计算和知识检索。
+
+创建索引代码 build&#95;index.py 如下：
+
+```python
+import json
+import requests
+import numpy as np
+import faiss
+
+EMBEDDING_URL = "http://localhost:18000/v1/embeddings"
+MODEL_NAME = "Qwen3-Embedding-0.6B"
+
+def get_embedding(text):
+    payload = {"model": MODEL_NAME,"input": text}
+    response = requests.post(
+        EMBEDDING_URL,
+        json=payload,
+        timeout=60
+    )
+    response.raise_for_status()
+    data = response.json()
+    embedding = data["data"][0]["embedding"]
+    return np.array(embedding, dtype="float32")
+
+def load_chunks(file_path):
+    chunks = []
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            chunks.append(json.loads(line))
+    return chunks
+def build_faiss_index(chunks,index_path="faiss.index", metadata_path="metadata.json"):
+
+    embeddings = []
+    for i, chunk in enumerate(chunks):
+        text = chunk["content"]
+        embedding = get_embedding(text)
+        embeddings.append(embedding)
+        print(f"已处理 {i + 1}/{len(chunks)}")
+    embeddings = np.array(embeddings, dtype="float32")
+    faiss.normalize_L2(embeddings)
+    dimension = embeddings.shape[1]
+    index = faiss.IndexFlatIP(dimension)
+    index.add(embeddings)
+    print("向量数量:", index.ntotal)
+    print("向量维度:", dimension)
+    faiss.write_index(index, index_path)
+    with open(metadata_path, "w", encoding="utf-8") as f:
+        json.dump(chunks,f,ensure_ascii=False,indent=2
+        )
+    print(f"Faiss 索引已保存到: {index_path}")
+    print(f"Chunk 信息已保存到: {metadata_path}")
+
+if __name__ == "__main__":
+
+    chunks = load_chunks("output/chunks.jsonl")
+
+    build_faiss_index(
+        chunks,
+        index_path="output/faiss.index",
+        metadata_path="output/metadata.json"
+    )
+```
+
+执行后输出对应的索引文件以及向量
+
+![正文配图](<../../assets/manuscript-20260914/c19-ebb9afa3f554f7.webp>)
 
 <a id="c21-s10"></a>
 
-### 7.1 模型输出与人工修改
+### 用 Reranker，把更相关的内容排到前面
 
-<table><thead><tr><th><p>指标</p></th><th><p>统计口径</p></th></tr></thead><tbody><tr><td><p>结构合法率</p></td><td><p>原始输出直接通过字段与类型校验的样本比例</p></td></tr><tr><td><p>对象准确率</p></td><td><p>与人工标注的可接受对象一致的比例，允许事先定义的同义词</p></td></tr><tr><td><p>可见现象准确率</p></td><td><p>描述符合照片可见证据的比例，由标注规则与人工审阅判断</p></td></tr><tr><td><p>无依据补充率</p></td><td><p>出现照片和输入不支持的物体、成因或处置断言的比例</p></td></tr><tr><td><p>人工修改率</p></td><td><p>需要修改对象或现象的草稿占比，保留修改前后内容</p></td></tr><tr><td><p>补拍与失败率</p></td><td><p>因模糊、暗光、字段缺失、推理中断等无法直接确认的比例</p></td></tr></tbody></table>
+Embedding 模型能够将用户问题和文档 Chunk 分别转换为向量，并通过向量之间的距离或相似度进行检索。这种方式的优势是：文档向量可以提前计算并存储，在用户提问时只需要计算一次问题向量，就能够快速从大量文档中召回相关内容。但是，这种高效的检索方式也存在一定局限。Embedding 模型将 Query 和 Chunk 分别进行编码，在计算相关性时，比较两个向量在向量空间中的相似程度。Reranker 模型是交互式匹配。通过将 Query 和候选 Chunk 同时输入模型，让模型直接分析两段文本之间的相关关系，因此能够进行更加细致的语义匹配。
 
-同一图片在 Notebook、手机原精度或量化版本中分别测试，确认差异来自哪一环。EvalScope 可组织自定义视觉问答数据与报告，业务字段和无依据补充仍需独立规则或人工评审；本初稿没有宣称已完成 EvalScope 视觉评测。
+因此，在 RAG 系统中通常采用 Embedding 召回 + Reranker 重排的两阶段检索方式：首先利用 Embedding 从大量 Chunk 中快速筛选出一批候选结果，再利用 Reranker 对少量候选结果进行更加精细的相关性判断和重新排序。这样既能够保证检索效率，又能够进一步提高最终提供给大语言模型的上下文质量。
+
+本节采用 Qwen3-Reranker-0.6B 作为重排模型，可以使用 ms-swift 启动服务：
+
+```text
+CUDA_VISIBLE_DEVICES=0 \
+swift deploy \
+    --model Qwen/Qwen3-Reranker-0.6B \
+    --task_type generative_reranker \
+    --infer_backend transformers \
+    --host 0.0.0.0 \
+    --port 18001
+```
+
+![正文配图](<../../assets/manuscript-20260914/c19-59e65688b71b86.webp>)
+
+服务启动后，可以将用户问题和 Embedding 检索得到的候选 Chunk 输入 Reranker，根据模型计算得到的相关性分数重新排序，并选择排名靠前的 Chunk 作为后续大语言模型生成答案的参考内容。
 
 <a id="c21-s11"></a>
 
-### 7.2 手机实际体验
+### 先召回再重排，实际找一次答案
 
-<table><thead><tr><th><p>项目</p></th><th><p>需记录的信息</p></th><th><p>本稿结果</p></th></tr></thead><tbody><tr><td><p>设备与部署</p></td><td><p>机型、系统、应用提交、模型与 mmproj 哈希</p></td><td><p>荣耀 Magic9 Pro Max，型号 <b>WKL-AN80</b>；Android <b>17 / API 37</b>，arm64，4 KiB 内存页。当前发布版本为 <b>MiniCPM-V 巡检实践版 v23 / 2.5</b>，包名 <code>com.example.minicpm_v_demo.practice</code>。原首页、聊天及模型下载入口保留；首次安装后通过 App 下载语言与视觉权重，并通过 SHA256 校验。固定提交与哈希见下文。</p></td></tr><tr><td><p>加载时间</p></td><td><p>冷加载到可处理图片的时间</p></td><td><p><b>v20：连续测试加载 3.916 秒，另一次实际 UI 加载 2.220 秒</b>。两次均未清除系统文件缓存，不能视为清缓存后的存储冷启动。v23 加载功能通过，尚无同口径加载耗时统计。</p></td></tr><tr><td><p>首字延迟</p></td><td><p>包含图片预处理、视觉编码和提示处理的延迟</p></td><td><p><b>v23：成功生成的一次实测为 7.986 秒</b>，包含生成阶段的图片预处理与读取。<b>v20：20 图平均 13.1668 秒，中位数 13.0675 秒</b>；该批次使用预先准备的 JPEG，不含相机／相册预处理。</p></td></tr><tr><td><p>单条记录耗时</p></td><td><p>从生成按钮到完整草稿可编辑</p></td><td><p><b>v23：成功生成并解析完成为 19.927 秒</b>；此前一次生成耗时 <b>15.236 秒</b>，因非法 JSON 被拦截，未闪退，照片和字段保留。<b>v20：20 图平均 21.571 秒，中位数 21.765 秒，P95 为 27.185 秒</b>。这些数值不含人工核对、填写时间；按钮点击到编辑界面完成绘制的严格端到端耗时未单独测量。</p></td></tr><tr><td><p>资源</p></td><td><p>进程峰值内存、图片尺寸、切片与上下文配置</p></td><td><p><b>v20：每秒采样的峰值 PSS 为 2,393,000 KiB，约 2.28 GiB；RSS 高水位为 2,513,636 KiB，约 2.40 GiB</b>。输入为 <b>227×227 JPEG</b>；切片上限 <b>1</b>、上下文 <b>8192</b>、CPU 线程 <b>4</b>、最多生成 <b>384 token</b>、温度 <b>0.7</b>、关闭思考。v23 相机预处理支持最长边缩至 <b>1280</b>，已通过 8 种 EXIF 方向与 48MP 图片测试；整改后的多进程总内存峰值尚未重测。</p></td></tr><tr><td><p>连续使用</p></td><td><p>连续 20 张，延迟变化、失败、发热与电量变化</p></td><td><p><b>v20：单次加载后连续处理 20 张不同公开裁剪图，20/20 返回原始回答，无闪退；19/20 通过严格结构校验</b>，1 次非法 JSON 被拒绝。前 5 张平均 <b>22.862 秒</b>，后 5 张平均 <b>16.966 秒</b>；输入内容与输出长度不同，不能据此判断热降频。电池温度 <b>40→42°C</b>，全程充电，电量 <b>100%→100%</b>，不据此估算耗电。v23 尚未重跑此批次。</p></td></tr><tr><td><p>飞行模式</p></td><td><p>新图片在断网状态生成草稿并保存</p></td><td><p>已通过。早期真机新拍照片在断网状态生成耗时 <b>17.575 秒</b>，确认后进入本地队列；恢复网络后显式同步，台账仅保留一条。<b>v23 另在飞行模式开启、Wi-Fi 关闭、无 ADB 反向网络映射时</b>导入公开图片，完成本地生成、人工确认和保存；同步失败时记录保留，恢复网络后主动同步成功，并完成状态刷新。</p></td></tr></tbody></table>
+前面经完成了 Embedding 服务、Reranker 服务以及 Faiss 向量索引的构建。在此基础上，按照提到的采用 Embedding 召回 + Reranker 重排的两阶段检索方式筛选出候选 Chunk。
 
-<strong>部署校验信息</strong>：<br>
-MiniCPM-V-Apps 上游提交
+第一阶段使用 Faiss 从知识库中进行向量检索，首先获取相似度排名前 10 的候选 Chunk,下面是针对问题：初次申领机动车号牌、行驶证应向哪个部门申请注册登记？向量检索 top10 结果。
 
-`d1aac05eecaac64b7fc35f1cc93a06b726ce10e3`
+```text
 
-原生子模块提交
+import json
+import faiss
+from build_index import get_embedding
+def load_faiss_index(index_path="faiss.index",
+                     metadata_path="metadata.json"):
 
-`13401aa8480d68a725e131cc4dbe5eda1f996a7f`
+    index = faiss.read_index(index_path)
 
-语言模型
+    with open(metadata_path, "r", encoding="utf-8") as f:
+        metadata = json.load(f)
 
-`MiniCPM-V-4_6-Q4_K_M.gguf`，529,101,504 字节
+    return index, metadata
+def search(query,index,metadata,top_k=10):
 
-语言模型 SHA256
+    query_embedding = get_embedding(query)
+    query_embedding = query_embedding.reshape(1, -1)
+    faiss.normalize_L2(query_embedding)
+    scores, indices = index.search(query_embedding,top_k)
+    results = []
+    for score, idx in zip(scores[0], indices[0]):
+        if idx == -1:
+            continue
+        chunk = metadata[idx]
+        results.append({
+            "score": float(score),
+            "id": chunk.get("id"),
+            "content": chunk.get("content"),
+            "file": chunk.get("file")
+        })
 
-`6b0c74962c44bc6bf4b655b9b02c13eda9d5a0491543ae976d1ac18e4b7892e2`
+    return results
+index, metadata = load_faiss_index(
+        "output/faiss.index",
+        "output/metadata.json"
+    )
+query="初次申领机动车号牌、行驶证应向哪个部门申请注册登记？"
+candidates = search(
+    query=query,
+    index=index,
+    metadata=metadata,
+    top_k=10
+)
 
-视觉组件
+print("candidates",candidates)
+```
 
-`mmproj-model-f16.gguf`，1,108,746,944 字节
+![正文配图](<../../assets/manuscript-20260914/c19-ef8b80aa906e3a.webp>)
 
-视觉组件 SHA256
+第二阶段使用 Reranker 对候选结果进行重排序。将用户问题和召回的候选 Chunk 提交给 Reranker，重新计算两者之间的相关性得分，并按照得分从高到低进行排序。
 
-`ca931d861d0801d9003e50697cd764721a334107c0e0415a51168ee1938462de`
+```text
+def rerank(query, candidates):
+    results = []
+    for candidate in candidates:
+        response = rerank_client.chat.completions.create(
+            model="Qwen3-Reranker-0.6B",
+            messages=[
+                {
+                    "role": "user",
+                    "content": query
+                },
+                {
+                    "role": "assistant",
+                    "content": candidate["content"]
+                }
+            ]
+        )
 
-v23 发布 APK SHA256
+        score = response.choices[0].message.content[0]
+        item = candidate.copy()
+        item["rerank_score"] = float(score)
+        results.append(item)
+    results.sort(
+        key=lambda x: x["rerank_score"],
+        reverse=True
+    )
+    for rank, item in enumerate(results, start=1):
+        item["rerank_rank"] = rank
 
-`6615b7de73245a2dde9f45dae12da46298fe46bc97022a24329213afedba1283`
+    return results
+```
 
-<p></p>
+下面是针对问题：初次申领机动车号牌、行驶证应向哪个部门申请注册登记？经过 Reranker 模型重新排序后的结果：
 
-所有数字应来自真实手机、具体模型包和相同测试口径。云端 Notebook 只负责算法基线；手机浏览器访问云端页面也不能作为本地推理证明。
+![正文配图](<../../assets/manuscript-20260914/c19-9d5052bb89590b.webp>)
+
+从上面两个结果可以看出，经过重排序后的 Chunk,排序明显发生了变化，在实际应用中，在实际项目中，可以根据知识库规模、Chunk 长度、问题复杂程度以及实际检索效果进行调整。例如，对于答案分布在多个文档片段中的问题，可以适当增加最终保留的 Chunk 数量；也可以结合 Reranker 得分设置相关性阈值，进一步过滤相关性较低的内容。除了上述方式，实际 RAG 系统还可以采用混合检索（Hybrid Search），将向量检索与 BM25 等关键词检索方式结合，对多路召回结果进行融合后再进行重排序。
 
 <a id="c21-s12"></a>
 
-### 7.3 失败场景与流转可靠性
+### 资料找到了，怎样让模型据此回答？
 
-<table><thead><tr><th><p>场景</p></th><th><p>正确行为</p></th></tr></thead><tbody><tr><td><p>视觉组件加载失败</p></td><td><p>停止图像生成，显示组件错误，不继续伪装图像理解</p></td></tr><tr><td><p>模糊或暗光图片</p></td><td><p>提示补拍或手工填写，保留原图与位置</p></td></tr><tr><td><p>输出不是合法 JSON</p></td><td><p>保留原始输出用于排查，表单不自动确认</p></td></tr><tr><td><p>生成期间应用中断</p></td><td><p>已采集照片与位置可以恢复</p></td></tr><tr><td><p>飞行模式确认记录</p></td><td><p>保存到本地队列，不等待网络请求</p></td></tr><tr><td><p>台账已写入但 ACK 丢失</p></td><td><p>用同一 ID 与内容重试，台账仍只有一条</p></td></tr><tr><td><p>同一 ID 内容发生变化</p></td><td><p>返回冲突，不覆盖已保存观察</p></td></tr><tr><td><p>两次后台状态更新冲突</p></td><td><p>用版本号发现冲突，刷新后再决定</p></td></tr></tbody></table>
+完成检索和重排序后，已经获得了与用户问题相关性较高的若干个 Chunk。接下来需要将这些内容作为参考资料，与用户问题一起提交给 LLM，如果相关性满足要求，则将检索内容提交给大语言模型生成答案；如果知识库中没有找到足够相关的内容，则直接返回拒答结果，避免模型在缺少依据的情况下生成答案。
 
-配套 `examples/verify_local.py` 已验证 Python 校验与模拟业务链路，包括离线队列恢复、HTTP 同步、重复提交和版本冲突。Android 生命周期恢复、相机与 native 引擎不在这组本地检查的覆盖范围，应在应用实机验收中补测。
+首先，在 Notebook 中启动大模型服务，本次实验采用 Qwen3-4B 模型，启动方式如下：
+
+```sql
+CUDA_VISIBLE_DEVICES=0 swift deploy \
+  --model Qwen/Qwen3-4B \
+  --load_args false \
+  --infer_backend vllm \
+  --enable_thinking false \
+  --host 0.0.0.0 \
+  --port 18002 \
+  --api_key 123 \
+  --vllm_gpu_memory_utilization 0.8 \
+  --vllm_max_model_len 8000 \
+  --max_new_tokens 2000
+```
+
+启动后显示如下，说明模型启动成功，服务启动后，即可通过 `18002` 端口调用 Qwen3-4B。
+
+![正文配图](<../../assets/manuscript-20260914/c19-d73faa5ebd537f.webp>)
 
 <a id="c21-s13"></a>
 
-## 8\. 魔搭平台怎样承接这些实践资产
+#### 构建 LLM 参考内容
 
-<table><thead><tr><th><p>平台能力</p></th><th><p>本章用途</p></th><th><p>应发布的资产</p></th></tr></thead><tbody><tr><td><p>模型库</p></td><td><p>提供固定基座、手机模型包与视觉组件</p></td><td><p>版本、文件哈希、部署说明</p></td></tr><tr><td><p>数据集</p></td><td><p>托管公开授权图片与人工标注</p></td><td><p>图片、标准记录、划分与许可</p></td></tr><tr><td><p>Notebook</p></td><td><p>验证单图理解与输出契约</p></td><td><p>可执行 Notebook、原始输出及配置</p></td></tr><tr><td><p>EvalScope</p></td><td><p>组织效果比较和报告</p></td><td><p>数据适配、评测配置与失败分析</p></td></tr><tr><td><p>创空间 Studio</p></td><td><p>展示台账与教学样例</p></td><td><p>示例记录、接口说明、APK 下载与手机验收材料</p></td></tr></tbody></table>
+Reranker 会根据用户问题与候选 Chunk 的相关程度重新调整排序。本实验直接选择排名前 5 的 Chunk 作为 LLM 的参考资料，为了使模型尽量依据知识库内容回答，可以在 Prompt 中明确限定回答范围。同时，当提供的参考资料无法回答用户问题时，要求模型直接拒答，而不是利用自身知识补充答案，prompt 如下：
 
-创空间中的网页台账可以帮助读者理解流程。网页如果调用服务器模型，应明确标注云端体验；核心验收仍然是在手机断网状态下拍摄新图片并生成记录。第一版台账可以由开发者在本地运行，Studio 发布入口由双方实际创建后补入。
+```text
+prompt = f"""
+请根据下面的参考资料回答用户问题。
+
+参考资料：
+{context}
+
+用户问题：
+{query}
+
+要求：
+1. 仅根据参考资料回答问题；
+2. 回答准确、简洁；
+3. 不要补充参考资料中不存在的信息；
+4. 如果参考资料无法回答该问题，请回答：
+   “根据当前知识库暂时无法回答该问题。”
+"""
+```
 
 <a id="c21-s14"></a>
 
-## 9\. 升级到 MiniCPM-V 4.7 时保持任务契约
+#### 返回答案及来源
 
-4.7 是后续可选的模型升级方向。升级前固定具体型号、正式模型页、语言权重、视觉组件、转换工具与手机引擎，不仅更换模型名称。相同巡检图片、相同标注与相同手机用于重新测量效果和资源成本。
+大模型生成答案后，除了向用户返回最终回答，还可以同时返回本次回答所参考的文档来源。对于企业知识问答场景，来源信息可以帮助用户了解答案来自哪些知识库文档，在需要进一步确认时，也可以回到原始文档中查看相关内容。来源信息不需要由大模型生成，而是直接从检索结果的元数据中获取。前面构建知识库时，每个 Chunk 都保留了对应的 `file` 字段，因此可以从 Reranker 排名前 5 的 Chunk 中提取文件名称，并对重复的文件进行去重。
 
-可以按以下顺序迁移：先通过 Notebook 单图和结构输出，再通过手机单图理解与飞行模式推理，最后接回人工确认、离线队列与台账。是否采用 1B 或 35B-A3B 路线，由目标设备资源和端侧实测决定。不能将其他版本、其他机型或其他提示条件下的内存与速度数字直接写入本章。
+下面是调用大模型实现问答的核心代码：
 
-最终完成标志是：另一位开发者能在受支持手机上拍摄一张新图片，断网生成草稿、人工确认并离线保存；联网后点击同步，在台账中看到唯一记录，再查看后续处理状态。模型文件、应用版本与实际手机指标应可以追溯。
+```python
+llm_client = OpenAI(
+    api_key="123",
+    base_url="http://127.0.0.1:18002/v1"
+)
+LLM_MODEL = "Qwen3-4B"
+
+def generate_answer(query, top_chunks):
+
+    context = "\n\n".join(
+        [
+            f"[参考资料{i + 1}]\n{item['content']}"
+            for i, item in enumerate(top_chunks)
+        ]
+    )
+    prompt = f"""
+请根据下面提供的参考资料回答用户问题。
+
+参考资料：
+{context}
+
+用户问题：
+{query}
+
+要求：
+1. 仅根据参考资料中的内容回答问题；
+2. 回答应准确、简洁，不要补充参考资料中不存在的信息；
+3. 如果参考资料中没有与问题相关的答案，请回答：
+   “根据当前知识库暂时无法回答该问题。”
+"""
+    response = llm_client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=[{"role": "user","content": prompt }],
+        temperature=0.1,
+        max_tokens=512
+    )
+
+    return response.choices[0].message.content
+```
+
+至此，一个企业问答助手已经搭建完成，下面我们可以在终端中进行简单测试，测试结果如下：
+
+![正文配图](<../../assets/manuscript-20260914/c19-15eb250aad89d0.webp>)
 
 <a id="c21-s15"></a>
 
-## 参考资料
+## 没答好，问题出在检索还是生成？
 
-- [MiniCPM-V 官方图像推理说明](<https://github.com/OpenBMB/MiniCPM-V#minicpm-v-46>)
-- [MiniCPM-V 4.6 模型页](<https://modelscope.cn/models/OpenBMB/MiniCPM-V-4.6>)
-- [MiniCPM-V Apps 固定手机工程](<https://github.com/OpenBMB/MiniCPM-V-Apps/tree/d1aac05eecaac64b7fc35f1cc93a06b726ce10e3>)
-- [Android LlamaEngine 图像预填充与推理接口](<https://github.com/OpenBMB/MiniCPM-V-Apps/blob/d1aac05eecaac64b7fc35f1cc93a06b726ce10e3/MiniCPM-V-demo-Android/app/src/main/java/com/example/minicpm_v_demo/LlamaEngine.kt>)
-- [业务背景参考：PilotDeck 开发在线智能数据系统](<https://modelbest.feishu.cn/wiki/Up4Owx87uiZLx0kFs3PcqjLYnch>)，仅沿用合作方案列出的业务方向，不据此认定已有手机巡检实现。
+完成 RAG 系统后，还需要通过评测判断整个问答流程是否真正有效。与普通大模型问答不同，RAG 的结果同时受到<strong>知识检索</strong>和<strong>答案生成</strong>两个阶段的影响。因此，RAG 评测通常也需要从这两个方面分别进行。
 
-[MiniCPM&#95;魔搭紫皮书&#95;章节与实践包&#95;v0.1.zip](<../../assets/minicpm-20261015/minicpm-practice-v0.1.zip>)
+1） 检索效果评测
+
+检索阶段的评测标准是用户的问题是否可以在召回的 Chunk 中找到答案，常用指标为 Recall<span>@</span>K。其中，Recall<span>@</span>K 是比较直观的指标，用于衡量前 K 个检索结果覆盖了多少相关文档：
+
+Recall<span>@</span>K：正确的文档是否出现在前 K 个检索结果中。
+
+
+
+```math
+Recall@K =
+\frac{\text{Top K 中检索到的相关文档数量}}
+{\text{所有相关文档数量}}
+```
+
+
+
+例如，一个问题对应 2 个正确的知识片段，在 Top 5 检索结果中找到了其中 2 个，则 Recall<span>@</span>5 为 100%。
+
+2） 生成效果评测
+
+检索到相关知识并不代表最终答案一定正确，还需要进一步评价 LLM 的生成结果，生成阶段可以重点关注答案正确性、完整性、相关性、引用准确性以及幻觉，此部分可参考第十二章中的 12.3 生成任务评测指标，通过这些指标，可以判断模型是否能够准确利用检索到的知识生成答案，并进一步发现答案遗漏、内容偏差或无依据生成等问题。在实际应用中，如果检索结果已经较为准确，但生成效果仍然无法满足要求，可以考虑选择能力更强、参数规模更大的模型作为 RAG 的生成模型，以提升复杂问题的理解和回答能力。
 
 <p></p>
+
+此章节涉及到的实验数据以及实验代码，可参考：https://modelscope.cn/gallery/liucong/564dcc20-ccfc-4d5a-bb12-20386d9d932f

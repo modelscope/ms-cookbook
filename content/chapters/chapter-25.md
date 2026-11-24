@@ -1,280 +1,197 @@
 <!-- Generated from ../source-html/chapter-25.html; do not edit independently. -->
 
-# 定制？使用 DiffSynth 训练图像 LoRA
+# 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步
 
-在实际应用中，通用图像生成模型不一定能够准确生成指定的人物、商品或者画面风格。如果希望模型能生成特定的人物、商品或风格特征，可以使用 LoRA 进行训练。本章首先介绍图像生成模型和 LoRA 的基本概念，再使用 DiffSynth 完成一次图像 LoRA 训练。
+现在最强的生图、生视频模型应该是 GPT Images 2.5 和 Seedance 2.5 了，生图、生视频的上限又被往前推了一截。
+
+那如果把它们当成闭源模型的第一梯队，那开源模型现在到底是什么水平？是玩具吗？是否能真正带来生产力？
+
+这篇直接看看大佬们，能把开源模型玩到什么地步，其中生图选择阿里的 Z-Image，生视频选择 MiniMax H3。
+
+<p></p>
 
 <a id="c25-s1"></a>
 
-## 一句提示词，怎样变成一张图片？
+## <strong>先介绍一下这两个模型</strong>
 
-目前常见的图像生成模型主要由文本编码器、扩散模型和 VAE 等组件组成。用户输入提示词后，模型先理解文字内容，再逐步生成图像特征，最后将这些特征转换为可以直接查看的图片。
+Z-Image 是做的 6B 生图模型，采用 Apache 2.0 许可证。完整的 Z-Image 是非蒸馏底模，支持 CFG、负面提示词和微调；社区里更常见的是 Z-Image-Turbo，只用 8 步，追求的就是一个快。
 
-文本编码器主要负责理解提示词，将文字转换为模型能够处理的文本特征。例如，输入“一只戴着墨镜的橘猫坐在沙滩上”，文本编码器会对“橘猫”“墨镜”“沙滩”等内容进行编码，为后续图像生成提供条件。
+MiniMax H3 则是 33B 的音视频生成模型，可以输出 4 到 15 秒、24fps、带立体声音频的视频。严格来说，它属于开放权重模型，使用的是 MiniMax H3 Community License。开源出来的 H3-Base 可以在本地生成 768p 音视频，但官方那套负责理解复杂输入的 Context-IR，以及 2K 再生成流程，没有完整开源。
 
-扩散模型是生成图像的核心组件。它从随机噪声开始，根据文本特征经过多次计算逐渐去除噪声，形成画面中的物体、颜色和结构。例如，在生成上述图片时，最开始的画面只是一片随机噪声，经过多轮处理后，橘猫、墨镜和沙滩等内容会逐渐形成。
-
-VAE（Variational Autoencoder，变分自编码器）负责在图像和特征空间之间进行转换。为了减少计算量，扩散模型通常不会直接在高分辨率图片上进行计算，而是在压缩后的特征空间中生成图像。生成完成后，再通过 VAE 将图像特征还原为最终图片。
-
-将这些组件组合起来，一次基本的文生图过程如下所示：
-
-![正文配图](<../../assets/manuscript-20260914/c21-f0637e13299fd7.webp>)
-
-用户输入提示词后，模型依次经过文本编码、图像特征生成和图像还原，最终得到图片。不同图像生成模型在具体结构上会有所不同，但整体都需要完成从文本输入到图像输出的转换过程。
+<p></p>
 
 <a id="c25-s2"></a>
 
-## 想让模型画得更像，图像 LoRA 能做什么？
+## <strong>Z-Image，已经不只是把脸画得好看</strong>
 
-通用图像生成模型通常是使用大量图片训练得到的，能够生成多种类型的内容，但对于特定人物、商品或画面风格，生成效果可能不够准确。
+现在很多生图模型都能生成美女，单看一张精修脸其实没啥意思。真正难的是：文字写对没有？数量数对没有？同一件商品能不能在不同视图里保持一致？复杂的空间关系有没有理解正确？
 
-例如，希望模型生成某个指定商品时，即使在提示词中详细描述商品的颜色、形状和外观，生成结果也可能与真实商品存在较大差异。
+<p></p>
 
-可以通过训练让模型学习这些新的视觉特征，但重新训练整个模型需要大量训练数据和计算资源。对于这类特定特征的学习，可以采用参数高效训练方法 LoRA，具体原理可见本文 9.2 节。训练时冻结原模型的大部分参数，只训练新增的少量参数，使模型学习新的特征。
+先看 <span>@</span>witcheer 做的一组本地测试。
 
-训练图像 LoRA 只需要准备少量目标图片，就可以让模型学习特定的人物、商品、风格或其他视觉特征。训练完成后得到的 LoRA 文件比完整模型小很多。使用时加载原始模型，再加载对应的 LoRA，就可以使用新学习的视觉特征。
+![正文配图](<../../assets/manuscript-20260914/c20-4e303a2853b092.webp>)
+
+他在 RTX 5090 上跑 Z-Image-Turbo，1024px 图片大约只要 3.2 秒一张。提示词里要求商店招牌写出指定单词，再画出“正好三只鸭子”，结果文字和数量都对了。
+
+这两个任务看着幼稚，其实一直是扩散模型的老大难。字母容易糊，三只鸭子经常咔咔咔变成四五只。
+
+![正文配图](<../../assets/manuscript-20260914/c20-c027c81c79257c.webp>)
+
+![正文配图](<../../assets/manuscript-20260914/c20-372f0213a6907c.webp>)
+
+原帖：https://x.com/witcheer/status/2074020722972758139
+
+<p></p>
+
+接着是一个更接近电商交付的 case。
+
+<span>@</span>rizavelioglu 让模型生成一张左右分栏图：左边只放一件白色花纹 T 恤，右边让真人模特穿上同一件衣服。提示词还要求保留印花、文字、面料、缝线和版型。
+
+最后出来的图里，两边的衣服没有各画各的，花纹和款式基本能对上。对于电商团队来说，这比单纯生成一张“漂亮模特图”值钱多了。商品图、上身图、营销图可以从同一个设计继续往下做。
+
+当然，这只是一张成功样本，离稳定批量出图还有距离。但它至少把方向跑通了。
+
+![正文配图](<../../assets/manuscript-20260914/c20-2778aa92ca4f07.webp>)
+
+原帖：https://x.com/rizavelioglu/status/2000012841525649621
+
+<p></p>
+
+写实人像这块，<span>@</span>dreamydigiarts 做了一组同提示词对比。
+
+他让 Z-Image-Turbo 和 Nano Banana 2 同时生成一张手机仰拍：蓝天、逆光、人物后仰、手里抱着一大束野花，头发被风吹起来，还要求保留手机照片那种轻微颗粒感。
+
+Z-Image 给出的画面已经有很强的随手拍味道。牛仔裤、皮肤和逆光没有糊成一层塑料，仰拍构图也没问题。拿来做人物氛围图、社媒配图，已经完全不是玩具级别。
+
+![正文配图](<../../assets/manuscript-20260914/c20-1692e5595374ae.webp>)
+
+![正文配图](<../../assets/manuscript-20260914/c20-7b130b1305b0e0.webp>)
+
+原帖：https://x.com/dreamydigiarts/status/2084233075245171142
+
+<p></p>
+
+Z-Image 也不只会写实，<span>@</span>tisch&#95;eins 用同一条提示词测试了 Boogu、Flux 2 Klein 和 Z-Image-Turbo。画面要求一个黑发女术士站在暴风雨山顶，手里的金色法杖必须从手到顶端完整出现，一道闪电从杖尖直冲云层，同时还要有低机位、全身构图、披风、符文、电弧和强烈的金色轮廓光。
+
+这种 prompt 很容易顾此失彼：法杖被裁掉，闪电接错位置，人物也可能只剩一个大头。Z-Image 的结果把主要关系都保持住了，说明它对复杂插画构图也较强的控制力。
+
+![正文配图](<../../assets/manuscript-20260914/c20-f95dd32bae9f1e.webp>)
+
+原帖：https://x.com/tisch_eins/status/2081490372405174375
+
+<p></p>
+
+最后一个是极端微距，<span>@</span>aisthetiic 的提示词很短：让某种动物的瞳孔占据画面主体，用左上方的戏剧光线照出虹膜纹理，背景做成由暗到亮的虚化渐变。
+
+更有意思的是，画面没有散。视线被牢牢锁定在瞳孔上，光线、阴影和背景都在给同一个主体服务。做海报主视觉或者情绪化封面时，这种构图服从度比堆一万句“8K、杰作、超细节”都有用。
+
+![正文配图](<../../assets/manuscript-20260914/c20-b5f58339b18a57.webp>)
+
+原帖：https://x.com/aisthetiic/status/1994424107451007336
+
+<p></p>
+
+这 5 个 case 放在一起看，Z-Image 的优势还是很明显了：
+
+模型不大、速度快、写实能力在线，而且能听懂比较长的自然语言。完整底模还可以继续做 LoRA、ControlNet 和行业微调。
 
 <p></p>
 
 <a id="c25-s3"></a>
 
-## 训练之前，先明确想让模型学什么
+## <strong>MiniMax H3，开源视频开始有导演感了</strong>
 
-根据学习目标不同，图像 LoRA 可以分为风格 LoRA、人物 LoRA、商品 LoRA 和概念 LoRA 等类型。
-
-<a id="c25-s4"></a>
-
-### 风格 LoRA
-
-风格 LoRA 学习的是画面的整体视觉风格：色彩、线条、构图、表现方式。训练时需要准备一组相似画风的图片，图片中的内容可以不同，但整体风格应尽量保持一致。
-
-例如：使用一组水墨画画风的图片训练风格 LoRA，可以让模型生成具有水墨画风格的人物、动物或风景图片。
-
-训练集示例图：
-
-![正文配图](<../../assets/manuscript-20260914/c21-ce6de2b2e02e44.webp>)
-
-测试提示词：一只坐在竹林里吃竹子的熊猫。
-
-<table><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载风格 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-3fd3a32c64192e.webp" alt="正文配图"></td><td><img src="../../assets/manuscript-20260914/c21-5d3e6ea0689d4c.webp" alt="正文配图"></td></tr></tbody></table>
-
-可以看到，加载风格 LoRA 后，画面转换为水墨画风格。
-
-<a id="c25-s5"></a>
-
-### 人物 LoRA
-
-人物 LoRA 主要学习特定人物的外观特征，包括脸部、发型和整体形象等。训练需要同一个人物不同角度、表情、背景和服装的图片，让模型学习人物相对稳定的外观特征。训练完成后，可以通过提示词让这个人物以不同的状态出现在办公室、街道或雪山等不同场景中。
-
-样例：提供一个男生的多张生活照，让模型学习他的外观特征。
-
-训练集示例图：
-
-![正文配图](<../../assets/manuscript-20260914/c21-0358bf22af1ebf.webp>)
-
-测试提示词：一个男生坐在地铁里玩手机。
-
-<table><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载人物 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-86fa3181793ea9.webp" alt="正文配图"></td><td><img src="../../assets/manuscript-20260914/c21-050a6a06b15640.webp" alt="正文配图"></td></tr></tbody></table>
-
-加载人物 LoRA 后，模型可以保持人物的脸部、发型等外观特征稳定。
-
-<a id="c25-s6"></a>
-
-### 商品 LoRA
-
-商品 LoRA 主要学习特定商品的外观特征，例如包装、形状、颜色和标志性结构。训练时可以准备同一商品在不同角度、背景和光照条件下的图片，让模型学习商品相对固定的外观。训练完成后，可以将该商品应用到不同展示场景中，生成商品展示图、电商素材和广告图片。
-
-样例：准备待宣传运动鞋的一组图片，让模型学习该商品特征，生成广告图。
-
-训练集示例图：
-
-![正文配图](<../../assets/manuscript-20260914/c21-394431c612a4d1.webp>)
-
-测试提示词：一双白色运动鞋放置在现代城市街头的混凝土地面上。清晨阳光从侧面照射，背景为模糊的现代建筑和城市道路，运动品牌广告摄影风格，低机位拍摄，浅景深。
-
-<table><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载商品 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-9586bc196eadee.webp" alt="正文配图"></td><td><img src="../../assets/manuscript-20260914/c21-5411cf6bf8b9c9.webp" alt="正文配图"></td></tr></tbody></table>
-
-加载商品 LoRA 后，生成结果保持了运动鞋的外观特征。
-
-<a id="c25-s7"></a>
-
-### 概念 LoRA
-
-概念 LoRA 学习的是一类抽象视觉概念或组合特征，例如未来城市、机械风建筑、科幻元素或特殊服饰元素。与人物 LoRA 和商品 LoRA 不同，概念 LoRA 学习的不是某个具体对象，而是多个对象共同具有的视觉特征。训练时需要准备一组具有相似概念的图片，图片中的具体内容可以不同，但整体概念特征需尽量保持一致。
-
-样例：准备一组未来科技城市图片，让模型学习未来感建筑、智能设备和科幻视觉元素。
-
-训练集示例图：
-
-![正文配图](<../../assets/manuscript-20260914/c21-1d1c74d25e4af1.webp>)
-
-测试提示词：一座未来科技城市，宏伟的悬浮建筑和空中交通，飞行汽车在空中穿梭，巨大的环形轨道和全息广告，蓝天白云，电影级构图，充满未来感的科幻氛围。
-
-<table><tbody><tr><td><p>未加载 LoRA 结果：</p></td><td><p>加载概念 LoRA 结果：</p></td></tr><tr><td><img src="../../assets/manuscript-20260914/c21-50abbbbdc3040e.webp" alt="正文配图"></td><td><img src="../../assets/manuscript-20260914/c21-c587b8f2fac6ff.webp" alt="正文配图"></td></tr></tbody></table>
-
-加载概念 LoRA 后，生成结果体现了未来科技城市的视觉元素。
-
-<a id="c25-s8"></a>
-
-## 从训练到出图，DiffSynth 能帮我们做什么？
-
-DiffSynth 是一个面向图像和视频生成、编辑与训练的开源框架。
-
-在进行图像 LoRA 训练时，需要完成基础模型加载、训练数据读取、训练参数配置、LoRA 训练和模型保存等工作。DiffSynth 对这些过程进行了封装，并针对不同的图像生成模型提供了相应的训练脚本。使用时只需要按照模型要求准备训练数据并配置相关参数，就可以启动 LoRA 训练。
-
-DiffSynth 还提供图像生成 Pipeline。训练完成后，可以直接加载基础模型和训练得到的 LoRA 权重，通过提示词生成图片，测试 LoRA 是否学习到了目标特征。从训练到测试可以在同一个框架中完成。
-
-使用 DiffSynth 训练图像 LoRA 的基本过程如下所示：
-
-![正文配图](<../../assets/manuscript-20260914/c21-6601e8dc60e5d6.webp>)
-
-其中，基础模型决定模型原本具备的图像生成能力，训练数据决定 LoRA 学习的内容，而训练参数会影响最终的训练效果。
-
-<a id="c25-s9"></a>
-
-## 用一组柯基图片，动手训练 LoRA
-
-下面使用 DiffSynth 官方提供的样例数据集完成一次图像 LoRA 训练。
-
-<a id="c25-s10"></a>
-
-### 准备环境
-
-需要下载并安装 DiffSynth-Studio。安装命令如下：
-
-```text
-!git clone https://github.com/modelscope/DiffSynth-Studio.git  
-%cd DiffSynth-Studio
-!pip3 install -e .
-```
-
-结果展示：
-
-![正文配图](<../../assets/manuscript-20260914/c21-b55aa52f6df6f5.webp>)
-
-<a id="c25-s11"></a>
-
-### 选择模型
-
-LoRA 需要基于已有的图像生成模型进行训练，需要先选择基础模型。
-
-DiffSynth 支持多种图像生成模型，本节选择 [Tongyi-MAI/Z-Image-Turbo](<https://www.modelscope.cn/models/Tongyi-MAI/Z-Image-Turbo>) 作为基础模型。该模型参数量较小，需要的显存和计算资源较少，在当前实验环境下可以比较方便快速地完成 LoRA 训练和图片生成测试。
-
-训练完成后，得到的 LoRA 权重需要与 Z-Image-Turbo 基础模型配合使用，不能单独用于图片生成。
-
-<a id="c25-s12"></a>
-
-### 准备训练数据
-
-本节使用 ModelScope 上的 [DiffSynth-Studio/diffsynth&#95;example&#95;dataset](<https://www.modelscope.cn/datasets/DiffSynth-Studio/diffsynth_example_dataset>) 样例数据集进行 LoRA 训练，可以通过以下命令下载：
-
-```bash
-!modelscope download --dataset DiffSynth-Studio/diffsynth_example_dataset \
---include "z_image/Z-Image-Turbo/*" \
---local_dir ./data/diffsynth_example_dataset
-```
-
-下载完成后，样例数据会保存在`data/diffsynth_example_dataset/`。
-
-![正文配图](<../../assets/manuscript-20260914/c21-28a00ba2392742.webp>)
-
-DiffSynth 采用统一的数据集格式。一个基本的图像训练数据集通常由训练图片和元数据文件组成。元数据文件 metadata.csv 记录训练图片及其对应的提示词，其中 image 表示图片文件，prompt 表示图片对应的文本描述。训练时，DiffSynth 会根据这些信息读取图片和提示词。数据集结构如下所示：
-
-![正文配图](<../../assets/manuscript-20260914/c21-30072dfd2cc460.webp>)
-
-查看数据集可以发现，里面包含着同一只柯基犬在不同场景下的图片，下面展示其中一张训练图片。通过这些图片进行训练，可以让模型学习这只柯基犬的外观特征。
-
-![正文配图](<../../assets/manuscript-20260914/c21-2475b46a99ed23.webp>)
-
-<a id="c25-s13"></a>
-
-### 配置训练参数
-
-准备好模型和数据集后，需要配置 LoRA 训练参数。下面训练脚本中使用的主要参数如下：
-
-<table><tr><td>参数</td><td>作用</td></tr><tr><td>dataset_base_path</td><td>训练数据所在目录</td></tr><tr><td>dataset_metadata_path</td><td>数据集元数据文件路径</td></tr><tr><td>max_pixels</td><td>训练图片允许的最大像素数</td></tr><tr><td>dataset_repeat</td><td>每轮训练中数据集重复使用的次数</td></tr><tr><td>model_id_with_origin_paths</td><td>基础模型及其模型文件路径</td></tr><tr><td>learning_rate</td><td>学习率，控制每次训练时参数更新的幅度</td></tr><tr><td>num_epochs</td><td>训练轮数</td></tr><tr><td>output_path</td><td>LoRA 权重的保存目录</td></tr><tr><td>lora_base_model</td><td>指定 LoRA 训练的基础模块</td></tr><tr><td>lora_target_modules</td><td>指定需要添加 LoRA 的模型模块</td></tr><tr><td>lora_rank</td><td>LoRA 的 Rank，影响可训练参数量</td></tr><tr><td>use_gradient_checkpointing</td><td>启用 Gradient Checkpointing，减少训练时的显存占用</td></tr><tr><td>dataset_num_workers</td><td>加载训练数据时使用的进程数量</td></tr></table>
-
-训练时可以根据训练数据和 GPU 显存调整 learning&#95;rate、num&#95;epochs、dataset&#95;repeat、lora&#95;rank 和 max&#95;pixels 等参数。
-
-<a id="c25-s14"></a>
-
-### 启动 LoRA 训练
-
-配置好训练参数后，可以使用`accelerate launch`启动 LoRA 训练。DiffSynth 针对不同模型提供了对应的训练脚本，本节使用 Z-Image-Turbo 的训练脚本，如下所示：
-
-```sql
-!accelerate launch examples/z_image/model_training/train.py \
-  --dataset_base_path data/diffsynth_example_dataset/z_image/Z-Image-Turbo \
-  --dataset_metadata_path data/diffsynth_example_dataset/z_image/Z-Image-Turbo/metadata.csv \
-  --max_pixels 1048576 \
-  --dataset_repeat 50 \
-  --model_id_with_origin_paths "Tongyi-MAI/Z-Image-Turbo:transformer/*.safetensors,Tongyi-MAI/Z-Image-Turbo:text_encoder/*.safetensors,Tongyi-MAI/Z-Image-Turbo:vae/diffusion_pytorch_model.safetensors" \
-  --learning_rate 1e-4 \
-  --num_epochs 2 \
-  --remove_prefix_in_ckpt "pipe.dit." \
-  --output_path "./models/train/Z-Image-Turbo_lora" \
-  --lora_base_model "dit" \
-  --lora_target_modules "to_q,to_k,to_v,to_out.0,w1,w2,w3" \
-  --lora_rank 32 \
-  --use_gradient_checkpointing \
-  --dataset_num_workers 8
-```
-
-训练日志展示：
-
-![正文配图](<../../assets/manuscript-20260914/c21-623521a08f9dc6.webp>)
-
-训练过程中，需要关注程序是否正常运行，以及显存占用和模型保存情况。
-
-如果训练过程中出现显存不足，可以适当降低 max&#95;pixels 或 lora&#95;rank 等参数。当前命令启用了 Gradient Checkpointing，可以减少训练时的显存占用。
-
-训练完成后，LoRA 权重会保存到 output&#95;path 指定的目录中：
-
-![正文配图](<../../assets/manuscript-20260914/c21-84491df0a7f172.webp>)
-
-后续生成图片时，需要加载这里保存的 LoRA 权重。
-
-<a id="c25-s15"></a>
-
-### 使用 LoRA 生成图片
-
-完成训练后，需要加载基础模型和刚刚训练得到的 LoRA 进行图片生成。
-
-针对训练目标，让模型生成一张柯基戴着墨镜站在雪地上的图片，观察生成图片里的小狗是否和训练图片中一致。
-
-```python
-from diffsynth.pipelines.z_image import ZImagePipeline, ModelConfig
-import torch
-
-pipe = ZImagePipeline.from_pretrained(
-    torch_dtype=torch.bfloat16,
-    device="cuda",
-    model_configs=[
-        ModelConfig(model_id="Tongyi-MAI/Z-Image-Turbo", origin_file_pattern="transformer/*.safetensors"),
-        ModelConfig(model_id="Tongyi-MAI/Z-Image-Turbo", origin_file_pattern="text_encoder/*.safetensors"),
-        ModelConfig(model_id="Tongyi-MAI/Z-Image-Turbo", origin_file_pattern="vae/diffusion_pytorch_model.safetensors"),
-    ],
-    tokenizer_config=ModelConfig(model_id="Tongyi-MAI/Z-Image-Turbo", origin_file_pattern="tokenizer/"),
-)
-pipe.load_lora(pipe.dit, "./models/train/Z-Image-Turbo_lora/epoch-1.safetensors")
-prompt = "dog, corgi dog, standing in the snow with sunglasses."
-image = pipe(prompt=prompt, seed=42, rand_device="cuda")
-image.save("image-dog.jpg")
-print("图片保存成功")
-```
-
-结果展示：
-
-![正文配图](<../../assets/manuscript-20260914/c21-8170bdfd74ca38.webp>)
-
-生成图片如下：
-
-![正文配图](<../../assets/manuscript-20260914/c21-b3c54155322268.webp>)
-
-测试时可以修改提示词中的场景、构图或其他描述，多生成几张图片进行比较。如果生成结果能够体现训练数据中的目标特征，又可以根据提示词改变场景和构图，说明 LoRA 已经学习到了相应特征。
+生视频比生图难得多，一张图里画错一根手指，有时候还能裁掉。视频里角色 15 秒不换脸、镜头按时间走、台词不串人、音效跟动作对上，任何一项掉链子，整条片子就废了。
 
 <p></p>
 
-本章代码及相关文件见：https://www.modelscope.cn/gallery/liucong/ba42f266-8a77-447c-aba3-b6d90a391791
+H3 的 case 里，最值得先看的就是双角色一致性。
+
+<span>@</span>coolthor 给 H3 的 Ref2VA 模式喂了两张 Z-Image 生成的角色设定图。一个穿赭色长袍，一个穿蓝灰色衣服，外形故意拉开差异。提示词安排其中一名角色在第 6 到 8 秒入场，还写了三句中文对白。
+
+10.125 秒的视频里，两个人没有互相“串脸”“串衣服”。该入场的角色在前半段没出现，到 7 秒左右才进画面。作者又拿 ASR 对 44 个汉字做了核对，字符错误率是 6.8%，错的还是同音字。
+
+这条是在单张 RTX 5090 上跑的，243 帧用了 437 秒。速度谈不上非常快，但角色、时间和对白可以一起控制，已经很能打了。
+
+![正文配图](<../../assets/manuscript-20260914/c20-21399ea076ac36.webp>)
+
+![正文配图](<../../assets/manuscript-20260914/c20-66554ca06322ab.webp>)
+
+[案例 6-H3 双角色中文对白-完整 10 秒.mp4](<../../assets/manuscript-20260914/c20-7d9146c1b9d02e.mp4>)
+
+原帖：https://x.com/coolthor/status/2096779996320719307
+
+<p></p>
+
+另一条本地 case 来自 <span>@</span>Lumosous。
+
+他用 RTX 4090 和 ComfyUI 做了三种尝试：四场景旅行短片、跟着鼓点切换画面的音乐视频，以及带 4 个镜头和环境声的海边故事。原始想法先交给 MiniMax 官方的 Prompt Writing Skill，整理成带镜头、时间、动作和声音的结构化提示词，再丢给 H3。
+
+这条最有用的地方，是它不只把画面做得“挺漂亮”。鼓点到了，画面真会跟着换；海边那条里，四个镜头、氛围和背景音能在一轮里一起出来。
+
+他的实测数据：4090 跑 15 秒、20 步的低分辨率视频要 200 多秒；升到 768p 就要 1000 多秒。开源可以让你反复改，但免费不等于没有成本，电费、显存和等待时间也是成本。
+
+![正文配图](<../../assets/manuscript-20260914/c20-145acd757537f0.webp>)
+
+[案例 7-H3 本地工作流-演示节选 22 秒.mp4](<../../assets/manuscript-20260914/c20-6bd384c463328e.mp4>)
+
+原帖：https://x.com/Lumosous/status/2089351551361937490
+
+<p></p>
+
+<span>@</span>PixelAigc 做的 30 秒《简·爱》式英伦庄园片段更夸张。
+
+他的提示词直接把 30 秒拆成 4 个镜头。每段写清焦段、机位、人物站位、微表情、对白、呼吸、环境音和禁止项。人物情绪从试探、反驳一路走到动容，男女声线也分别约束。
+
+这条片子用的是本地 ComfyUI、H3 Turbo LoRA，先出 480p，再用 Topaz 超到 1080p。作者给出的时间是，25 秒大约要 13 到 15 分钟。它不能代表官方原版模型的裸跑效果，但能代表开源生态最有意思的地方：模型出来一个月，社区已经开始改速度、做长视频、接自动超分了。
+
+![正文配图](<../../assets/manuscript-20260914/c20-2fe3efcf3dbfde.webp>)
+
+[案例 8-H3 英伦庄园多镜头对白-完整 30 秒.mp4](<../../assets/manuscript-20260914/c20-5139f6a635a7e1.mp4>)
+
+原帖：https://x.com/PixelAigc/status/2093563293306929579
+
+<p></p>
+
+H3 官方单段上限是 15 秒，那更长的视频怎么做？
+
+<span>@</span>superalesha 用 4 张 RTX 3090 跑了一条 30 秒第一人称动作片。他把两个 15 秒片段串起来，前一段故意停在一个稳定画面，后一段从同一帧接着生成，再把重复帧剪掉，声音继续往后走。
+
+成片的接缝藏在第 15 秒，正常看很难发现。整条片从生成到完成用了 44 分钟。这个 case 的价值不在于 H3 突然突破了时长限制，而是有人把限制研究明白以后，用工作流绕过去了。
+
+![正文配图](<../../assets/manuscript-20260914/c20-2e30c4ea95fddb.webp>)
+
+[案例 9-H3 双段串联第一人称动作片-完整 30 秒.mp4](<../../assets/manuscript-20260914/c20-2b841bfdc3eae3.mp4>)
+
+原帖：https://x.com/superalesha/status/2086171185134686509
+
+<p></p>
+
+还有一个特别适合拿来研究“视频提示词到底该怎么写”的 case。
+
+<span>@</span>ou&#95;zhen599 用本地 ComfyUI 做了一段 15 秒赛博飞船短片。画面里有三名女性角色，一人一直坐在左边，一人站在中间拿刀，一人站在右前方拿汽水罐。提示词不只写剧情，还规定谁在第几秒说话、没说话的人不能动嘴、汽水罐必须一直留在右手、红色追踪点什么时候出现在屏幕上，最后舷窗外的阴影再压过来。
+
+这种 case 最难的是空间别乱、道具别丢、台词别串、沉默的人真能闭嘴。H3 已经能把这么多约束塞进一条 15 秒短片里执行，开源视频的玩法明显变了。
+
+![正文配图](<../../assets/manuscript-20260914/c20-58907f0c3e3aa4.webp>)
+
+[案例 10-H3 赛博飞船多角色对白-完整 15 秒.mp4](<../../assets/manuscript-20260914/c20-7b0dbb64916194.mp4>)
+
+原帖：https://x.com/ou_zhen599/status/2097988690102390893
+
+<p></p>
+
+<p></p>
+
+总的来看，
+
+如果你只是想最快出一条成片，闭源模型依然省事。
+
+但如果你想反复试、批量生成、训练自己的风格，或者把能力装进本地工作流，Z-Image 和 H3 已经值得认真研究了。先用开源模型把镜头和素材咔咔咔试出来，真正卡住的时候再调用闭源模型，成本会低很多。
+
+开源模型以前给人的感觉是等等党平替，现在它已经能参与真正的创作了。
+
+对天天要做图、做视频的人来说，最爽的变化就是，以后每冒出一个想法，不用先算这一轮要烧掉多少积分。
 
 <p></p>

@@ -1,169 +1,148 @@
 <article>
-<h1>把自己微调的 MiniCPM 装进手机：从训练拆解到魔搭实践</h1>
-<p>配套实践包：<a href="../../assets/minicpm-20261015/minicpm-practice-v0.1.zip" class="attachment" download="MiniCPM_魔搭紫皮书_章节与实践包_v0.1.zip">MiniCPM_魔搭紫皮书_章节与实践包_v0.1.zip</a></p>
-<p>作者：杨知铮 OpenBMB 开源社区开发者关系负责人、魔搭社区共建者 </p>
-<p>前面几章，我们已经尝试在电脑和云端运行模型。</p>
-<p>不过，平时随手记点事情、查一条信息，我们更常拿起的还是手机。既然开源模型可以下载下来，能不能把它放进手机，让它直接在手机上帮我们处理一些事情？</p>
-<p>当然，手机的内存、电量和散热条件都有限，电脑上能跑的模型，换到手机上未必就能顺畅运行。一般选择一个较小的模型，让它学习具体任务的要求，再通过量化降低权重的资源占用，看看它在手机上的实际表现。</p>
-<p>这次先从整理待办这样的小事开始，随手记下“工作，周五18点提交项目报告，另外需要浇花”，希望模型能把要做的事分别提取出来，有时间的保留时间，没有写明的就留空。如果后续要做一个待办应用，这样的结果就方便程序继续处理。</p>
-<p>围绕这个场景，选用 MiniCPM，在魔搭 Notebook 中完成一次 LoRA 微调，再把模型转换、量化，放到 Android 手机上运行。</p>
-<p>来看看在手机上我们能做哪些有意思的事情。</p>
+<h1>大量用户同时提问，如何让模型答得更快？基于 SGLang 的实践</h1>
+<p class="chapter-author"><span>作者：<strong>SGLang Team</strong></span> <span class="author-links"><a href="https://github.com/sgl-project" target="_blank" rel="noopener noreferrer" aria-label="SGLang Team 的 GitHub 主页（新窗口）" title="GitHub 主页"><img class="author-link-icon" src="../../assets/brand/github.svg" alt="GitHub 主页" width="20" height="20" /></a></span></p>
+<p>在模型推理中，如果我们仅考虑最简单的情景，即在自己的 GPU 上跑起来以后，自己问几句，回答都挺快。可一旦接进业务，将会是完全不同的场景。同一时间可能有成百上千人在提问，Agent 完成一个任务还要连续调用模型十几次。SGLang就是为这样的场景而诞生的大规模推理框架，把模型部署成稳定，高效的服务；提供低成本，高质量的token。</p>
 <p />
-<h2>1. 先定义一个适合手机的小任务</h2>
-<p>本章我们先完成“从记录中抽取明确且尚未完成的待办”的任务。输入是一段文字，输出是以下结构：</p>
-<pre data-language="json"><code>{
-  "tasks": [
-    {"task": "提交项目报告", "due_text": "周五18点", "category": "工作"},
-    {"task": "浇花", "due_text": null, "category": null}
-  ]
-}</code></pre>
-<p><code>task</code> 使用原文中的动作短语；<code>due_text</code> 保留原文的时间描述；<code>category</code> 只在原文明示“工作、生活、学习、其他”时填写，否则为 <code>null</code>。多件事按出现顺序排列，已经完成或取消的事不列入待办，没有待办时返回 <code>{"tasks":[]}</code>。</p>
-<p>保留原文时间能减少一个常见错误：记录里有“明天”，但模型并不知道这条记录是在什么时区、什么日期写的。如果以后要接入日历，应由应用携带记录时间和时区，单独完成时间解析和用户确认。</p>
-<p>任务边界确定之后，先用相同提示词测试基座模型。如果它已经满足你的需求，仍可完成本章实验，观察微调是否带来稳定性提升。</p>
-<h2>2. 一个 MiniCPM 小模型是怎样训练出来的</h2>
-<p>我们使用 <b>MiniCPM5-2B</b> 作为文本模型。它采用标准 <code>LlamaForCausalLM</code> 架构，官方公开了 Base、Midtrain、SFT 和最终模型等阶段产物，适合观察训练阶段之间的关系。本章在最终模型上继续做任务微调，主模型入口是 <a href="https://www.modelscope.cn/models/OpenBMB/MiniCPM5-2B" target="_blank" rel="noopener noreferrer">OpenBMB/MiniCPM5-2B</a>。</p>
-<h3>2.1 小模型需要在能力与运行成本之间取舍</h3>
-<p>手机需要同时为操作系统、各种 app、模型权重、KV cache 和临时计算张量保留内存。选择小模型的目的，是在资源约束下完成指定任务。模型小并不意味着任何任务都容易跑起来；输入复杂程度、输出长度、量化精度和运行引擎都会影响最终体验。</p>
-<p>MiniCPM5-2B 的结构为 42 层、16 个 Query heads、2 个 KV heads，采用 GQA。它的总参数量为 <b>2,516,756,480</b>，非嵌入参数为 <b>1,981,982,720</b>。“2B”是模型名称中的规模标签，计算部署体积时应依据真实参数量和文件。仅将全量权重按每参数 2 字节估算，就约为 5.03 GB；这还没有包括运行时内存。本章从较短输入与较短 JSON 输出开始。</p>
-<h3>2.2 预训练、中期训练与后训练分别解决什么问题</h3>
-<table><colgroup><col /><col /><col /></colgroup><thead><tr><th><p>阶段</p></th><th><p>输入与学习目标</p></th><th><p>MiniCPM5 公开训练路线中的作用</p></th></tr></thead><tbody><tr><td><p>基础训练</p></td><td><p>大规模文本，预测后续 token</p></td><td><p>建立语言与基础知识能力；训练路线包含稳定训练和衰减训练</p></td></tr><tr><td><p>中期训练</p></td><td><p>目标能力相关的数据</p></td><td><p>加强代码、数学等能力，适应目标数据分布</p></td></tr><tr><td><p>监督微调 SFT</p></td><td><p>对话或任务输入与示范回答</p></td><td><p>学习指令遵循、回答方式及特定任务行为</p></td></tr><tr><td><p>强化学习 RL</p></td><td><p>对生成结果的奖励反馈</p></td><td><p>进一步优化有评价信号的任务表现</p></td></tr><tr><td><p>On-Policy Distillation</p></td><td><p>教师对学生生成行为提供训练信号</p></td><td><p>将经过专门训练的教师能力蒸馏到发布模型</p></td></tr></tbody></table>
-<p>官方发布的 UltraData 系列覆盖网页、代码、数学、SFT 和 RL 等数据方向。对开发者来说，值得学习的是数据质量与训练阶段如何相互配合，而不是把全部训练语料搬进一次 Notebook 实验。我们只更新已有模型上的少量 LoRA 参数。</p>
+<p>本章介绍 SGLang 的基本用法：在魔搭 Notebook 的免费 GPU 上部署一个 4B 模型，用 Python 调用它，再看看多人同时提问时，SGLang 能快多少。</p>
 <p />
-<h3>2.3 LoRA 怎样让模型学会我们的任务</h3>
-<p>LoRA 冻结基座权重，为指定线性层加入可训练的低秩更新。一次微调结束后得到的是适配器，它依赖原来的基座，不能当作完整模型独立运行。为了让手机使用，本章会把适配器合并回基座，再转换为 GGUF 并量化。</p>
-<p>数据中的 <code>user</code> 给出记录，<code>assistant</code> 给出符合契约的 JSON。训练学习的是如何处理这些输入及如何输出，不是让模型增加确定可靠的私人知识。特别是“没有时间就填 null”“已经完成的不列入待办”等规则，需要在样例中反复体现。</p>
-<h2>3. 在魔搭 Notebook 中准备环境和数据</h2>
-<p>下载并解压配套实践包，在魔搭 Notebook 中上传整个 <code>minicpm-purplebook-draft</code> 目录，打开 <code>notebooks/01_minicpm5_todo_lora.ipynb</code>。Notebook 的路径检查会确认章节、脚本与数据位于同一项目根目录。我们已经上传了魔搭灵感流（notebook），可以直接点击运行<a href="https://www.modelscope.cn/gallery/ms-cookbook-team/MiniCPM5-Finetuing-and-Evaluation" target="_blank" rel="noopener noreferrer">https://www.modelscope.cn/gallery/ms-cookbook-team/MiniCPM5-Finetuing-and-Evaluation</a></p>
-<p>本章以 Python 3.11 和支持 BF16 的 NVIDIA GPU 为训练环境候选，建议准备 <b>24 GB 显存和至少 30 GB 可用磁盘</b>。这是给初次复现留余量的资源建议，尚不是实测最低需求。最终应记录实际 Notebook 镜像、GPU 型号、峰值显存、磁盘占用和训练时长。选择运行镜像与创建实例，可参考紫皮书第 04、10 章；额度和可获得资源以账号当时显示为准。</p>
-<h3>3.1 对齐模型、模板和依赖</h3>
-<p>官方微调文档区分了两个模板：</p>
-<table><colgroup><col /><col /><col /></colgroup><thead><tr><th><p>模型</p></th><th><p>模板</p></th><th><p>官方文档给出的 ms-swift 要求</p></th></tr></thead><tbody><tr><td><p>MiniCPM5-1B</p></td><td><p><code>minicpm5</code></p></td><td><p>PyPI <code>4.5.3</code></p></td></tr><tr><td><p>MiniCPM5-2B</p></td><td><p><code>minicpm5_2b</code></p></td><td><p><code>&gt;=4.6.0.dev0</code>，文档提供固定源码提交</p></td></tr></tbody></table>
-<p>本章使用 2B 模型，采用官方文档指定的 ms-swift 源码版本：</p>
-<pre data-language="bash"><code>python -m pip install \
-  'git+https://github.com/modelscope/ms-swift.git@654e24f17b5d9f40ed4b9ee4c56a723320244db5' \
-  'transformers==5.7.0' 'modelscope==1.33.0' accelerate peft</code></pre>
-<p>保留 Notebook 镜像提供的匹配 CUDA 的 PyTorch。安装完成后重启内核，记录 <code>pip freeze</code> 和 GPU 信息。上述组合是基于官方兼容范围选定的初稿配置，需要在最终训练镜像中确认；不应把安装命令本身当成兼容性验证。</p>
-<h3>3.2 从魔搭下载基座，固定版本</h3>
-<pre data-language="python"><code>from modelscope import snapshot_download
+<h2>为什么要用 SGLang？</h2>
+<p><a href="https://github.com/sgl-project/sglang" target="_blank" rel="noopener noreferrer">SGLang</a> 是一个开源的大模型推理框架。它把模型加载到 GPU 上，对外提供和 OpenAI API 兼容的接口。业务应用只需要发请求、拿回答，请求怎么排队、怎么在 GPU 上计算，都交给 SGLang。</p>
+<img src="../../assets/sglang-20261124/01-3d141533434123.png" alt="SGLang 在业务应用和 GPU 之间的位置" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>SGLang 已经在生产环境中大规模使用。使用它的既有 NVIDIA、AMD、Google、Meta、Microsoft AI、LinkedIn 这样的科技公司，也有阿里云、腾讯云、百度、美团、蚂蚁集团、火山引擎、科大讯飞等国内厂商，还有清华大学、斯坦福、UC Berkeley 等高校。</p>
+<img src="../../assets/sglang-20261124/02-65df3c496a47a4.png" alt="使用 SGLang 的部分机构" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>和直接用 transformers 一条一条地生成相比，SGLang 主要在两件事上下了功夫。</p>
+<p />
+<p><strong>一是把同时到达的请求合在一起算。</strong>模型每生成一个 token，都要把整个模型的权重从显存中读一遍。只服务一个请求时，读一遍只算出一个 token，GPU 大部分时间都在等数据。SGLang 会把正在生成的多个请求组成一批，读一遍权重，给批里的每个请求各算出一个 token；有请求写完就离开，新请求随时加入。这种做法叫作连续批处理（Continuous Batching）。</p>
+<img src="../../assets/sglang-20261124/03-1a32264b1c1b71.png" alt="逐个处理与连续批处理对比" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p><strong>二是相同的开头只算一次。</strong>实际业务里，很多请求的开头是一样的：知识库问答、客服的每个请求都带着同一段系统提示词和资料；多轮对话每问一句，都要把前面所有的聊天记录重新发一遍；Agent 每调用一次工具，又要把之前的整段过程再发给模型。如果每次都从头计算，大部分算力都花在了重复的内容上。</p>
+<p />
+<p>SGLang 的做法是 RadixAttention：模型处理输入时算出的中间结果叫 KV Cache，SGLang 请求结束后不急着丢掉，而是按文本前缀把它们组织成一棵基数树（Radix Tree）。开头相同的请求共用树上的同一段枝干，到内容开始不同的地方再分叉。新请求进来时，先沿着树找到和自己开头相同的最长部分，这部分直接复用，只计算后面新增的内容。对话轮数越多、共享的提示词越长，省下的计算就越多，首字出来得也越快。</p>
+<img src="../../assets/sglang-20261124/04-fda5ec1ffc62c3.png" alt="多个请求共享同一段前缀" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>RadixAttention 是 SGLang 论文（NeurIPS 2024）提出的核心技术之一，在 SGLang 中默认开启，不需要改任何代码。</p>
+<p />
+<p>效果有多明显？我们用 Qwen3-4B-Instruct-2507 做过一次实测：单张 H200，精度 BF16，回放两段 AI 编程助手的真实工作轨迹（来自 SemiAnalysis 公开的 AgentX 数据集，各取前 8 条请求，输入长度缩短为原来的 1/16），共 16 次请求，2 个会话并发。对照组是开启了连续批处理和前缀缓存的 Hugging Face Transformers serve。</p>
+<table><thead><tr><th><p>服务</p></th><th><p>完成用时</p></th><th><p>输出吞吐</p></th><th><p>平均首字延迟</p></th><th><p>前缀命中率</p></th></tr></thead><tbody><tr><td><p>Hugging Face Transformers serve</p></td><td><p>44.98 秒</p></td><td><p>37.3 token/s</p></td><td><p>128.4 ms</p></td><td><p>81.9%</p></td></tr><tr><td><p>SGLang</p></td><td><p>3.70 秒</p></td><td><p>453.7 token/s</p></td><td><p>27.5 ms</p></td><td><p>85.1%</p></td></tr></tbody></table>
+<p />
+<p>同样的模型、同样的 GPU，换成 SGLang，吞吐和延迟都相差了一个数量级。这是一次小规模测试，只跑了一轮，也没有评测回答质量，但足够说明推理框架的作用。</p>
+<p />
+<h2>准备 GPU 环境，安装 SGLang</h2>
+<p>1）按照第 4 章的方法，打开<a href="https://modelscope.cn/my/mynotebook" target="_blank" rel="noopener noreferrer">我的 Notebook</a>。启动 GPU 环境之前，先在「当前镜像版本」的下拉框里选择 <code>ubuntu22.04-cuda13.0.3-py312-torch2.13.0</code> 开头的镜像：SGLang 最新版需要 CUDA 13，旧镜像是 CUDA 12.1。魔搭的免费 GPU 是一张 NVIDIA A10，显存 24GB，运行本章的 4B 模型够用。</p>
+<p />
+<p>2）实例启动后，点击「查看」进入开发页面，打开一个终端，执行下面命令查看 GPU：</p>
+<pre data-language="bash"><code>nvidia-smi</code></pre>
+<p>能看到 <code>NVIDIA A10</code> 和 23028MiB 显存，右上角的 <code>CUDA Version</code> 是 13.0，说明环境没问题。如果这里显示的是 12.x，说明选的是旧镜像，回到实例列表换成 CUDA 13.0 的镜像再启动。</p>
+<img src="../../assets/sglang-20261124/05-bc544195d44416.png" alt="nvidia-smi 输出" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>3）单独建一个 Python 环境，然后安装 SGLang：</p>
+<pre data-language="bash"><code>python3 -m venv /root/sglang-env
+source /root/sglang-env/bin/activate
+pip install --pre sglang modelscope</code></pre>
+<p>魔搭镜像里的 pip 已经配置好阿里云的镜像源，下载很快，整个安装大约 5 分钟。环境放在本地盘的 <code>/root</code> 下，而不是持久化目录 <code>/mnt/workspace</code>：<code>/mnt/workspace</code> 是网络存储，SGLang 依赖的 PyTorch、CUDA 库有上万个小文件，装到这里要二十分钟以上。代价是实例关闭后环境会被清掉，下次启动要重新执行一遍上面三行命令。</p>
+<p />
+<p>安装完成后，执行 <code>sglang version</code>，能打印出版本号（我们测试时是 <code>0.5.23</code>），说明安装成功。安装遇到问题时，以 <a href="https://docs.sglang.io/docs/get-started/install" target="_blank" rel="noopener noreferrer">SGLang 官方安装文档</a> 为准。</p>
+<p />
+<h2>从魔搭下载模型，启动服务</h2>
+<p>1）本章以 <a href="https://www.modelscope.cn/models/Qwen/Qwen3-4B-Instruct-2507" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-4B-Instruct-2507</a> 为例，BF16 权重约 8GB。在终端执行下面命令，把模型下载到持久化目录，实例重启后不用重新下载。在魔搭实例里下载很快，我们测试时不到一分钟：</p>
+<pre data-language="bash"><code>modelscope download --model Qwen/Qwen3-4B-Instruct-2507 \
+  --local_dir /mnt/workspace/models/Qwen3-4B-Instruct-2507</code></pre>
+<p />
+<p>2）启动 SGLang 服务。服务会一直运行，放在 Notebook 单元格里会占住内核，所以在终端中执行：</p>
+<pre data-language="bash"><code>sglang serve /mnt/workspace/models/Qwen3-4B-Instruct-2507 \
+  --served-model-name qwen3-4b \
+  --host 127.0.0.1 --port 30000 \
+  --context-length 8192 \
+  --mem-fraction-static 0.8</code></pre>
+<p><code>--served-model-name</code> 是调用时使用的模型名；<code>--context-length</code> 限制单个请求的最大长度，设小一些可以给并发请求留出更多显存；<code>--mem-fraction-static</code> 是 SGLang 预先占用的显存比例，用来存放模型权重和 KV Cache。</p>
+<p />
+<p>启动时 SGLang 会先加载权重、分配 KV Cache，再做一轮预热，在 A10 上大约需要 3 分钟。日志中出现下面这一行，说明服务启动成功：</p>
+<pre data-language="text"><code>The server is fired up and ready to roll!</code></pre>
+<img src="../../assets/sglang-20261124/06-d7b23adbb3b183.png" alt="启动日志" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>这时另开一个终端执行 <code>nvidia-smi</code>，会看到显存已经用掉 19GB 多，这是 SGLang 按 <code>--mem-fraction-static</code> 预先分配的，属于正常现象。</p>
+<p />
+<h2>用 Python 调用模型服务</h2>
+<p>服务启动后，在开发页面新建一个 Notebook，内核选择 Python 3。魔搭镜像里已经装好了 OpenAI 的 Python 客户端，直接运行下面的测试代码：</p>
+<pre data-language="Python"><code>from openai import OpenAI
 
-base_dir = snapshot_download(
-    "OpenBMB/MiniCPM5-2B",
-    revision="master",
-    local_dir="models/minicpm5-2b"
-)</code></pre>
-<p><code>master</code> 用于第一次发现当前产物。正式复现时，应在模型页选定实际存在的固定版本或提交，替换 <code>revision</code>，并记录配置、分词器和权重文件的 SHA256。Notebook 会生成文件清单，之后训练与评测全部使用下载到的本地路径。</p>
-<p>不能用“今天下载的模型”作为长期复现标识，也不能只固定权重、不固定分词器。</p>
-<h3>3.3 准备训练、验证和测试数据</h3>
-<p>配套包提供原创合成教学数据：训练集 320 条、验证集 64 条、测试集 96 条。三个集合使用不同的外围表述模板，并检查原始输入不重复。它们包含单事项、多事项、取消、已完成、无待办、无关时间以及记录内要求改变输出格式的备注。</p>
-<pre data-language="bash"><code>python examples/build_data.py</code></pre>
-<p>训练文件采用 ms-swift 支持的 messages JSONL，每行一个完整对话：</p>
-<pre data-language="json"><code>{"messages":[{"role":"system","content":"按本章待办契约输出JSON。"},{"role":"user","content":"工作：周五18点提交项目报告"},{"role":"assistant","content":"{\"tasks\":[{\"task\":\"提交项目报告\",\"due_text\":\"周五18点\",\"category\":\"工作\"}]}"}]}</code></pre>
-<p>上例缩短了系统提示，实际文件包含 <code>examples/task_contract.py</code> 中的完整提示。训练、验证、测试和手机任务应使用同一契约。</p>
-<p>合成数据适合教会读者跑通流程。虽然表述模板分离，但任务词汇与生成规则仍有共享，它不能证明模型已适应真实用户的全部记录。项目验收还应补充经过授权、人工标注且未参与调参的真实测试集。验证集用于调整参数和挑选检查点；最终测试集不用于选择提示词或学习率。</p>
-<p>数据集托管时，将输入、标签、划分方法、生成脚本、版本和许可一同发布到魔搭数据集仓库。正文定稿前补上双方实际创建的仓库链接，配套包中的本地文件即可先用于初稿复现。</p>
-<h2>4. 用 ms-swift 完成一次 LoRA 微调</h2>
-<p>在项目根目录执行：</p>
-<pre data-language="bash"><code>CUDA_VISIBLE_DEVICES=0 swift sft \
-  --model models/minicpm5-2b \
-  --model_type llama --template minicpm5_2b \
-  --tuner_type lora \
-  --dataset data/train.jsonl --val_dataset data/dev.jsonl \
-  --target_modules q_proj k_proj v_proj o_proj gate_proj up_proj down_proj \
-  --lora_rank 16 --lora_alpha 32 --lora_dropout 0.05 \
-  --num_train_epochs 2 --learning_rate 1e-4 --warmup_ratio 0.05 \
-  --per_device_train_batch_size 1 --per_device_eval_batch_size 1 \
-  --gradient_accumulation_steps 8 \
-  --max_length 512 --gradient_checkpointing true --bf16 true \
-  --eval_strategy steps --eval_steps 20 \
-  --save_strategy steps --save_steps 20 --save_total_limit 2 \
-  --logging_steps 5 --seed 47 \
-  --output_dir runs/todo</code></pre>
-<p><code>--model_type llama</code> 负责选择模型加载类型，<code>--template minicpm5_2b</code> 负责选择对话模板，二者缺一可能导致自动匹配错误。SFT 样本中的 assistant 没有思考内容，固定版本的模板默认会为这类样本加入非思考前缀；<code>enable_thinking</code> 是推理选项，不应把它当成控制训练标签的方法。</p>
-<table><colgroup><col /><col /><col /></colgroup><thead><tr><th><p>参数</p></th><th><p>本章初始值</p></th><th><p>调整时观察什么</p></th></tr></thead><tbody><tr><td><p>学习率</p></td><td><p><code>1e-4</code></p></td><td><p>太大可能破坏输出行为，太小可能学习不足；用验证集判断</p></td></tr><tr><td><p>训练轮数</p></td><td><p><code>2</code></p></td><td><p>训练损失下降而验证结果恶化，可能过拟合</p></td></tr><tr><td><p>LoRA rank / alpha</p></td><td><p><code>16 / 32</code></p></td><td><p>控制更新容量与缩放，优先保持官方示例量级</p></td></tr><tr><td><p>单卡 batch / 累积步数</p></td><td><p><code>1 / 8</code></p></td><td><p>单卡有效 batch 为 8；先用小 batch 控制显存</p></td></tr><tr><td><p>最大长度</p></td><td><p><code>512</code></p></td><td><p>应覆盖完整提示、记录和答案；统计实际模板化长度，避免丢样本</p></td></tr></tbody></table>
-<p>LoRA 仍需加载基座，所以不会消除基座权重、激活和 KV 等开销。遇到 OOM，先确认其他进程、样本长度、batch 和数据是否异常，再考虑低资源路线。更换为 1B 时应同时换模型、模板、手机注册项和评测标识。</p>
-<p>训练日志中需要确认：损失不是 NaN、实际处理的样本数正确、验证按预期运行、检查点保存了适配器。正常训练结束只是产物生成成功，不能据此认定任务效果已经提高。</p>
-<h2>5. 比较基座、微调和量化后的结果</h2>
-<p>先测试基座，再测试合并权重，最后测试 GGUF。比较时使用同一测试集、系统提示、输出上限和非思考模式。为便于对照，本实验采用确定性解码；这是任务评测协议，不是对 MiniCPM 所有推理场景的采样推荐。</p>
-<pre data-language="bash"><code>python examples/predict_todo.py \
-  --model models/minicpm5-2b --out results/base.jsonl
+client = OpenAI(base_url="http://127.0.0.1:30000/v1", api_key="EMPTY")
 
-python examples/evaluate_todo.py \
-  --predictions results/base.jsonl --report results/base-report.json</code></pre>
-<p>微调模型需要先合并。将 <code>--adapters</code> 替换为训练实际输出的检查点路径，示例中的 <code>checkpoint-实际步数</code> 不可原样执行：</p>
-<pre data-language="bash"><code>swift export \
-  --model models/minicpm5-2b \
-  --model_type llama --template minicpm5_2b \
-  --adapters runs/todo/实际运行目录/checkpoint-实际步数 \
-  --merge_lora true --output_dir artifacts/todo-merged
+response = client.chat.completions.create(
+    model="qwen3-4b",
+    messages=[
+        {"role": "system", "content": "你是一个有帮助的中文助手。"},
+        {"role": "user", "content": "请用三句话介绍一下杭州。"},
+    ],
+    temperature=0.2,
+    max_tokens=512,
+)
 
-python examples/predict_todo.py \
-  --model artifacts/todo-merged --out results/merged.jsonl
+print(response.choices[0].message.content)</code></pre>
+<p><code>base_url</code> 指向刚才启动的服务，<code>model</code> 填启动时设置的模型名。本地服务不校验密钥，<code>api_key</code> 填一个非空字符串即可。</p>
+<p />
+<p>结果显示如下：</p>
+<img src="../../assets/sglang-20261124/07-147fbeeedbfb28.png" alt="调用结果" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>聊天界面一般会边生成边显示，只需要加上 <code>stream=True</code>：</p>
+<pre data-language="Python"><code>stream = client.chat.completions.create(
+    model="qwen3-4b",
+    messages=[{"role": "user", "content": "请用三句话介绍一下杭州。"}],
+    max_tokens=512,
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices and chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)</code></pre>
+<p />
+<h2>16 个人同时提问，会慢 16 倍吗？</h2>
+<p>下面准备 16 个问题，分别用两种方式发送：一种是等上一个回答完成再发下一个，另一种是 16 个请求同时发出。代码如下：</p>
+<pre data-language="Python"><code>import asyncio, time
+from openai import AsyncOpenAI
 
-python examples/evaluate_todo.py \
-  --predictions results/merged.jsonl --report results/merged-report.json</code></pre>
-<p>配套 Notebook 会列出实际检查点并允许选择，避免把示例路径当成已生成的文件。</p>
-<table><colgroup><col /><col /><col /><col /><col /></colgroup><thead><tr><th><p>指标</p></th><th><p>定义</p></th><th><p>基座</p></th><th><p>合并权重</p></th><th><p>Q4 GGUF</p></th></tr></thead><tbody><tr><td><p>结构合法率</p></td><td><p>原始输出能直接解析且字段、类型满足契约的样本比例</p></td><td><p>25.00%（24/96）</p></td><td><p>100%（96/96）</p></td><td><p>100%（96/96）</p></td></tr><tr><td><p>整条记录正确率</p></td><td><p>解析结果与标准答案完全相同的样本比例</p></td><td><p>16.67%（16/96</p></td><td><p>100%（96/96）</p></td><td><p>100%（96/96）</p></td></tr><tr><td><p>事项数量准确率</p></td><td><p>正确提取事项数量且输出结构合法的样本比例</p></td><td><p>21.60%（70/324）</p></td><td><p>100%（324/324</p></td><td><p>100%（324/324</p></td></tr><tr><td><p>字段准确率</p></td><td><p>按事项顺序比较三个字段，多项或少项均扣分</p></td><td><p>21.60%（70/324</p></td><td><p>100%（324/324）</p></td><td><p>100%（324/324）</p></td></tr><tr><td><p>缺失信息保持率</p></td><td><p>标准答案应为 null 的字段仍输出 null 的比例</p></td><td><p>14.29%（7/49）</p></td><td><p>100%（49/49）</p></td><td><p>100%（49/49）</p></td></tr></tbody></table>
-<p>无法解析的输出、超时和缺失预测都计为失败；评分前不删除 Markdown、不修复 JSON、不补字段。空待办样本的字段评分按一个完整空记录计算，避免被统计时忽略。所有指标应同时报告样本数量与失败样例。</p>
-<p>EvalScope 可以用 <code>general_qa</code> 组织这批测试数据和报告，入口为 <code>examples/qa_evalscope.py</code>。它的默认 BLEU、ROUGE 适合补充观察，却不能判断“时间是否凭空补全”“是否把取消事项当成待办”，因此本章以任务校验脚本为主要依据。通用评测原理可继续阅读紫皮书第 16 章。</p>
-<p>实际项目还可以增加“基座加少量示例提示”的对照，判断收益来自微调还是提示改进。这一组应独立标记，不能混入同提示词的主对照。</p>
-<h2>6. 转换、量化，并再次验证</h2>
-<p>GGUF 是模型文件格式，Q4_K_M、Q8_0 是量化方案。已经训练好的 LoRA 适配器应先合并到完整权重，不能将适配器直接改名为 <code>.gguf</code>。MiniCPM5 是文本模型，不需要 <code>mmproj</code>。</p>
-<p>在 Linux 转换环境中准备 llama.cpp。本初稿将下面的上游提交作为转换候选，需要与手机内置引擎共同验收：</p>
-<pre data-language="bash"><code>git clone https://github.com/ggml-org/llama.cpp.git vendor/llama.cpp
-git -C vendor/llama.cpp checkout 23b0202a189c44a54625aadcb37a946dd1d6278d
-python -m pip install -r vendor/llama.cpp/requirements.txt
-cmake -S vendor/llama.cpp -B vendor/llama.cpp/build \
-  -DGGML_CUDA=OFF -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release
-cmake --build vendor/llama.cpp/build -j 4 \
-  --target llama-quantize llama-cli llama-server
+aclient = AsyncOpenAI(base_url="http://127.0.0.1:30000/v1", api_key="EMPTY")
+provinces = ["浙江", "四川", "云南", "广东", "山东", "陕西", "湖南", "福建",
+             "江苏", "河南", "湖北", "安徽", "江西", "贵州", "山西", "甘肃"]
+questions = [f"用三句话介绍{p}省的特色美食。" for p in provinces]
 
-bash examples/convert_gguf.sh \
-  artifacts/todo-merged artifacts/todo-gguf vendor/llama.cpp</code></pre>
-<p>脚本生成 F16、Q4_K_M、Q8_0 三份文件和校验清单。官方基座发布的 2B Q4_K_M 文件为约 1.56 GB，仅供存储规划参考；自己的产物大小应测量，文件体积不能代替运行内存。</p>
-<p>先在电脑启动 Q4 服务，使用同一测试集检查转换与量化是否破坏模板、分词和任务效果：</p>
-<pre data-language="bash"><code>vendor/llama.cpp/build/bin/llama-server \
-  -m artifacts/todo-gguf/todo-Q4_K_M.gguf -a todo \
-  --host 127.0.0.1 --port 8080 -c 2048 --jinja</code></pre>
-<p>在另一个终端运行：</p>
-<pre data-language="bash"><code>python examples/predict_api.py --out results/q4.jsonl
-python examples/evaluate_todo.py \
-  --predictions results/q4.jsonl --report results/q4-report.json</code></pre>
-<p>服务必须实际支持 <code>enable_thinking=false</code>，并在对话模板中生成非思考前缀；以测试请求的真实表现和模板日志核对。若模板没有正确关闭思考，应修复模板或运行时配置，不通过截取思考内容掩盖问题。量化后退化明显时，检查分词器和模板一致性，再比较 Q8 与 F16，不能只用更强约束让 JSON “看上去正确”。</p>
-<h2>7. 上传到自己的魔搭模型仓库</h2>
-<p>为适配器、合并权重和手机 GGUF 分别建立仓库或明确区分目录。模型卡说明各自产物角色，并互相链接。</p>
-<table><colgroup><col /><col /><col /></colgroup><thead><tr><th><p>产物</p></th><th><p>是否可独立加载</p></th><th><p>模型卡应写明的关键内容</p></th></tr></thead><tbody><tr><td><p>LoRA 适配器</p></td><td><p>否，需要对应基座</p></td><td><p>基座版本、LoRA 参数、训练数据及加载方法</p></td></tr><tr><td><p>合并权重</p></td><td><p>是，使用相应推理框架</p></td><td><p>合并来源、分词器、模板及评测结果</p></td></tr><tr><td><p>手机 GGUF</p></td><td><p>需兼容的手机运行时</p></td><td><p>量化格式、转换提交、手机工程提交及校验和</p></td></tr></tbody></table>
-<p>在魔搭网页创建自己的模型仓库，把可分发文件放进独立发布目录，补上 README 模型卡和必要配置。上传脚本只接收这个目录，不应把训练工作区、账号凭据或私人记录一起上传。</p>
-<pre data-language="bash"><code>python examples/upload_model.py \
-  --repo 你的用户名/你的手机模型仓库 \
-  --folder artifacts/todo-gguf \
-  --revision cookbook-v0.1</code></pre>
-<p>这是一条需要读者填写自己仓库的示例命令。上传前在该目录准备 <code>README.md</code>；Token 在脚本运行时隐藏输入。上传后记录实际仓库链接与固定提交。<code>cookbook-v0.1</code> 只是发布分支示例，若后续更新，同名分支不再代表相同字节；手机注册最终应使用实际固定提交或不会覆盖的发布版本。</p>
-<p>模型卡至少包含任务契约、基座与分词器版本、数据来源和许可、训练参数、环境清单、评测方法与失败案例、量化方式、手机要求及局限。模型、数据与教程各自的许可分别处理，不因为教程仓库采用 Apache-2.0 就自动改变所有材料的许可。</p>
-<h2>8. 在 Android 手机上运行自己的模型</h2>
-<p>主路线使用 OpenBMB 官方 <a href="https://github.com/OpenBMB/MiniCPM-V-Apps" target="_blank" rel="noopener noreferrer">MiniCPM-V Apps</a>。虽然项目名称带 V，公开工程也支持 MiniCPM5-1B、MiniCPM5-2B 文本模型。</p>
-<p><b>官方预编译 APK 的模型列表是固定的。</b> 本章使用源码注册自己的 GGUF，再构建安装。它不是“把文件放入任意目录，官方 APK 就能识别”的通用导入方案。完成注册后，应用的 Model Manager 可以下载你的固定版本模型。</p>
-<pre data-language="bash"><code>git clone https://github.com/OpenBMB/MiniCPM-V-Apps.git vendor/MiniCPM-V-Apps
-git -C vendor/MiniCPM-V-Apps checkout d1aac05eecaac64b7fc35f1cc93a06b726ce10e3
-git -C vendor/MiniCPM-V-Apps submodule update --init --recursive
+async def ask(q):
+    r = await aclient.chat.completions.create(
+        model="qwen3-4b", messages=[{"role": "user", "content": q}],
+        max_tokens=256, temperature=0)
+    return r.usage.completion_tokens
 
-python examples/register_android_model.py \
-  --apps vendor/MiniCPM-V-Apps \
-  --repo 你的用户名/你的手机模型仓库 \
-  --revision 上传后的固定提交或发布版本 \
-  --gguf artifacts/todo-gguf/todo-Q4_K_M.gguf</code></pre>
-<p>脚本在官方 <code>ModelInfo.kt</code> 的模型列表中增加一项，设置独立模型 ID、魔搭下载 URL 和文件校验值；同时在该自定义模型的加载与清空会话入口设置相同的待办系统提示和非思考模式。这里使用公开可下载仓库；私有仓库需要另外实现鉴权下载，本章不把账号 Token 打包进手机应用。</p>
-<p>用 Android Studio 打开 <code>vendor/MiniCPM-V-Apps/MiniCPM-V-demo-Android</code>。所选工程声明 NDK <code>27.0.12077973</code>、CMake <code>4.1.2</code>、compile SDK 36.1，按实际 Gradle 提示安装匹配组件，在已配置 SDK 的环境构建：</p>
-<pre data-language="bash"><code>cd vendor/MiniCPM-V-Apps/MiniCPM-V-demo-Android
-./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk</code></pre>
-<p>读者硬件范围先按官方安装页的 Android 8.0+、ARM64、建议至少 6 GB RAM 选择；具体手机能否运行以本章自定义模型的实测为准。源码声明的最低 API 与安装页存在差异，正文采用安装页更保守的范围，不据此承诺全部设备兼容。</p>
-<p>手机上选择“我的 MiniCPM 待办助手”，完成模型下载并加载。注册脚本会使用 <code>task_contract.py</code> 中的提示生成 <code>TodoPrompts.kt</code>，并在该模型加载及清空会话后调用 <code>setSystemPrompt</code>。每条测试前清空会话，保持非思考模式。原版聊天界面没有这个任务契约；如果跳过脚本，只把契约粘贴为用户消息，属于不同提示条件，应另外标记结果。</p>
-<p>下载完成后开启飞行模式，输入一条没有见过的新记录。成功验收应同时包括：能生成符合契约的结果、没有调用远程推理接口、模型文件来自自己微调后的固定版本。运行官方原版模型只能验证安装路线，不能替代对自定义产物的验证。</p>
-<h2>9. 记录手机体验与排查问题</h2>
-<table><colgroup><col /><col /><col /></colgroup><thead><tr><th><p>实测项目</p></th><th><p>测量方法</p></th><th><p>结果</p></th></tr></thead><tbody><tr><td><p>机型、系统、可用内存</p></td><td><p>记录型号、系统版本与加载前可用内存</p></td><td><p>待测</p></td></tr><tr><td><p>首次加载时间</p></td><td><p>从点击加载到模型可接收输入</p></td><td><p>待测</p></td></tr><tr><td><p>首字延迟</p></td><td><p>从提交记录到第一个输出 token</p></td><td><p>待测</p></td></tr><tr><td><p>完整待办生成时间</p></td><td><p>从提交到生成结束，包含提示处理</p></td><td><p>待测</p></td></tr><tr><td><p>解码速度</p></td><td><p>生成 token 数除以实际解码时间，注明 tokenizer</p></td><td><p>待测</p></td></tr><tr><td><p>峰值内存</p></td><td><p>用系统工具采样进程内存，记录采样口径</p></td><td><p>待测</p></td></tr><tr><td><p>连续运行</p></td><td><p>固定输入长度连续 20 条，记录延迟、失败及发热</p></td><td><p>待测</p></td></tr><tr><td><p>断网推理</p></td><td><p>飞行模式下输入新记录并生成结果</p></td><td><p>待验收</p></td></tr></tbody></table>
-<p>不能将字符数当成 token 数，也不能把桌面 GGUF 服务速度当成手机速度。首字延迟与整条 JSON 完成时间同时报告，才能反映待办助手的真实交互成本。</p>
-<p>模型导入失败时，检查文件完整性、GGUF 元数据、分词器与引擎提交；出现思考内容时，检查模板和非思考设置；内存不足时，降低上下文与输出上限、比较量化方案；格式退化时，从原始失败样例定位数据与契约问题。JSON 非法时应用应保留原文，允许重新生成或手动编辑，不能把错误结果直接写入日历。</p>
-<p>本章的完成标准是：自己的魔搭仓库有可追溯的训练与部署产物，自己的受支持手机能够加载这个产物，断网将新的记录转换成待办。到这一步，微调、发布和端侧运行才连成同一个实践。</p>
-<h2>10.参考资料</h2>
-<ul><li><a href="https://github.com/OpenBMB/MiniCPM/tree/316cfb1cea39f39cfa16b4f5703b77495c2340be" target="_blank" rel="noopener noreferrer">MiniCPM 官方仓库：结构、阶段权重与训练路线</a></li><li><a href="https://github.com/OpenBMB/MiniCPM/blob/316cfb1cea39f39cfa16b4f5703b77495c2340be/docs/finetune/ms_swift.md" target="_blank" rel="noopener noreferrer">官方 ms-swift 微调说明</a></li><li><a href="https://github.com/OpenBMB/MiniCPM/blob/316cfb1cea39f39cfa16b4f5703b77495c2340be/docs/deployment/llama_cpp.md" target="_blank" rel="noopener noreferrer">官方 llama.cpp 部署与自定义 GGUF 转换说明</a></li><li><a href="https://github.com/OpenBMB/MiniCPM-V-Apps/tree/d1aac05eecaac64b7fc35f1cc93a06b726ce10e3" target="_blank" rel="noopener noreferrer">MiniCPM-V Apps 固定工程版本</a></li><li><a href="https://github.com/modelscope/ms-swift/blob/654e24f17b5d9f40ed4b9ee4c56a723320244db5/swift/arguments/base_args/template_args.py" target="_blank" rel="noopener noreferrer">ms-swift 模板参数与训练标签说明</a></li><li><a href="https://github.com/modelscope/evalscope/blob/3af6b5f0412a4eb88bc2dcd4308b2e0fe6713de1/docs/zh/advanced_guides/custom_dataset/llm.md" target="_blank" rel="noopener noreferrer">EvalScope 自定义问答数据说明</a></li></ul>
+async def one_by_one():
+    return [await ask(q) for q in questions]
+
+async def all_at_once():
+    return await asyncio.gather(*(ask(q) for q in questions))
+
+for name, run in [("逐个发送", one_by_one), ("同时发送", all_at_once)]:
+    start = time.perf_counter()
+    tokens = sum(await run())
+    sec = time.perf_counter() - start
+    print(f"{name}：{sec:5.1f} 秒，共生成 {tokens} token，平均 {tokens / sec:5.0f} token/s")</code></pre>
+<p>结果显示如下：</p>
+<img src="../../assets/sglang-20261124/08-02d157cfe564ac.png" alt="并发测试结果" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>两种方式生成的 token 数差不多，逐个发送用了 26.7 秒，同时发送只用了 2.4 秒，每秒生成的 token 数从 53 涨到了 581。16 个人同时提问并不会慢 16 倍，反而整体快了十倍多，这就是前面讲的连续批处理在起作用：多个请求共享同一次计算，GPU 的算力被用得更充分。</p>
+<p />
+<p>我们还在一张数据中心级的 NVIDIA B300 上，用同一个模型、同一份代码跑了这个测试，两张卡的结果放在一起对比：</p>
+<table><thead><tr><th><p>GPU</p></th><th><p>逐个发送</p></th><th><p>同时发送</p></th><th><p>提速</p></th></tr></thead><tbody><tr><td><p>NVIDIA A10（魔搭免费 GPU）</p></td><td><p>26.7 秒，53 token/s</p></td><td><p>2.4 秒，581 token/s</p></td><td><p>约 11 倍</p></td></tr><tr><td><p>NVIDIA B300</p></td><td><p>3.5 秒，391 token/s</p></td><td><p>0.7 秒，2005 token/s</p></td><td><p>约 5 倍</p></td></tr></tbody></table>
+<p />
+<p>B300 的算力和显存带宽都高得多，逐个发送已经比 A10 快 7 倍多。16 个请求还远不足以让 B300 满载，所以同时发送的提速倍数反而比 A10 小。换到哪张卡上，规律都一样：同时到达的请求越多，SGLang 合在一起算的收益越大。</p>
+<p />
+<h2>常见问题</h2>
+<p><strong>启动时提示显存不足。</strong>把 <code>--mem-fraction-static</code> 调低到 0.7 左右，或者把 <code>--context-length</code> 调小；模型本身放不下时，换更小的模型或量化版本，可以参考第 13 章。</p>
+<p><strong>启动时出现 <code>CUDA driver version is insufficient</code> 等 CUDA 报错。</strong>通常是实例用的是 CUDA 12.1 的旧镜像。关闭实例，在「当前镜像版本」里换成 CUDA 13.0 的镜像，重新启动后再安装。</p>
+<p><strong>安装很慢，或者一直卡住不动。</strong>确认用的是镜像自带的 <code>pip</code>。<code>uv</code> 等工具默认访问 pypi.org，在魔搭实例里会非常慢。另外不要把环境建在 <code>/mnt/workspace</code> 下，原因见上文。</p>
+<p><strong>重启实例后提示找不到 <code>sglang</code> 命令。</strong>环境建在本地盘，实例关闭后会被清掉，重新执行一遍安装命令即可。模型在 <code>/mnt/workspace</code> 下，不需要重新下载。</p>
+<p><strong>启动时出现 FlashInfer 相关报错。</strong>在启动命令中加上 <code>--attention-backend triton --sampling-backend pytorch</code>，换用其他实现。</p>
+<p><strong>提示 <code>address already in use</code>。</strong>端口被占用，通常是之前的服务还在运行。停掉旧服务，或者换一个端口，调用代码中的端口同步修改。</p>
+<p />
+<p>实验结束后，在启动服务的终端按 <code>Ctrl + C</code> 停止 SGLang，再回到 Notebook 页面停止 GPU 实例。只关闭浏览器页面，并不会停止云端的实例。</p>
+<p />
+<p>想换其他模型或硬件，可以参考 <a href="https://docs.sglang.io/cookbook/intro" target="_blank" rel="noopener noreferrer">SGLang Cookbook</a>，选好 GPU 型号、模型大小和精度，页面会生成对应的启动命令。想了解推理框架内部的原理，可以看 Datawhale 的开源课程 <a href="https://github.com/datawhalechina/zero-to-sglang" target="_blank" rel="noopener noreferrer">zero-to-sglang</a>。</p>
 </article>

@@ -1,1491 +1,751 @@
 <article>
-<h1>搭建一个能听也能说的语音助手</h1>
-<p>在聊天框里问模型一个问题，已经很熟悉了。如果把键盘换成麦克风，直接开口问，等它把答案说出来，会是什么样？</p>
+<h1>智能客服质检：AI 能从一通客服电话中分析出什么？</h1>
+<p>一通客服电话结束了，用户的问题有没有解决，客服有没有漏掉重要条件，录音少的时候，可以逐条听；录音多了，人工抽听就很难顾及每一通电话。</p>
 <p />
-<p>这里会用到前面介绍过的几类模型，ASR 负责把语音转成文字，LLM 负责回答，TTS 再把文字转成声音。录音什么时候开始、用户有没有说话、历史对话怎样保存，也都要安排好。</p>
+<p>传统客服质检主要依靠人工抽听，不仅需要投入较多时间，也很难覆盖全部通话。利用语音识别和音频多模态模型，可以从电话录音中分析通话内容、说话人、情绪、服务语气和双方互动，再由大语言模型按照质检规则完成评分并生成质检报告。</p>
 <p />
-<h2>从开口提问到听见回答，中间经过哪些步骤？</h2>
-<p>语音助手需要接收用户的语音问题，理解问题后生成回答，并通过语音将回答播放出来。这个过程主要由 ASR、LLM、TTS 三个核心模型共同完成。</p>
-<h3>ASR，先把你说的话转成文字</h3>
-<p>ASR 需要将麦克风采集到的音频信号转换为文本。</p>
-<p>例如，用户对着麦克风说：“北京有哪些著名景点？”，麦克风采集到的是音频数据：</p>
-<figure><a href="../../assets/manuscript-20260914/c18-97a3eee17bf6ef.wav" class="attachment" download="query.wav">query.wav</a></figure>
-<p>LLM 不能按照普通文本的方式处理这些数据，需要先通过 ASR 进行语音识别，ASR 识别结果会作为文字输入交给后面的 LLM。</p>
-<p>语音助手中的 ASR 不仅需要关注识别内容是否正确，还需要考虑口音、语速、环境噪声等因素。例如，同一句话在安静环境和嘈杂环境中的识别效果可能存在差异。</p>
+<p>这一章就用语言培训机构的一段客服通话记录，把从录音到质检报告的过程跑一遍。</p>
 <p />
-<h3>LLM，接过问题来回答</h3>
-<p>LLM 拿到 ASR 输出的用户问题文本，生成对应的回答文本。单轮对话中，问题进去回答出来，流程相对直接。</p>
-<p>例如，ASR 识别得到：“北京有哪些著名景点？”，将这段文字发送给 LLM 后，模型生成回答：“北京比较著名的景点包括故宫、天坛、颐和园和八达岭长城等。”</p>
-<p>多轮对话则不同。为了让 LLM 理解用户问题在上一轮或前几轮中的指代，需要将前几轮的用户问题和助手回答一并放入上下文。</p>
+<h2>质检一通电话，我们到底要检查什么？</h2>
+<p>不同业务场景对客服服务质量的要求有所不同。在进行自动质检之前，需要先明确质检需要关注哪些问题，并根据实际业务要求制定相应的质检规则。</p>
 <p />
-<h3>TTS，把文字回答读出来</h3>
-<p>TTS 负责将 LLM 生成的回答转换成对应的语音，由语音助手把回答“说出来”，。</p>
-<p>例如，针对 LLM 生成的回答：“北京比较著名的景点包括故宫、天坛、颐和园和八达岭长城等。”，利用 TTS 转为音频：</p>
-<figure><a href="../../assets/manuscript-20260914/c18-5a6f60ab3affcb.wav" class="attachment" download="answer.wav">answer.wav</a></figure>
-<p>生成的语音可以直接通过扬声器播放，也可以保存为音频文件。</p>
-<p>除了保证文字内容能够正确朗读，TTS 还会影响语音助手最终的听感。例如，声音是否清晰、停顿是否自然、语速是否合适，都会影响实际的交互体验。</p>
-<p>在语音助手中，TTS 的输出方式分为非流式和流式两种。如果等 LLM 生成完整回答后再启动 TTS，用户会明显感知到等待时间。更合理的做法是流式 TTS——LLM 每生成几个字，TTS 就立即开始合成对应的音频片段并推送给播放模块，实现“边说边放”。</p>
+<h3>先看客户问了什么，客服回应得怎么样</h3>
+<p>语言培训机构的客服通常需要通过电话处理课程咨询、开课通知、请假、课程调整、学习反馈和售后等业务。</p>
+<p>质检时，需要检查客服是否正确理解客户需求，回答是否完整、准确，对于无法立即确定的问题是否给出了后续处理方式，以及是否存在不当承诺。同时，电话中的服务态度和沟通过程也会影响服务质量，例如客服是否存在不耐烦、敷衍或责怪，是否打断客户，客户是否出现负面情绪等。</p>
+<p>这些信息并不能只通过电话转写文本获得，还需要结合说话人以及电话录音中的情绪、语气和双方互动等信息进行分析。</p>
 <p />
-<h3>把录音、识别、回答和播放连起来</h3>
-<p>在实际的语音助手中，除了 ASR、LLM 和 TTS 三个核心模型，还需要音频采集、VAD 语音活动检测和音频播放等模块。各模块协同工作，将用户的语音问题转换为语音回答，并支持流式音频输出和多轮对话。完整的处理流程如下图所示。</p>
-<img src="../../assets/manuscript-20260914/c18-2f2d5ab6857d11.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>下面按照这条处理链路，从音频输入开始，逐步搭建一个可以在本地运行的语音助手。</p>
+<h3>把服务要求写成具体的评分规则</h3>
+<p>确场景需求后，还需要将这些要求进一步整理为具体的质检规则，明确一通电话需要检查哪些内容，以及不同问题对应的评分标准，为后续自动判断和评分提供依据。</p>
+<p>结合语言培训机构电话客服的服务要求，从需求回应、信息准确性、问题解决、服务态度、通话行为和客户情绪等方面制定质检规则，如下表所示。</p>
+<table><tr><td>质检项</td><td>主要检查内容</td><td>分值</td></tr><tr><td>开场与身份说明</td><td>是否主动问候，说明机构和本人身份，并询问客户需求</td><td>5</td></tr><tr><td>需求识别与回应完整性</td><td>是否识别客户提出的问题，并逐项进行有效回应</td><td>20</td></tr><tr><td>信息准确性与风险控制</td><td>是否编造不确定的信息，是否存在学习效果等不当承诺</td><td>15</td></tr><tr><td>问题解决与承诺闭环</td><td>客户核心问题是否解决，无法立即解决时是否说明后续处理方式</td><td>15</td></tr><tr><td>服务态度与专业措辞</td><td>是否存在不耐烦、责怪、敷衍、辱骂或推卸责任等表达</td><td>15</td></tr><tr><td>打断与通话节奏</td><td>是否频繁打断客户、抢话或存在明显影响沟通的异常节奏</td><td>10</td></tr><tr><td>客户情绪与服务修复</td><td>客户是否出现明显负面情绪，客服是否及时解释和安抚</td><td>10</td></tr><tr><td>结束语与待办确认</td><td>是否礼貌结束，并对尚未完成的事项进行确认</td><td>10</td></tr><tr><td>合计</td><td /><td>100</td></tr></table>
+<p>后续自动质检将按照这些规则逐项进行判断和评分。不同质检项所需的信息并不相同，例如需求识别、信息准确性和问题解决情况主要根据通话内容判断，服务态度、客户情绪以及打断等情况需要结合电话录音进行分析，最后再根据这些分析结果完成综合质检。</p>
 <p />
-<h2>动手搭一个能语音问答的助手</h2>
-<p>前面介绍了语音助手的基本处理流程。下面按照音频采集、VAD、ASR、LLM 和 TTS 的顺序，逐步实现各个功能模块，并在此基础上增加流式音频输出和多轮对话，最后将这些模块组合成一个完整的本地语音助手。</p>
-<p>为了便于后续组合，本节会将需要加载模型的 ASR、LLM 和 TTS 封装成类，将音频采集、播放等功能封装成函数。每完成一个功能模块，都先单独进行测试，确认能够正常运行后，再继续后面的实现。</p>
+<h2>从电话录音到质检报告，模型怎样分工？</h2>
+<p>根据前面的场景需求，系统先从电话录音中获得通话文本和说话人信息，再结合录音分析客户情绪、客服服务语气和双方的互动情况，最后将这些分析结果与客服质检规则一起交给大语言模型进行综合判断、评分并生成质检报告。整个自动质检过程如下图所示。</p>
+<img src="../../assets/manuscript-20260914/c17-d9cd2c1009983c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>整个过程可以分为电话数据分析和综合质检两个部分。</p>
+<p />
+<h3>整理通话内容，也听听语气和互动</h3>
+<p>电话录音输入系统后，需要先统一音频格式，将采样率和声道转换为后续模型能够处理的形式。</p>
+<p>处理后的音频使用 FSMN-VAD 检测有效语音区域，并结合 CAM++区分不同说话人，得到每个说话人的发言时间。此时得到的是<code>spk0</code>、<code>spk1</code>等说话人编号，还不能直接确定其身份。</p>
+<p>语音识别使用 Qwen3-ASR-0.6B 完成。模型将录音转换为文本，并通过时间戳记录每段文本对应的时间。将语音识别结果与说话人分析结果按照时间进行对齐，可以得到带有说话人编号和时间信息的通话文本。随后，根据不同说话人的对话内容，使用参数量较小的 Qwen3-4B 判断其在本次电话中的角色，并将说话人编号转换为“客服”和“客户”。最终可以得到带有角色和时间信息的完整通话文本，例如：</p>
+<pre data-language="Plain Text"><code>第1轮 [客服] 0.00-4.82秒：……
+第2轮 [客户] 5.10-10.36秒：……</code></pre>
+<p>电话中的声音还包含文本无法直接反映的信息，例如客服的情绪和服务语气、客户的情绪变化以及双方的互动情况。使用 Qwen2.5-Omni-3B 对电话录音进行分析，并结合通话文本判断客服是否存在不耐烦、敷衍、责怪或语气生硬等情况，客户是否出现明显负面情绪以及客服是否进行了适当回应，同时分析通话过程中是否存在明显抢话或打断客户等问题。</p>
+<p>主要分析模块如下表所示。</p>
+<table><tr><td>分析任务</td><td>模型或组件</td><td>主要输出</td></tr><tr><td>语音识别</td><td>Qwen3-ASR-0.6B</td><td>带时间信息的识别文本</td></tr><tr><td>说话人分析</td><td>FSMN-VAD、CAM++</td><td>不同说话人及说话时间</td></tr><tr><td>说话人角色识别</td><td>Qwen3-4B</td><td>客服、客户角色</td></tr><tr><td>语音综合分析</td><td>Qwen2.5-Omni-3B</td><td>客服情绪与服务语气、客户情绪与客服应对、通话互动</td></tr></table>
+<p>这些分析结果需要整理为统一格式，便于后续大语言模型直接读取。例如：</p>
+<pre data-language="Plain Text"><code>【通话转写】
+第1轮 [客服] XX.XX-XX.XX秒：……
+第2轮 [客户] XX.XX-XX.XX秒：……
+
+【信息核验说明】
+本次分析未提供企业业务规则或标准答案。
+对于课程时间、请假规则等业务信息，只能判断客服是否进行了明确回应，无法核验其内容是否准确。
+
+【语音综合分析】
+
+客服情绪与服务语气：
+情绪表现：……
+服务语气：……
+异常情况：……
+
+客户情绪与客服应对：
+客户情绪：……
+情绪变化：……
+客服应对：……
+
+通话互动：
+抢话：……
+打断客户：……
+其他异常：……
+
+分析说明：……</code></pre>
+<p>规范化结果中保留完整通话文本、说话人角色以及语音综合分析结果。客户需求、回答完整性、问题解决、承诺和合规等业务内容不再提前单独分析，而是在后面的综合质检中由大语言模型结合完整通话内容统一判断。</p>
+<p />
+<h3>按规则评分，让每个判断都有依据</h3>
+<p>完成电话数据分析后，将 20.1.2 节制定的客服质检规则和规范化分析结果一起输入 Qwen3-8B。模型根据完整通话文本判断客户提出了哪些需求、客服如何回应以及问题是否得到处理，并结合客服情绪与服务语气、客户情绪与客服应对、通话互动等信息，对各项质检规则进行判断和评分。</p>
+<p>对于课程时间、请假规则等需要企业业务规则才能验证的信息，如果没有提供相应的业务标准，只判断客服是否进行了明确回应，不直接判断其内容是否正确，并在报告中注明“现有信息无法核验”。</p>
+<p>质检时按照 20.1.2 节的规则逐项评分。每个质检项除了给出得分，还需要说明判断结果和主要依据。发现问题时，可以引用对应的通话轮次、客服原话或语音综合分析结果作为证据，避免只给出“服务态度较差”“问题处理不到位”等缺少依据的结论。</p>
+<p>最终生成的客服质检报告可以采用如下格式：</p>
+<pre data-language="Plain Text"><code>客服质检报告
+
+综合得分：XX/100
+质检结论：……
+
+一、总体评价
+……
+
+二、质检结果
+
+1. 开场与身份说明：X/5
+判断结果：……
+主要依据：……
+扣分原因：……
+
+2. 需求识别与回应完整性：X/20
+判断结果：……
+主要依据：……
+扣分原因：……
+
+3. 信息准确性与风险控制：X/15
+判断结果：……
+主要依据：……
+扣分原因：……
+
+4. 问题解决与承诺闭环：X/15
+判断结果：……
+主要依据：……
+扣分原因：……
+
+5. 服务态度与专业措辞：X/15
+判断结果：……
+主要依据：……
+扣分原因：……
+
+6. 打断与通话节奏：X/10
+判断结果：……
+主要依据：……
+扣分原因：……
+
+7. 客户情绪与服务修复：X/10
+判断结果：……
+主要依据：……
+扣分原因：……
+
+8. 结束语与待办确认：X/10
+判断结果：……
+主要依据：……
+扣分原因：……
+
+三、主要问题
+1. ……
+2. ……
+
+四、改进建议
+1. ……
+2. ……</code></pre>
+<h2>动手做一次电话客服质检</h2>
+<p>下面按照前面的技术方案编写程序，逐步实现电话客服自动质检。</p>
 <h3>准备运行环境</h3>
-<p>安装基础依赖：</p>
-<pre data-language="YAML"><code>!pip3 install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0
-!pip3 install transformers accelerate modelscope
-!pip3 install qwen-asr 
-!pip3 install soundfile webrtcvad-wheels scipy
-!pip3 install gradio
-%pip install --no-deps --force-reinstall qwen-tts==0.1.1 faster-qwen3-tts==0.3.0
-!pip3 install numpy==2.2.6 scipy
-!pip3 install jiwer bert_score onnxruntime</code></pre>
-<p>结果展示：</p>
-<img src="../../assets/manuscript-20260914/c18-e8861a4ee62ef9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>安装完以来后，需要点击上方的<code>Restart</code>重启 kernel。</p>
-<img src="../../assets/manuscript-20260914/c18-c3cb3a269cb1fe.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>采集麦克风音频</h3>
-<p>语音助手首先需要获取用户的音频。</p>
-<p>如果程序直接运行在本地电脑上，可以通过 <code>sounddevice</code> 等库访问麦克风设备。但本章使用的是 ModelScope Notebook，Python 程序实际运行在远程服务器上，服务器无法直接访问用户电脑上的麦克风。</p>
-<p>因此，本节使用 Gradio 在浏览器中采集麦克风音频，再将音频数据传给后端程序。</p>
-<p>音频采集有 2 种类型：</p>
-<p>1）实时音频采集</p>
-<p>开始采集后，会一直收集麦克风音频。代码如下：</p>
-<pre data-language="Python"><code>import gradio as gr
-import numpy as np
+<p>安装需要使用的依赖库。</p>
+<pre data-language="Plain Text"><code>!pip3 install modelscope transformers accelerate
+!pip3 install funasr qwen-asr qwen-omni-utils
+!pip3 install soundfile scipy</code></pre>
+<img src="../../assets/manuscript-20260914/c17-2054efb58564c9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>提前下载需要使用的模型，使后续加载时可以直接使用本地缓存。</p>
+<pre data-language="Python"><code>from modelscope import snapshot_download
 
-def receive_audio(stream, new_chunk):
-    if new_chunk is None:
-        return stream, "等待麦克风音频……"
+snapshot_download("iic/speech_fsmn_vad_zh-cn-16k-common-pytorch")
+snapshot_download("iic/speech_campplus_sv_zh-cn_16k-common")
+snapshot_download("Qwen/Qwen3-ASR-0.6B")
+snapshot_download("Qwen/Qwen3-ForcedAligner-0.6B")
+snapshot_download("Qwen/Qwen3-4B")
+snapshot_download("Qwen/Qwen3-8B")
+snapshot_download("Qwen/Qwen2.5-Omni-3B")</code></pre>
+<img src="../../assets/manuscript-20260914/c17-a123d84d436711.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>安装完成后，统一导入后续程序需要使用的依赖。</p>
+<pre data-language="Python"><code>import os
+import gc
+import json
+import torch
+import soundfile as sf
+from scipy.signal import resample_poly
+from funasr import AutoModel
+from qwen_asr import Qwen3ASRModel
+from modelscope import AutoTokenizer, AutoModelForCausalLM, snapshot_download
+from transformers import Qwen2_5OmniForConditionalGeneration, Qwen2_5OmniProcessor
+from qwen_omni_utils import process_mm_info</code></pre>
+<p>测试音频文件：</p>
+<figure><a href="../../assets/manuscript-20260914/c17-11cc32fc941475.wav" class="attachment" download="客服通话记录.wav">客服通话记录.wav</a></figure>
+<h3>音频预处理</h3>
+<p>将输入录音统一转换为 16 kHz 单声道 WAV 音频。</p>
+<pre data-language="Python"><code>def preprocess_audio(audio_path, output_path="./customer_service/preprocessed.wav",
+                     target_sr=16000):
+    audio, sr = sf.read(audio_path)
 
-    sample_rate, audio = new_chunk
-
+    # 转单声道
     if audio.ndim &gt; 1:
         audio = audio.mean(axis=1)
 
-    audio = audio.astype(np.float32)
+    # 重采样
+    if sr != target_sr:
+        audio = resample_poly(audio, target_sr, sr)
+        sr = target_sr
 
-    if stream is None:
-        stream = audio
-    else:
-        stream = np.concatenate([stream, audio])
+    # 保存为统一的wav格式
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    sf.write(output_path, audio, sr)
 
-    duration = len(stream) / sample_rate
-    status = f"收到音频块，当前采集长度：{len(stream)}，已采集：{duration:.2f}秒"
-
-    print(status)
-    return stream, status
-
-with gr.Blocks() as demo:
-    gr.Markdown("# 麦克风实时采集测试")
-    gr.Markdown("点击麦克风开始录音，说话过程中可以观察音频采集状态。")
-
-    audio_input = gr.Audio(sources=["microphone"], streaming=True, label="麦克风")
-    status_output = gr.Textbox(label="采集状态", value="等待麦克风音频……")
-    audio_state = gr.State(None)
-
-    audio_input.stream(fn=receive_audio, inputs=[audio_state, audio_input], outputs=[audio_state, status_output])
-
-demo.launch(share=True)</code></pre>
-<p>运行代码结果：</p>
-<img src="../../assets/manuscript-20260914/c18-fe2c8085814289.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>打开日志打印的网页地址“<a href="http://127.0.0.1:7862/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:7862</a>”，点击“录制”，并允许浏览器使用麦克风。</p>
-<img src="../../assets/manuscript-20260914/c18-bff6ff2f651046.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>网页就会开始采集音频信息，直至手动停止。</p>
-<img src="../../assets/manuscript-20260914/c18-dc2bb84bc81fda.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>2）非实时音频采集</p>
-<p>每次都需要用户手动触发，才会开始采集音频。代码如下：</p>
-<pre data-language="Python"><code>import gradio as gr
-
-# 一个简单的音频采集页面
-with gr.Blocks() as demo:
-    gr.Markdown("# 🎤 麦克风非实时音频采集")
-    
-    # 音频输入组件
-    audio = gr.Audio(
-    sources=["microphone"],
-    type="numpy",
-    streaming=False,
-    label="🎤 点击「录制」说话，说完点击「停止」",
-    visible=True,
-    interactive=True,
-    elem_classes="audio-component"
-)
-    
-    # 显示音频信息
-    audio_info = gr.Textbox(label="音频信息", lines=3)
-    
-    # 当录制完成时显示信息
-    def show_audio_info(audio_data):
-        if audio_data is None:
-            return "未录制音频"
-        sr, data = audio_data
-        return f"采样率: {sr} Hz\n时长: {len(data)/sr:.2f} 秒\n数据形状: {data.shape}"
-    
-    audio.change(show_audio_info, inputs=audio, outputs=audio_info)
-
-demo.launch()</code></pre>
-<p>运行代码结果：</p>
-<img src="../../assets/manuscript-20260914/c18-ebe5a7312e8a5d.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>打开日志打印的网页地址“<a href="http://127.0.0.1:7868/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:7868</a>”，点击“录制”，并允许浏览器使用麦克风。</p>
-<img src="../../assets/manuscript-20260914/c18-bff6ff2f651046.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>然后说话即可，点击停止则结束录音。</p>
-<p>停止后可以看到音频信息，这说明程序已经接采集到麦克风音频了。</p>
-<img src="../../assets/manuscript-20260914/c18-7a5099960ef1d2.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p />
-<h3>VAD 检测语音活动</h3>
-<p>VAD 在语音助手中，主要用于判断用户什么时候开始说话，以及什么时候结束一轮语音输入。</p>
-<p>WebRTC VAD 的检测等级可以设置为 0、1、2、3，数字越大，对非语音声音的过滤越严格。代码如下：</p>
-<p>下面结合采集麦克风音频进行测试：</p>
-<p>1）实时音频采集+VAD 语音活动检测</p>
-<p>针对实时的音频采集，VAD 主要用来监测用户是否说话了，判断语音开始和结束的时间，并将用户说话的音频裁剪出来。这里采用逐 30ms 音频帧判断是否存在语音活动，VAD 检测代码如下：</p>
-<pre data-language="Python"><code>import numpy as np
-import webrtcvad
-from scipy.signal import resample_poly
-
-class StreamingVAD:
-
-    def __init__(self, sample_rate=16000, frame_ms=30, mode=2, silence_seconds=1.0):
-        self.sample_rate = sample_rate
-        self.frame_ms = frame_ms
-        self.frame_size = int(sample_rate * frame_ms / 1000)
-        self.max_silence_frames = int(silence_seconds * 1000 / frame_ms)
-        self.vad = webrtcvad.Vad(mode)
-        self.reset()
-
-    def reset(self):
-        self.speech_started = False
-        self.silence_frames = 0
-        self.audio_frames = []
-        self.buffer = np.array([], dtype=np.int16)
-
-    def process(self, audio, sample_rate):
-        if audio.ndim &gt; 1:
-            audio = audio.mean(axis=1)
-
-        if np.issubdtype(audio.dtype, np.integer):
-            audio = audio.astype(np.float32) / 32768.0
-        else:
-            audio = audio.astype(np.float32)
-
-        if sample_rate != self.sample_rate:
-            audio = resample_poly(audio, self.sample_rate, sample_rate)
-
-        audio = np.clip(audio, -1.0, 1.0)
-        audio = (audio * 32767).astype(np.int16)
-
-        self.buffer = np.concatenate([self.buffer, audio])
-
-        while len(self.buffer) &gt;= self.frame_size:
-            frame = self.buffer[:self.frame_size]
-            self.buffer = self.buffer[self.frame_size:]
-
-            is_speech = self.vad.is_speech(frame.tobytes(), self.sample_rate)
-
-            if is_speech:
-                if not self.speech_started:
-                    print("检测到用户开始说话", flush=True)
-
-                self.speech_started = True
-                self.silence_frames = 0
-                self.audio_frames.append(frame)
-
-            elif self.speech_started:
-                self.silence_frames += 1
-                self.audio_frames.append(frame)
-
-                if self.silence_frames &gt;= self.max_silence_frames:
-                    print("检测到连续静音，本轮语音结束", flush=True)
-                    return True
-
-        return False
-
-    def get_audio(self):
-        if not self.audio_frames:
-            return None
-
-        return np.concatenate(self.audio_frames)</code></pre>
-<p>测试页面代码：</p>
-<pre data-language="Python"><code>import gradio as gr
-
-vad_detector = StreamingVAD(mode=2, silence_seconds=1.0)
-vad_logs = []
-turn_index = 0
-
-def detect_speech(chunk):
-    global vad_logs, turn_index
-
-    if chunk is None:
-        return "\n".join(vad_logs) if vad_logs else "等待语音输入……"
-
-    sample_rate, audio = chunk
-    finished = vad_detector.process(audio, sample_rate)
-
-    if finished:
-        speech_audio = vad_detector.get_audio()
-        if speech_audio is not None:
-            turn_index += 1
-            duration = len(speech_audio) / vad_detector.sample_rate
-            log = f"第{turn_index}轮：检测到有效语音，时长{duration:.2f}秒"
-            vad_logs.append(log)
-            print(log, flush=True)
-        vad_detector.reset()
-
-    return "\n".join(vad_logs) if vad_logs else "等待语音输入……"
-
-with gr.Blocks() as demo:
-    gr.Markdown("# 实时音频采集 + VAD语音活动检测")
-    gr.Markdown("点击“录制”启动麦克风，说话结束后保持约1秒静音。")
-
-    audio_input = gr.Audio(sources=["microphone"], type="numpy", streaming=True, label="麦克风")
-    log_output = gr.Textbox(label="VAD检测日志", value="等待语音输入……", lines=6)
-
-    audio_input.stream(fn=detect_speech, inputs=audio_input, outputs=log_output, stream_every=0.5)
-
-demo.launch(share=True)</code></pre>
-<p>运行结果：</p>
-<img src="../../assets/manuscript-20260914/c18-b7152920d11c1c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>打开日志打印的网页地址：“<a href="http://127.0.0.1:7871/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:7871</a>”，点击“录制”并允许浏览器访问麦克风，然后说话即可。点击停止后页面会显示日志，样例如下。</p>
-<img src="../../assets/manuscript-20260914/c18-c617719236fd27.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>2）非实时音频采集+VAD 语音活动检测</p>
-<p>针对非实时采集的音频，VAD 主要作为前置过滤器，去除静音和环境噪声，避免 ASR 做无效识别，节省资源。系统会将 Gradio 接收到的整个音频切片，分割为若干 20 毫秒的短帧，并对每一帧进行语音/非语音状态标记。最后根据该切片中的语音帧数量与阈值的关系，判断该段音频的是否交给 ASR 处理。VAD 检测代码如下：</p>
-<pre data-language="Python"><code>import webrtcvad
-import numpy as np
-from collections import deque
-
-class StreamingVAD:
-    def __init__(self, mode=3, silence_seconds=1.0, min_speech_seconds=0.5, 
-                 energy_threshold=0.03, start_frames=3, pre_buffer_chunks=5,
-                 target_sr=16000):  # 添加目标采样率
-        self.vad = webrtcvad.Vad(mode)
-        self.silence_seconds = silence_seconds
-        self.min_speech_seconds = min_speech_seconds
-        self.energy_threshold = energy_threshold
-        self.start_frames = start_frames
-        self.pre_buffer_chunks = pre_buffer_chunks
-        self.target_sr = target_sr  # VAD 支持的采样率
-        self.reset()
-
-    def reset(self):
-        self.speech_started = False
-        self.audio_chunks = []
-        self.pre_buffer = deque(maxlen=self.pre_buffer_chunks)
-        self.speech_count = 0
-        self.speech_samples = 0
-        self.silence_samples = 0
-        self.sample_rate = None
-
-    def _resample(self, audio, orig_sr, target_sr):
-        """重采样到目标采样率"""
-        if orig_sr == target_sr:
-            return audio
-        # 计算重采样比例
-        ratio = target_sr / orig_sr
-        # 重采样
-        resampled = signal.resample(audio, int(len(audio) * ratio))
-        return resampled.astype(np.float32)
-
-    def _is_speech(self, audio, sample_rate):
-        try:
-            # 先重采样到目标采样率
-            if sample_rate != self.target_sr:
-                audio = self._resample(audio, sample_rate, self.target_sr)
-                sample_rate = self.target_sr
-            
-            # 检查音频幅度
-            rms = np.sqrt(np.mean(audio ** 2) + 1e-10)
-            print(f"RMS: {rms:.6f}, 阈值: {self.energy_threshold}")
-            
-            if rms &lt; self.energy_threshold:
-                print(f"音频太安静")
-                return False
-            
-            # 归一化到 [-1, 1]
-            max_val = np.max(np.abs(audio))
-            if max_val &gt; 0:
-                audio = audio / max_val
-            
-            frame_size = int(sample_rate * 0.02)  # 20ms
-            speech_frames = 0
-            total_frames = 0
-            
-            # 转换为 int16
-            audio_int16 = (audio * 32767).astype(np.int16)
-            
-            for i in range(0, len(audio) - frame_size + 1, frame_size):
-                frame = audio_int16[i:i + frame_size]
-                is_speech = self.vad.is_speech(frame.tobytes(), sample_rate)
-                speech_frames += int(is_speech)
-                total_frames += 1
-                
-            if total_frames == 0:
-                return False
-            
-            ratio = speech_frames / total_frames
-            print(f"语音帧比例: {ratio:.2f} ({speech_frames}/{total_frames})")
-            return ratio &gt;= 0.5
-            
-        except Exception as e:
-            print(f"VAD _is_speech 错误: {e}")
-            traceback.print_exc()
-            return False
-
-    def process(self, audio, sample_rate):
-        try:
-            self.sample_rate = sample_rate
-            audio = np.asarray(audio)
-            if audio.ndim == 2:
-                audio = audio.mean(axis=1)
-            audio = audio.astype(np.float32)
-            
-            # 归一化（如果需要）
-            if np.max(np.abs(audio)) &gt; 1.0:
-                audio = audio / 32768.0
-            
-            is_speech = self._is_speech(audio, sample_rate)
-            print(f"is_speech: {is_speech}")
-            
-            if not self.speech_started:
-                self.pre_buffer.append(audio)
-                if is_speech:
-                    self.speech_count += 1
-                else:
-                    self.speech_count = 0
-                if self.speech_count &gt;= self.start_frames:
-                    self.speech_started = True
-                    self.audio_chunks.extend(list(self.pre_buffer))
-                    self.speech_samples = sum(len(chunk) for chunk in self.pre_buffer)
-                    self.silence_samples = 0
-                return False, is_speech
-                
-            self.audio_chunks.append(audio)
-            if is_speech:
-                self.speech_samples += len(audio)
-                self.silence_samples = 0
-            else:
-                self.silence_samples += len(audio)
-                
-            speech_duration = self.speech_samples / sample_rate
-            silence_duration = self.silence_samples / sample_rate
-            
-            if silence_duration &gt;= self.silence_seconds:
-                if speech_duration &gt;= self.min_speech_seconds:
-                    return True, is_speech
-                self.reset()
-            return False, is_speech
-            
-        except Exception as e:
-            print(f"VAD process 错误: {e}")
-            traceback.print_exc()
-            return False, False
-
-    def get_audio(self):
-        if not self.audio_chunks:
-            return np.array([], dtype=np.float32)
-        return np.concatenate(self.audio_chunks)</code></pre>
-<p>测试代码：</p>
-<pre data-language="Python"><code>import gradio as gr
-import numpy as np
-import traceback
-
-vad = StreamingVAD(mode=3, silence_seconds=1.0)
-
-def test_vad(audio_data):
-    try:
-        if audio_data is None:
-            return "❌ 没有音频数据"
-        
-        sr, audio = audio_data
-        vad.reset()
-        
-        # 分块处理（每块100ms）
-        chunk_size = int(sr * 0.1)  # 100ms
-        is_complete = False
-        speech_found = False
-        
-        for i in range(0, len(audio), chunk_size):
-            chunk = audio[i:i+chunk_size]
-            if len(chunk) &lt; chunk_size:
-                break
-            is_complete, is_speech = vad.process(chunk, sr)
-            if is_speech:
-                speech_found = True
-            if is_complete:
-                break
-        
-        # 获取裁剪后的音频
-        speech_audio = vad.get_audio()
-        speech_duration = len(speech_audio) / sr if len(speech_audio) &gt; 0 else 0
-        
-        result = f"""✅ 检测完成
-采样率: {sr} Hz
-音频长度: {len(audio)} 样本
-时长: {len(audio)/sr:.2f} 秒
-检测到语音: {'是 ✅' if speech_found else '否 ❌'}
-触发结束: {'是' if is_complete else '否'}
-裁剪后时长: {speech_duration:.2f} 秒
-        """
-        
-        return result
-        
-    except Exception as e:
-        return f"❌ 错误: {str(e)}\n{traceback.format_exc()}"
-
-with gr.Blocks() as demo:
-    gr.Markdown("# 🎤 非实时音频采集+VAD语音活动检测")
-    
-    audio_input = gr.Audio(
-        sources=["microphone"],
-        type="numpy",
-        label="录制音频（录长一点，包含停顿）"
+    return output_path</code></pre>
+<h3>说话人分析</h3>
+<p>使用 FunASR 组合 FSMN-VAD 和 CAM++获得不同说话人的语音片段及时间信息。</p>
+<pre data-language="Python"><code>def analyze_speakers(audio_path):
+    model = AutoModel(
+        model="paraformer-zh",
+        vad_model="fsmn-vad",
+        punc_model="ct-punc",
+        spk_model="cam++",
+        device="cuda:0"
     )
-    
-    result = gr.Textbox(label="检测结果", lines=8)
-    
-    audio_input.change(test_vad, audio_input, result)
 
-demo.launch(debug=True)</code></pre>
-<p>运行结果：</p>
-<img src="../../assets/manuscript-20260914/c18-7a11023344c1c0.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>打开日志打印的网页地址：“<a href="http://127.0.0.1:7869/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:7869</a>”，点击“录制”并允许浏览器访问麦克风，然后说话即可。点击停止后页面会显示日志，样例如下。</p>
-<img src="../../assets/manuscript-20260914/c18-461ac2cc3c020e.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>ASR 语音识别</h3>
-<p>获得音频以后，下一步是将语音转换成文字。以 <a href="https://modelscope.cn/models/Qwen/Qwen3-ASR-0.6B" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-ASR-0.6B</a> 模型为例，ASR 实现代码如下：</p>
-<pre data-language="Python"><code>import torch
-from modelscope import snapshot_download
-from qwen_asr import Qwen3ASRModel
+    result = model.generate(
+        input=audio_path,
+        batch_size_s=60,
+        sentence_timestamp=True
+    )
 
-class ASRService:
+    sentence_info = result[0].get("sentence_info", [])
+    segments = []
 
-    def __init__(self, model_id="Qwen/Qwen3-ASR-0.6B", device="cuda:0"):
-        print("正在加载ASR模型……")
+    for item in sentence_info:
+        segments.append({
+            "speaker": f"spk{item['spk']}",
+            "start": round(item["start"] / 1000, 2),
+            "end": round(item["end"] / 1000, 2)
+        })
 
-        model_dir = snapshot_download(model_id)
-        self.model = (
-            Qwen3ASRModel.from_pretrained(
-                model_dir,
-                dtype=torch.bfloat16,
-                device_map=device,
-                max_inference_batch_size=1,
-                max_new_tokens=256,
-            )
-        )
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
 
-        print("ASR模型加载完成")
+    return segments</code></pre>
+<h3>语音识别</h3>
+<p>使用 Qwen3-ASR-0.6B 识别整段录音，并通过 ForcedAligner 获得识别文本对应的时间戳。</p>
+<pre data-language="Python"><code>def analyze_asr(audio_path, language="Chinese"):
+    model_path = "Qwen/Qwen3-ASR-0.6B"
+    aligner_path = "Qwen/Qwen3-ForcedAligner-0.6B"
+    model = Qwen3ASRModel.from_pretrained(
+        model_path, dtype=torch.bfloat16, device_map="cuda:0",
+        max_inference_batch_size=1, max_new_tokens=2048,
+        forced_aligner=aligner_path,
+        forced_aligner_kwargs={"dtype": torch.bfloat16, "device_map": "cuda:0"}
+    )
 
-    def transcribe(self, audio_file,language="Chinese"):
-        result = self.model.transcribe(audio=audio_file, language=language)
-        return result[0].text</code></pre>
-<p>测试命令：</p>
-<pre data-language="Plain Text"><code>asr = ASRService()
-text = asr.transcribe("query.wav")
+    result = model.transcribe(
+        audio=audio_path, language=language, return_time_stamps=True
+    )[0]
 
-print("ASR识别结果：", text)</code></pre>
-<p>结果展示：</p>
-<img src="../../assets/manuscript-20260914/c18-bbba4b10d3a721.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>LLM 理解问题并生成回答</h3>
-<p>本节使用 <a href="https://modelscope.cn/models/Qwen/Qwen3-4B" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-4B</a> 模型进行问题理解和答案生成，模型加载和推理代码如下：</p>
-<pre data-language="Python"><code>from modelscope import AutoModelForCausalLM, AutoTokenizer
+    segments = []
+    if result.time_stamps:
+        for item in result.time_stamps:
+            segments.append({
+                "start": round(item.start_time, 2), "end": round(item.end_time, 2),
+                "text": item.text.strip()
+            })
 
-class LLMService:
+    output = {
+        "language": result.language,
+        "text": result.text.strip(),
+        "segments": segments
+    }
 
-    def __init__(self, model_id="Qwen/Qwen3-4B"):
-        print("正在加载LLM……")
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
+    return output</code></pre>
+<h3>说话人角色识别</h3>
+<p>使用 Qwen3-4B 根据不同说话人的对话内容判断其角色，并将说话人编号转换为“客服”和“客户”。</p>
+<pre data-language="Python"><code>def identify_speaker_roles(segments):
+    speaker_texts = {}
+    for seg in segments:
+        speaker_texts.setdefault(seg["speaker"], []).append(seg["text"])
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id)
+    speaker_text = "\n".join(
+        f"{speaker}：{''.join(texts)[:1000]}"
+        for speaker, texts in speaker_texts.items()
+    )
 
-        self.model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype="auto", device_map="auto")
+    model_name = "Qwen/Qwen3-4B"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name, torch_dtype=torch.bfloat16, device_map="cuda:0"
+    )
 
-        print("LLM加载完成")
+    prompt = f"""下面是一段语言培训机构客服电话中不同说话人的对话内容。
+请根据对话内容判断每个说话人的角色，将机构客服标记为“客服”，接受服务的一方标记为“客户”。
 
-    def chat(self, user_text, history=None):
-        messages = [
-            {
-                "role": "system",
-                "content": "你是一个语音助手，请用简洁、自然的语言回答问题，尽量控制在150字以内。",
-            }
-        ]
+【对话内容】
+{speaker_text}
 
-        if history:
-            messages.extend(history)
+只返回JSON，例如：
+{{"spk0": "客户", "spk1": "客服"}}
+不要输出其他内容。"""
 
-        messages.append({"role": "user", "content": user_text})
+    messages = [{"role": "user", "content": prompt}]
+    text = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True, enable_thinking=False
+    )
+    inputs = tokenizer(text, return_tensors="pt").to(model.device)
+    outputs = model.generate(**inputs, max_new_tokens=128)
+    outputs = outputs[:, inputs.input_ids.shape[1]:]
+    role_map = json.loads(tokenizer.decode(outputs[0], skip_special_tokens=True))
 
-        text = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-            enable_thinking=False,
-        )
+    for seg in segments:
+        seg["speaker"] = role_map.get(seg["speaker"], seg["speaker"])
 
-        inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
+    del model, tokenizer
+    gc.collect()
+    torch.cuda.empty_cache()
+    return segments</code></pre>
+<h3>语音综合分析</h3>
+<p>前面已经获得了带有角色和时间信息的通话文本，接下来使用 Qwen2.5-Omni-3B 结合电话录音，进一步分析客服情绪与服务语气、客户情绪与客服应对以及双方互动情况。</p>
+<p>对于较长的电话录音，直接将完整音频一次输入模型会占用较多显存。根据前面得到的通话轮次对音频进行切分，不按照固定时间直接截断，而是在片段达到指定长度后，等待客服当前一轮发言结束再进行切分，使每个片段尽量保持完整的会话内容。Qwen2.5-Omni-3B 只加载一次，依次分析各个音频片段，最后将结果按照对应的时间范围进行整理。</p>
+<p>实现代码如下：</p>
+<pre data-language="Python"><code>def split_audio_by_conversation(
+    audio_path,
+    segments,
+    max_seconds=30,
+    output_dir="./customer_service/audio_segments"
+):
+    audio, sr = sf.read(audio_path)
+    os.makedirs(output_dir, exist_ok=True)
 
-        generated_ids = self.model.generate(
-            **inputs,
-            max_new_tokens=512,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.8,
-            top_k=20,
-        )
+    groups = []
+    current = []
+    start_time = segments[0]["start"]
 
-        output_ids = generated_ids[:, inputs.input_ids.shape[1]:]
-        answer = self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0]
+    # 按完整会话切分，达到指定长度后等待客服当前一轮发言结束
+    for seg in segments:
+        current.append(seg)
 
-        return answer.strip()</code></pre>
-<p>将<code>enable_thinking</code>设置为<code>False</code>，关闭思考模式，更适合普通语音问答，也可以减少用户等待时间。</p>
-<p>测试问答效果：</p>
-<pre data-language="Plain Text"><code>llm = LLMService()
-answer = llm.chat("北京有哪些著名景点？")
+        if seg["end"] - start_time &gt;= max_seconds and seg["speaker"] == "客服":
+            groups.append(current)
+            current = []
+            start_time = seg["end"]
 
-print("回答：", answer)</code></pre>
-<img src="../../assets/manuscript-20260914/c18-8c4bf36bbd1b9b.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>TTS 生成回答语音</h3>
-<p>本节选择 <a href="https://modelscope.cn/models/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice" target="_blank" rel="noopener noreferrer">Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice</a> 模型将 LLM 答案转为语音，CustomVoice 模型支持指定预置音色生成语音，可以根据业务需要选择合适的音色。具体实现代码如下：</p>
-<pre data-language="Python"><code>import torch
-from modelscope import snapshot_download
-from qwen_tts import Qwen3TTSModel
+    if current:
+        groups.append(current)
 
-class TTSService:
+    results = []
 
-    def __init__(
-        self,
-        model_id=("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"),
-        device="cuda:0",
-        speaker="Vivian",
-    ):
-        print("正在加载TTS模型……")
+    # 根据每组会话的时间范围截取音频
+    for i, group in enumerate(groups):
+        start = group[0]["start"]
+        end = group[-1]["end"]
 
-        model_dir = snapshot_download(model_id)
+        segment_audio = audio[int(start * sr):int(end * sr)]
+        output_path = os.path.join(output_dir, f"segment_{i + 1}.wav")
+        sf.write(output_path, segment_audio, sr)
 
-        self.model = (
-            Qwen3TTSModel.from_pretrained(model_dir,device_map=device,dtype=torch.bfloat16)
-        )
+        results.append({
+            "path": output_path,
+            "start": start,
+            "end": end,
+            "segments": group
+        })
 
-        self.speaker = speaker
+    return results
 
-        print("TTS模型加载完成")
+def build_segment_transcript(segments):
+    # 生成当前音频片段对应的通话文本
+    return "\n".join(
+        f"第{seg['turn_id']}轮 [{seg['speaker']}] "
+        f"{seg['start']:.2f}-{seg['end']:.2f}秒：{seg['text']}"
+        for seg in segments
+    )
 
-    def synthesize(self, text, language="Chinese"):
-        wavs, sample_rate = (
-         self.model.generate_custom_voice(text=text,language=language,speaker=self.speaker)
-        )
+def format_audio_analysis(results):
+    # 按时间范围整理各片段的语音分析结果
+    return "\n\n".join(
+        f"{item['start']:.2f}-{item['end']:.2f}秒语音综合分析结果：\n"
+        f"{item['analysis']}"
+        for item in results
+    )
 
-        return wavs[0], sample_rate</code></pre>
-<p>生成语音测试代码：</p>
-<pre data-language="Python"><code>import soundfile as sf
+def analyze_audio(audio_path, segments, max_seconds=30):
+    # 按完整会话切分长音频
+    audio_segments = split_audio_by_conversation(
+        audio_path,
+        segments,
+        max_seconds=max_seconds
+    )
 
-tts = TTSService()
-
-answer = "北京有许多著名景点，如故宫、长城、颐和园、天坛、景山、北海公园、南锣鼓巷等。这些地方历史悠久，风景优美，是北京的标志性景点。"
-
-wav, sample_rate = tts.synthesize(answer)
-
-sf.write("tts_answer.wav", wav, sample_rate)
-
-print("语音已保存：tts_answer.wav")
-print("采样率：", sample_rate)</code></pre>
-<p>结果展示：</p>
-<img src="../../assets/manuscript-20260914/c18-863d54e0b2c39a.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>生成音频如下，可试听：</p>
-<figure><a href="../../assets/manuscript-20260914/c18-3a026da3de7a82.wav" class="attachment" download="tts_answer.wav">tts_answer.wav</a></figure>
-<h3>流式处理</h3>
-<p>等整段语音合成完毕再播放，用户等待时间较长。流式生成在推理阶段同步输出音频，边生成边播放，首帧延迟明显降低，用户交互体验更流畅。TTSService 服务流式音频输出的实现代码如下：</p>
-<pre data-language="Python"><code>import torch
-import numpy as np
-from modelscope import snapshot_download
-from faster_qwen3_tts import FasterQwen3TTS
-
-class TTSService:
-
-    def __init__(
-        self,
-        model_id=("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"),
-        device="cuda:0",
-        speaker="Vivian",
-        chunk_size=4,
-    ):
-        print("正在加载TTS模型……")
-
-        model_dir = snapshot_download(model_id)
-        self.model = FasterQwen3TTS.from_pretrained(
-            model_dir,
-            device=device,
-            dtype=torch.bfloat16,
-            attn_implementation="sdpa",
-        )
-
-        self.speaker = speaker
-        self.chunk_size = chunk_size
-        print("TTS模型加载完成")
-
-    def synthesize(self, text, language="Chinese"):
-        wavs, sample_rate = (
-         self.model.generate_custom_voice(text=text,language=language,speaker=self.speaker)
-        )
-        return wavs[0], sample_rate
-
-    def synthesize_stream(self, text, language="Chinese", cancelled=None):
-        """流式输出，逐块返回新增波形。"""
-        if not text.strip():
-            return
-        cancelled = cancelled or (lambda: False)
-        if cancelled():
-            return
-        stream = self.model.generate_custom_voice_streaming(
-            text=text,
-            language=language,
-            speaker=self.speaker,
-            chunk_size=self.chunk_size,
-            max_new_tokens=1024,
-        )
-        sample_rate = None
-        try:
-            for audio_chunk, sr, timing in stream:
-                if cancelled():
-                    break
-                sr = int(sr)
-                if sr &lt;= 0 or (sample_rate is not None and sample_rate != sr):
-                    raise ValueError("TTS 音频块的采样率发生变化")
-                sample_rate = sr
-                audio_chunk = np.asarray(audio_chunk, dtype=np.float32).reshape(-1)
-                if audio_chunk.size:
-                    yield np.clip(np.nan_to_num(audio_chunk), -1, 1), sr
-        finally:
-            stream.close()
-</code></pre>
-<p>测试代码：</p>
-<pre data-language="Plain Text"><code>import numpy as np
-import soundfile as sf
-
-tts = TTSService()
-text = "今天天气真不错，适合出门散步。"
-
-chunks = []
-for audio_chunk, sr in tts.synthesize_stream(text):
-    chunks.append(audio_chunk)
-    print(f"收到音频块，当前共 {len(chunks)} 块")
-
-if chunks:
-    full_audio = np.concatenate(chunks)
-    sf.write("output.wav", full_audio, sr)
-    print(f"保存完成，共 {len(chunks)} 块，总时长 {len(full_audio)/sr:.2f}s")</code></pre>
-<p>结果展示：</p>
-<img src="../../assets/manuscript-20260914/c18-af38afcc77fb2f.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>生成音频如下，可试听：</p>
-<figure><a href="../../assets/manuscript-20260914/c18-1acadc154136e3.wav" class="attachment" download="output.wav">output.wav</a></figure>
-<h3>实现多轮语音对话</h3>
-<p>多轮对话场景中，对于存在上下文关联的问题，如果只把当前问题发给 LLM，模型无法理解指代对象。例如：</p>
-<pre data-language="Plain Text"><code>用户：北京有哪些著名景点？
-助手：北京有许多著名景点，如故宫、长城、颐和园、天坛、景山、北海公园、南锣鼓巷等。这些地方历史悠久，风景优美，是北京的标志性景点。
-
-用户：第一个什么时候去比较好？</code></pre>
-<p>第二轮中的“第一个”依赖上一轮回答，但系统不保存历史记录，模型无从得知指代内容。因此需要保存历史问答记录，将完整对话上下文一并送入模型。</p>
-<p>可以将历史对话封装成<code>ConversationManager</code>类：</p>
-<pre data-language="Python"><code>class ConversationManager:
-
-    def __init__(self):
-        self.history = []
-
-    def get_history(self):
-        return self.history
-
-    def add_turn(self, user_text, assistant_text):
-        self.history.append({"role": "user", "content": user_text})
-        self.history.append({"role": "assistant", "content": assistant_text})
-
-    def clear(self):
-        self.history.clear()</code></pre>
-<p>会话记录保存样例：</p>
-<pre data-language="Python"><code>conversation = ConversationManager()
-llm = LLMService()
-
-question1 = "北京有哪些著名景点？"
-
-answer1 = llm.chat(question1, conversation.get_history())
-conversation.add_turn(question1, answer1)
-print("第一轮会话结束")
-
-
-question2 = ("第一个什么时候去比较好？")  
-answer2 = llm.chat(question2, conversation.get_history())  
-conversation.add_turn(question2, answer2)  
-print("第二轮会话结束") 
-
-print("会话历史：", conversation.get_history())</code></pre>
-<p>结果展示：</p>
-<img src="../../assets/manuscript-20260914/c18-5d9b9eccd5f601.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>多轮对话保存的是用户问题文本和助手回答文本。下一轮对话时，再把这些历史消息与新的用户问题一起发送给 LLM。这样，语音输入和输出仍然负责用户与系统之间的交互，而对话上下文则由 LLM 使用的文字历史进行管理。</p>
-<h3>一个完整的本地语音助手</h3>
-<p>前面已经分别介绍了音频采集、VAD、ASR、LLM、TTS、流式处理和多轮对话。现在可以直接复用前面定义的类和函数，将这些模块连接成一个完整的本地语音助手，其中对已有的<code>ConversationManager</code>类进行了改造，扩充了用于前端展示的额外信息存储。</p>
-<p>由于 gadio 展示限制，这里采用非实时音频采集（点击录制→上传处理）和非流式音频输出（生成完整音频后返回）的方式搭建本地语音助手。</p>
-<p>完整代码如下：</p>
-<pre data-language="Plain Text"><code>import gradio as gr
-import numpy as np
-import soundfile as sf
-import tempfile, os, threading, time
-from datetime import datetime
-import base64
-import librosa
-import json
-
-os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
-
-class ConversationManager:
-    def __init__(self): self.reset()
-    def reset(self):
-        self.messages, self.conversation_history = [], []
-        self.current_user_text = self.current_assistant_text = self.current_audio_html = None
-    def add_user_message(self, text):
-        self.messages.append(("user", text, None))
-        self.conversation_history.append({"role": "user", "content": text})
-        self.current_user_text = text
-    def add_assistant_message(self, text, audio_html=None):
-        self.messages.append(("assistant", text, audio_html))
-        self.conversation_history.append({"role": "assistant", "content": text})
-        self.current_assistant_text, self.current_audio_html = text, audio_html
-    def get_history_html(self):
-        if not self.messages:
-            return '&lt;p style="color: #999; text-align: center; padding: 40px;"&gt;暂无对话记录&lt;/p&gt;'
-        parts = []
-        for role, text, audio_html in self.messages:
-            if role == "user":
-                parts.append(f'''
-                &lt;div style="display: flex; justify-content: flex-end; margin: 6px 0;"&gt;
-                    &lt;div style="max-width: 75%; background: #e3f2fd; padding: 8px 14px; border-radius: 16px 16px 4px 16px;"&gt;
-                        &lt;div style="font-size: 12px; color: #1565c0; font-weight: bold;"&gt;👤 我&lt;/div&gt;
-                        &lt;div style="font-size: 14px; line-height: 1.5;"&gt;{text}&lt;/div&gt;
-                    &lt;/div&gt;
-                &lt;/div&gt;
-                ''')
-            else:
-                parts.append(f'''
-                &lt;div style="display: flex; justify-content: flex-start; margin: 6px 0;"&gt;
-                    &lt;div style="max-width: 75%; background: #f5f5f5; padding: 8px 14px; border-radius: 16px 16px 16px 4px;"&gt;
-                        &lt;div style="font-size: 12px; color: #2e7d32; font-weight: bold;"&gt;🤖 助手&lt;/div&gt;
-                        &lt;div style="font-size: 14px; line-height: 1.5;"&gt;{text}&lt;/div&gt;
-                        {audio_html if audio_html else ''}
-                    &lt;/div&gt;
-                &lt;/div&gt;
-                ''')
-        return ''.join(parts)
-    def get_history_for_llm(self): return self.conversation_history.copy()
-    def get_current_round(self): return len([m for m in self.messages if m[0] == "user"])
-
-chat, logs, pending_audio, is_processing, is_waiting_for_response = (
-    ConversationManager(), [], None, False, False
+    # 模型只加载一次，依次分析所有音频片段
+    model_path = snapshot_download("Qwen/Qwen2.5-Omni-3B")
+    processor = Qwen2_5OmniProcessor.from_pretrained(model_path)
+    model = Qwen2_5OmniForConditionalGeneration.from_pretrained(
+    model_path,
+    torch_dtype=torch.bfloat16,
+    device_map="cuda:0",
+    enable_audio_output=False
 )
-process_lock, log_lock = threading.Lock(), threading.Lock()
 
-def add_log(msg):
-    line = f"[{datetime.now().strftime('%H:%M:%S')}] {msg}"
-    with log_lock:
-        logs.append(line)
-        if len(logs) &gt; 50: logs.pop(0)
-    print(line)
+    analysis_results = []
 
-def save_temp_audio(audio, sr):
-    fd, path = tempfile.mkstemp(suffix=".wav", prefix="audio_")
-    os.close(fd)
-    audio = np.asarray(audio, dtype=np.float32)
-    max_val = np.max(np.abs(audio))
-    if max_val &gt; 0: audio = audio / max_val
-    sf.write(path, audio, sr)
-    return path
+    for i, item in enumerate(audio_segments):
+        print(
+            f"语音综合分析 {i + 1}/{len(audio_segments)}："
+            f"{item['start']:.2f}-{item['end']:.2f}秒"
+        )
 
-def get_audio_duration(audio, sr): return len(np.asarray(audio)) / sr
+        transcript = build_segment_transcript(item["segments"])
 
-def create_html_audio_player(audio_path):
-    if not audio_path or not os.path.exists(audio_path): return None
-    try:
-        with open(audio_path, 'rb') as f:
-            audio_bytes = base64.b64encode(f.read()).decode('utf-8')
-        return f'''
-        &lt;div style="margin-top: 6px; padding: 4px 6px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0;"&gt;
-            &lt;audio controls style="width: 100%; height: 32px;"&gt;
-                &lt;source src="data:audio/wav;base64,{audio_bytes}" type="audio/wav"&gt;
-                您的浏览器不支持音频播放
-            &lt;/audio&gt;
-        &lt;/div&gt;
-        '''
-    except Exception as e:
-        add_log(f"❌ 创建HTML播放器失败: {e}")
-        return None
+        prompt = f"""
+这是一段语言培训机构的客服电话录音。请结合录音和对应的通话文本，对这段通话中的语音表现进行分析。
 
-def process_with_yield(audio_data):
-    global pending_audio, is_processing, is_waiting_for_response
-    
-    if is_processing or is_waiting_for_response:
-        add_log("⏳ 正在处理中，请稍候...")
-        yield gr.skip(), gr.skip()
-        return
-    
-    if audio_data is None:
-        yield gr.skip(), gr.skip()
-        return
-    
-    try:
-        sr, audio = audio_data
-        if audio is None or len(audio) == 0:
-            yield gr.skip(), gr.skip()
-            return
-        audio = np.asarray(audio)
-        if audio.ndim == 2: audio = audio.mean(axis=1)
-        duration = get_audio_duration(audio, sr)
-        if duration &lt; 0.8:
-            add_log(f"⚠️ 音频太短 ({duration:.1f}秒)，请说长一点")
-            yield gr.skip(), gr.skip()
-            return
-        
-        is_processing = is_waiting_for_response = True
-        add_log(f"✅ 录制完成，{duration:.1f}秒")
-        
-        user_audio_file = save_temp_audio(audio, sr)
-        add_log("🎤 开始处理...")
-        add_log("🔊 ASR识别中...")
-        
-        try:
-            user_text = asr.transcribe(user_audio_file).strip()
-        except Exception as e:
-            add_log(f"❌ ASR错误: {e}")
-            is_processing = is_waiting_for_response = False
-            if os.path.exists(user_audio_file): os.remove(user_audio_file)
-            yield gr.skip(), gr.skip()
-            return
-        
-        if not user_text or len(user_text) &lt; 2:
-            add_log(f"⚠️ 未识别到有效文本: '{user_text}'")
-            is_processing = is_waiting_for_response = False
-            if os.path.exists(user_audio_file): os.remove(user_audio_file)
-            yield gr.skip(), gr.skip()
-            return
-        
-        add_log(f"👤 我: {user_text}")
-        
-        # 第一步：显示用户文本
-        chat.add_user_message(user_text)
-        yield chat.get_history_html(), gr.update(value=None)
-        
-        history = chat.get_history_for_llm()
-        add_log(f"📚 历史对话: {len(history)//2} 轮")
-        add_log("🧠 LLM思考中...")
-        
-        try:
-            answer = llm.chat(user_text, history=history).strip()
-        except Exception as e:
-            add_log(f"❌ LLM错误: {e}")
-            is_processing = is_waiting_for_response = False
-            if os.path.exists(user_audio_file): os.remove(user_audio_file)
-            chat.add_assistant_message(f"❌ LLM错误: {e}", None)
-            yield chat.get_history_html(), gr.update(value=None)
-            return
-        
-        if not answer:
-            add_log("⚠️ LLM未生成回答")
-            is_processing = is_waiting_for_response = False
-            if os.path.exists(user_audio_file): os.remove(user_audio_file)
-            chat.add_assistant_message("⚠️ LLM未生成回答", None)
-            yield chat.get_history_html(), gr.update(value=None)
-            return
-        
-        add_log(f"🤖 助手: {answer}")
-        add_log("🗣️ TTS生成中...")
-        chunks, tts_sr = [], None
-        
-        try:
-            for audio_chunk, sample_rate in tts.synthesize_stream(answer):
-                if audio_chunk is not None and len(audio_chunk) &gt; 0:
-                    chunk = np.asarray(audio_chunk, dtype=np.float32)
-                    chunks.append(chunk)
-                    if tts_sr is None: tts_sr = sample_rate
-        except Exception as e:
-            add_log(f"❌ TTS错误: {e}")
-            is_processing = is_waiting_for_response = False
-            if os.path.exists(user_audio_file): os.remove(user_audio_file)
-            chat.add_assistant_message(f"❌ TTS错误: {e}", None)
-            yield chat.get_history_html(), gr.update(value=None)
-            return
-        
-        if not chunks:
-            add_log("⚠️ TTS未生成音频")
-            is_processing = is_waiting_for_response = False
-            if os.path.exists(user_audio_file): os.remove(user_audio_file)
-            chat.add_assistant_message("⚠️ TTS未生成音频", None)
-            yield chat.get_history_html(), gr.update(value=None)
-            return
-        
-        wav = np.concatenate(chunks)
-        audio_path = save_temp_audio(wav, tts_sr)
-        total_rounds = chat.get_current_round() + 1
-        audio_html = create_html_audio_player(audio_path)
-        
-        # 第二步：显示助手答案 + 音频
-        chat.add_assistant_message(answer, audio_html)
-        
-        add_log(f"✅ 第 {total_rounds} 轮对话完成，{len(wav)/tts_sr:.1f}秒")
-        if os.path.exists(user_audio_file): os.remove(user_audio_file)
-        is_processing = is_waiting_for_response = False
-        
-        yield chat.get_history_html(), gr.update(value=None)
-        
-    except Exception as e:
-        add_log(f"❌ 处理错误: {e}")
-        is_processing = is_waiting_for_response = False
-        yield gr.skip(), gr.skip()
+【通话文本】
+{transcript}
 
-def clear_all():
-    global generation_id, pending_audio, is_processing, is_waiting_for_response
-    generation_id += 1
-    chat.reset()
-    pending_audio = None
-    is_processing = is_waiting_for_response = False
-    return '&lt;p style="color: #999; text-align: center; padding: 40px;"&gt;暂无对话记录&lt;/p&gt;', gr.update(value=None)
+请重点分析以下内容：
 
-print("🚀 正在加载模型...")
-# asr = ASRService()
-# llm = LLMService()
-# tts = TTSService()
-print("✅ 所有模型加载完成！")
+1. 客服情绪与服务语气
+分析客服整体情绪和服务语气，判断是否存在明显不耐烦、敷衍、责怪客户、语气生硬等情况。
 
-css = """
-.progress-container { display: none !important; }
-.gr-progress { display: none !important; }
-.loading { display: none !important; }
-#header-area { max-width:800px; margin:0 auto 16px auto; padding:12px 16px; background:#f5f5f5; border-radius:10px; }
-#mic-area { display:flex; align-items:center; gap:12px; }
-#mic-area .audio-component { flex:1; }
-#mic-area .clear-button { flex-shrink:0; }
-#chat-container { min-height:400px; max-height:500px; overflow-y:auto; padding:10px 14px; background:#fff; border-radius:8px; border:1px solid #e0e0e0; }
-#chat-container::-webkit-scrollbar { width:5px; }
-#chat-container::-webkit-scrollbar-track { background:#f1f1f1; border-radius:3px; }
-#chat-container::-webkit-scrollbar-thumb { background:#c1c1c1; border-radius:3px; }
-#chat-container::-webkit-scrollbar-thumb:hover { background:#a8a8a8; }
-footer { display:none !important; }
+2. 客户情绪与客服应对
+分析客户的主要情绪及变化。如果客户出现明显不满、焦虑、生气等负面情绪，判断客服是否进行了适当解释、回应或安抚。
+
+3. 通话互动
+结合实际语音中的说话先后关系和双方同时说话情况，判断客服是否存在明显抢话或打断客户，以及是否存在其他明显影响沟通的问题。
+
+只根据实际录音和提供的通话文本进行分析，不要猜测没有依据的问题。
+
+请按照下面的格式输出：
+
+客服情绪与服务语气：
+情绪表现：……
+服务语气：……
+异常情况：……
+
+客户情绪与客服应对：
+客户情绪：……
+情绪变化：……
+客服应对：……
+
+通话互动：
+抢话：……
+打断客户：……
+其他异常：……
+
+分析说明：……
 """
 
-with gr.Blocks(css=css, theme=gr.themes.Soft(), title="语音助手") as demo:
-    gr.Markdown("## 🎙️ 语音助手")
-    with gr.Group(elem_id="header-area"):
-        with gr.Row(elem_id="mic-area"):
-            mic_audio = gr.Audio(
-                sources=["microphone"],
-                type="numpy",
-                streaming=False,
-                label="🎤 点击「录制」说话，说完点击「停止」",
-                visible=True,
-                interactive=True,
-                elem_classes="audio-component"
+        conversation = [{
+            "role": "user",
+            "content": [
+                {"type": "audio", "audio": item["path"]},
+                {"type": "text", "text": prompt}
+            ]
+        }]
+
+        text = processor.apply_chat_template(
+            conversation,
+            add_generation_prompt=True,
+            tokenize=False
+        )
+
+        audios, images, videos = process_mm_info(
+            conversation,
+            use_audio_in_video=False
+        )
+
+        inputs = processor(
+            text=text,
+            audio=audios,
+            images=images,
+            videos=videos,
+            return_tensors="pt",
+            padding=True
+        ).to(model.device)
+        
+        with torch.no_grad():
+            output = model.generate(
+                **inputs,
+                use_audio_in_video=False,
+                return_audio=False,
+                max_new_tokens=500
             )
-            clear_btn = gr.Button(
-                "🗑️ 清空对话",
-                variant="stop",
-                size="sm",
-                elem_classes="clear-button"
-            )
-    chat_history = gr.HTML(
-        value='&lt;p style="color: #999; text-align: center; padding: 40px;"&gt;暂无对话记录&lt;/p&gt;',
-        label="💬 对话记录",
-        elem_id="chat-container"
+
+        output = output[:, inputs.input_ids.shape[1]:]
+
+        analysis = processor.batch_decode(
+            output,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False
+        )[0]
+
+        analysis_results.append({
+            "start": item["start"],
+            "end": item["end"],
+            "analysis": analysis
+        })
+
+        # 每段推理后释放中间变量，模型继续保留
+        del inputs, output, audios, images, videos
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    # 所有片段处理完成后释放模型
+    del model, processor
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    return format_audio_analysis(analysis_results)</code></pre>
+<h3>分析结果汇总</h3>
+<p>将各个模块的分析结果整理为统一的文本格式。</p>
+<pre data-language="Python"><code>def format_analysis_result(transcript, audio_analysis):
+    result = f"""
+【通话转写】
+{transcript}
+
+【信息核验说明】
+本次分析未提供企业业务规则或标准答案。
+对于课程时间、请假规则等业务信息，只能判断客服是否进行了明确回应，
+无法核验其内容是否准确。
+
+【语音综合分析】
+{audio_analysis}
+"""
+    return result.strip()</code></pre>
+<h3>大模型综合质检</h3>
+<p>将规范化分析结果与 20.1.2 节制定的客服质检规则一起输入 Qwen3-8B，由模型综合分析通话内容和各项分析结果，完成质检评分并生成报告。</p>
+<pre data-language="Markdown"><code>def generate_qc_report(analysis_text, qc_rules):
+    model_name = "Qwen/Qwen3-8B"
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.bfloat16,
+        device_map="cuda:0"
     )
-    
-    mic_audio.change(
-        fn=process_with_yield,
-        inputs=mic_audio,
-        outputs=[chat_history, mic_audio]
+
+    prompt = f"""
+你是一名语言培训机构电话客服质检人员。请严格按照客服质检规则，根据电话分析结果完成综合质检并生成质检报告。
+
+【客服质检规则】
+{qc_rules}
+
+【电话分析结果】
+{analysis_text}
+
+【质检要求】
+1. 按照8个质检项逐项检查，只根据提供的电话分析结果进行判断，不得猜测或补充未提供的信息。每项判断和扣分都需要有明确依据。
+2. 采用从严评分原则。没有明确问题时不扣分；发现明确问题后，应根据问题严重程度充分扣分。明显违反质检规则、影响客户体验或带来业务风险的问题，应进行较大幅度扣分，不能因为客服整体表现尚可而从轻处理，也不能只扣1～2分作为象征性处罚。
+3. 对课程时间、请假规则等需要企业业务规则才能验证的信息，如果没有提供相应依据，应标记为“现有信息无法核验”，不要自行判断正确或错误。对于学习效果等无法保证的事项，如果客服使用“保证”“一定”“肯定”等表述作出确定性承诺，应判定为不当承诺并明显扣分。
+4. 服务态度、专业措辞和问题解决情况应同时结合通话文本进行判断；客服情绪、客户情绪以及抢话、打断等语音表现结合语音综合分析结果进行判断。语音情绪正常不能覆盖文本中明确存在的不当话术。
+5. 各质检项按照其对应的检查内容进行判断，不要增加质检规则中没有规定的要求，也不要将问题归入无关的质检项。同一个问题原则上不要重复扣分；如果同一行为确实影响不同质检项，应分别说明对应依据。
+6. 完成全部质检项后，检查分项得分、综合得分和质检结论是否一致。综合得分必须等于8个质检项得分之和。
+
+【质检结论】
+根据综合得分确定质检结论：
+- 95～100分：优秀
+- 90～94分：良好
+- 80～89分：一般
+- 80分以下：较差
+
+【输出格式】
+请使用标准Markdown格式输出，不要转义Markdown符号。
+
+# 客服质检报告
+
+## 一、综合结果
+- 综合得分：XX/100
+- 质检结论：优秀/良好/一般/较差
+- 总体评价：简要概括本次客服服务质量，不超过3句话。
+
+## 二、质检项结果
+
+### 1. 开场与身份说明（X/5）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+### 2. 需求识别与回应完整性（X/20）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+### 3. 信息准确性与风险控制（X/15）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+### 4. 问题解决与承诺闭环（X/15）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+### 5. 服务态度与专业措辞（X/15）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+### 6. 打断与通话节奏（X/10）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+### 7. 客户情绪与服务修复（X/10）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+### 8. 结束语与待办确认（X/10）
+- 判断结果：
+- 主要依据：
+- 扣分原因：无/具体原因
+
+## 三、主要问题
+只列出本次通话中有明确证据的主要问题。如果没有明显问题，写“未发现明显问题”。
+
+## 四、改进建议
+针对主要问题给出具体、简洁的改进建议。如果没有明显问题，可以给出简短的保持建议。
+"""
+
+    messages = [{"role": "user", "content": prompt}]
+
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+        enable_thinking=False
     )
-    
-    clear_btn.click(
-        fn=clear_all,
-        outputs=[chat_history, mic_audio],
-        queue=False
-    )
 
-demo.queue(max_size=10)
-demo.launch(share=True, show_error=True, debug=False)</code></pre>
-<p>运行结果展示：</p>
-<img src="../../assets/manuscript-20260914/c18-25b6abbb9ca6b4.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<p>进入网址：<a href="http://127.0.0.1:7861/" target="_blank" rel="noopener noreferrer">http://127.0.0.1:7861</a>。点击“录制”后开始录音，点击“停止”后就会开始解析问题、生成答案音频。</p>
-<img src="../../assets/manuscript-20260914/c18-e6591451112a20.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
-<h3>语音助手评测</h3>
-<h4>评测维度设计</h4>
-<p>语音助手的评测需要从四个相互独立的维度分别考察，每个维度对应一项或多项可计算的指标。四个维度分别为准确性、实时性、鲁棒性和交互自然度。</p>
-<p>1）准确性</p>
-<p>准确性衡量语音助手“说得对不对”和“答得对不对”两个层面。</p>
-<p>ASR 字错率（WER） 是衡量语音转文字精度的硬指标。计算方法是将 ASR 输出的识别文本与人工标注的标准转写文本按最小编辑距离对齐，统计替换（S）、删除（D）、插入（I）三类错误的总数，除以标准文本总字数 N，即 WER = (S+D+I)/N。中文语音识别在实际业务中，WER 控制在 5%~15%就算可接受区间，再低当然更好，但要付出的优化成本会指数上升。</p>
-<p>LLM 回答语义相似度评估生成回答与标准答案在语义层面的接近程度。采用 BERTScore 指标，通过预训练语言模型将生成回答和标准答案分别编码为上下文向量，计算两段文本中每个 token 向量的余弦相似度，再综合得到整体相似性分数。BERTScore 取值范围为 0 到 1，分数越接近 1 表示语义越一致。该指标相比传统的 BLEU 或 ROUGE，对同义表达具有更好的容忍度。对于无法自动判定的开放性问题，可辅以人工评分（5 分制）作为补充。</p>
-<p>2）耗时</p>
-<p>耗时衡量语音助手各阶段及整体的处理速度，直接反映系统的计算效率。</p>
-<p>端到端总耗时是从 VAD 检测到用户语音结束（t_vad_end）到 TTS 完成全部音频输出（t_tts_end）之间的时间间隔，即 T = t_tts_end − t_vad_end。该指标反映了用户从结束发言到获得完整语音回答的完整等待时间。</p>
-<p>各阶段独立耗时将端到端总耗时拆解为四个子阶段的分别耗时：</p>
-<ul><li>VAD 耗时：从音频输入到完成语音活动检测的时间</li><li>ASR 耗时：从语音段提取到完成文字识别的时间</li><li>LLM 耗时：从用户文本输入到完成回答生成的时间</li><li>TTS 耗时：从回答文本输入到完成全部音频合成的时间</li></ul>
-<p>分别记录各阶段的起止时间戳，便于定位系统瓶颈。四个子阶段耗时的加和即为端到端总耗时。</p>
-<p>3）鲁棒性</p>
-<p>鲁棒性考察语音助手在非理想条件下的性能衰减程度。</p>
-<p>评测时需构建多组对照测试集，各组包含相同的问句集合，但施加不同的干扰条件，并将各条件下的评测结果与基线条件（安静环境、标准普通话、正常语速）进行对比，以性能衰减幅度作为鲁棒性的量化依据。</p>
-<p>噪声环境：在原始语音上叠加三类背景噪声（白噪声、街道噪声、多说话人噪声），每种噪声按三个信噪比档位（0dB、10dB、20dB）分别施加，记录各档位下的 WER 和端到端延迟，观察噪声对识别精度和响应速度的影响。</p>
-<p>口音差异：采集或合成带有不同方言口音（如四川话、东北话、粤式普通话）的测试语音，与标准普通话测试集的结果进行对比，WER 的差值直接反映 ASR 在各口音方向上的偏倚程度。</p>
-<p>语速变化：通过语音信号处理工具将测试语音加速至 1.3 倍和减速至 0.7 倍，观察 WER 随语速变化而产生的波动。</p>
-<p>4）交互自然度</p>
-<p>交互自然度评估的是多轮对话场景下语音助手的行为是否连贯、顺畅。</p>
-<p>VAD 误断率包含两类错误：误触发（用户未说话时 VAD 判定为有语音）和漏检（用户说话时 VAD 未能检测到）。误触发会导致助手在静默状态下意外开始录音和处理，漏检则会导致用户语音被截断，两者均影响交互体验。评测时在真实对话场景中连续运行 30 分钟，统计 VAD 判定状态与人工标注的真实语音活动之间的不一致帧数占总帧数的比例。</p>
-<p>多轮对话上下文保持能力：测试语音助手能否在连续 3~5 轮对话中正确指代上文提到的实体和意图。例如用户依次说“今天北京天气怎么样”“那上海呢”“两个地方哪个更冷”，考察第二轮的“那”和第三轮的“两个地方”能否被正确解析。该指标无法自动计算，需人工对照对话记录逐轮判定上下文引用是否正确，以正确轮次占总轮次的比例表示。</p>
-<p>TTS 自然度 MOS 分采用平均意见分（Mean Opinion Score）方法评估合成语音的自然程度。邀请不少于 10 名听音人对 TTS 生成的语音样本进行 5 分制主观打分（5 分=与真人无异，1 分=完全机械声），取所有打分的算术平均值。测试样本需涵盖陈述句、疑问句、感叹句和长短句四种类型，每类不少于 5 条，以避免单一文本类型对评分的偏差。</p>
-<p>四个维度的全部指标汇总如下表所示：</p>
-<table><colgroup><col /><col /><col /><col /><col /></colgroup><tbody><tr><td><p>维度</p></td><td><p>指标</p></td><td><p>计算方式</p></td><td><p>数值类型</p></td><td><p>是否支持自动化评测</p></td></tr><tr><td><p>准确性</p></td><td><p>ASR WER</p></td><td><p>(S+D+I)/N</p></td><td><p>百分比，越低越好</p></td><td><p>是</p></td></tr><tr><td><p>准确性</p></td><td><p>LLM 语义相似度</p></td><td><p>BERTScore</p></td><td><p>0~1，越高越好</p></td><td><p>是</p></td></tr><tr><td><p>耗时</p></td><td><p>端到端总耗时</p></td><td><p>t_tts_end − t_vad_end</p></td><td><p>毫秒，越低越好</p></td><td><p>是</p></td></tr><tr><td><p>耗时</p></td><td><p>VAD 耗时</p></td><td><p>t_vad_end − t_vad_start</p></td><td><p>毫秒，越低越好</p></td><td><p>是</p></td></tr><tr><td><p>耗时</p></td><td><p>ASR 耗时</p></td><td><p>t_asr_end − t_asr_start</p></td><td><p>毫秒，越低越好</p></td><td><p>是</p></td></tr><tr><td><p>耗时</p></td><td><p>LLM 耗时</p></td><td><p>t_llm_end − t_llm_start</p></td><td><p>毫秒，越低越好</p></td><td><p>是</p></td></tr><tr><td><p>耗时</p></td><td><p>TTS 耗时</p></td><td><p>t_tts_end − t_tts_start</p></td><td><p>毫秒，越低越好</p></td><td><p>是</p></td></tr><tr><td><p>鲁棒性</p></td><td><p>各条件下 WER 变化</p></td><td><p>施扰结果 − 基线结果</p></td><td><p>差值（pp），越小越鲁棒</p></td><td><p>是</p></td></tr><tr><td><p>交互自然度</p></td><td><p>VAD 误断率</p></td><td><p>不一致帧数 / 总帧数</p></td><td><p>百分比，越低越好</p></td><td><p>是</p></td></tr><tr><td><p>交互自然度</p></td><td><p>上下文保持准确率</p></td><td><p>正确指代轮次 / 总轮次</p></td><td><p>百分比，越高越好</p></td><td><p>否</p></td></tr><tr><td><p>交互自然度</p></td><td><p>TTS 自然度 MOS</p></td><td><p>多人打分的算术均值</p></td><td><p>1~5，越高越好</p></td><td><p>否</p></td></tr></tbody></table>
-<h4>自动化评测脚本</h4>
-<p>自动化评测脚本的核心任务是：读取标准测试集，对每条测试音频依次执行 VAD、ASR、LLM、TTS 四个阶段，记录每阶段的耗时和中间结果，最后与标准答案比对，生成量化评测报告。</p>
-<p>1）测试集结构设计</p>
-<p>测试集以 JSON 格式组织，存放于 /mnt/workspace/ 目录下。每条测试样本包含以下字段：</p>
-<pre data-language="JSON"><code>{
-  "samples": [
-    {
-      "id": "sample_001",
-      "audio_path": "/mnt/workspace/query.wav",
-      "reference_text": "北京有哪些著名景点",
-      "reference_answer": "北京有许多著名景点，如故宫、长城、颐和园、天坛、景山、北海公园、南锣鼓巷等。这些地方历史悠久，风景优美，是北京的标志性景点。",
-      "category": "weather",
-      "noise_type": "clean",
-      "speaker_accent": "standard"
-    }
-  ]
-}</code></pre>
-<p>其中 <code>reference_text</code> 为 ASR 阶段的标准转写文本，用于计算 WER；<code>reference_answer</code> 为 LLM 阶段的标准回答，用于计算语义相似度。</p>
-<p>测试音频文件的采样率统一为 16000 Hz，单声道，时长控制在 2~8 秒之间。若需要测试鲁棒性，可在 <code>noise_type</code> 和 <code>speaker_accent</code> 字段中标注干扰条件。</p>
-<p>2）自动化评测</p>
-<p>构建评测执行器 <code>AudioEvaluator</code> 接收音频文件路径，依次调用 VAD、ASR、LLM、TTS 四个模块，记录各阶段的起始和结束时间戳，保存中间输出，并计算 WER 和 BERTScore 指标。 遍历测试集所有样本，调用执行器逐条处理，汇总统计结果。评测代码如下：</p>
-<pre data-language="Python"><code>import os
-import json
-import time
-import tempfile
-import traceback
-from pathlib import Path
-from typing import Dict
-from collections import defaultdict
+    inputs = tokenizer(
+        text,
+        return_tensors="pt"
+    ).to(model.device)
 
-import numpy as np
-import soundfile as sf
-import librosa
-from jiwer import wer
-import torch
-from transformers import AutoTokenizer, AutoModel
-
-# 使用 modelscope 加载 BERT 模型（会自动下载）
-from modelscope import AutoTokenizer, AutoModel
-
-def compute_bert_score(pred_text: str, ref_text: str, model, tokenizer) -&gt; float:
-    """
-    使用本地 BERT 模型计算语义相似度（简化版 BERTScore）
-    """
-    if not pred_text or not ref_text:
-        return 0.0
-    
-    # 编码
-    pred_tokens = tokenizer(pred_text, return_tensors="pt", truncation=True, max_length=512)
-    ref_tokens = tokenizer(ref_text, return_tensors="pt", truncation=True, max_length=512)
-    
     with torch.no_grad():
-        pred_outputs = model(**pred_tokens)
-        ref_outputs = model(**ref_tokens)
-    
-    # 获取最后一层的隐藏状态
-    pred_embeds = pred_outputs.last_hidden_state.squeeze(0)
-    ref_embeds = ref_outputs.last_hidden_state.squeeze(0)
-    
-    # 计算 token 级别余弦相似度（取平均）
-    pred_norm = torch.nn.functional.normalize(pred_embeds, p=2, dim=1)
-    ref_norm = torch.nn.functional.normalize(ref_embeds, p=2, dim=1)
-    
-    # 计算余弦相似度矩阵
-    sim_matrix = torch.matmul(pred_norm, ref_norm.T)
-    
-    # 取每个预测 token 的最佳匹配，然后取平均
-    max_sim, _ = sim_matrix.max(dim=1)
-    score = max_sim.mean().item()
-    
-    return score
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=4096
+        )
 
-class AudioEvaluator:
-    def __init__(self, vad, asr, llm, tts, bert_model, bert_tokenizer):
-        self.vad = vad
-        self.asr = asr
-        self.llm = llm
-        self.tts = tts
-        self.bert_model = bert_model
-        self.bert_tokenizer = bert_tokenizer
-    
-    def evaluate_single(self, audio_path: str) -&gt; Dict:
-        result = {
-            "audio_path": audio_path,
-            "stages": {},
-            "asr_text": "",
-            "llm_answer": "",
-            "status": "success",
-            "error_detail": ""
-        }
-        
-        try:
-            # 检查音频文件是否存在
-            if not os.path.exists(audio_path):
-                result["status"] = "音频文件不存在"
-                result["error_detail"] = f"文件路径: {audio_path}"
-                return result
-            
-            # 加载音频
-            try:
-                audio, sr = sf.read(audio_path)
-            except Exception as e:
-                result["status"] = "音频加载失败"
-                result["error_detail"] = f"{e}\n{traceback.format_exc()}"
-                return result
-            
-            if sr != 16000:
-                try:
-                    audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
-                    sr = 16000
-                except Exception as e:
-                    result["status"] = "音频重采样失败"
-                    result["error_detail"] = f"{e}\n{traceback.format_exc()}"
-                    return result
-            
-            # ---------- VAD 阶段 ----------
-            t0 = time.perf_counter()
-            try:
-                # 重置 VAD 状态
-                self.vad.reset()
-                
-                # 分块处理（每块100ms）
-                chunk_size = int(sr * 0.1)
-                is_complete = False
-                speech_found = False
-                
-                for i in range(0, len(audio), chunk_size):
-                    chunk = audio[i:i+chunk_size]
-                    if len(chunk) &lt; chunk_size:
-                        break
-                    is_complete, is_speech = self.vad.process(chunk, sr)
-                    if is_speech:
-                        speech_found = True
-                    if is_complete:
-                        break
-                
-                # 获取裁剪后的语音音频
-                speech_audio = self.vad.get_audio()
-                
-                # 如果检测到语音，使用裁剪后的音频
-                if speech_found and len(speech_audio) &gt; 0:
-                    audio = speech_audio
-                    
-            except Exception as e:
-                result["status"] = f"VAD错误: {e}"
-                result["error_detail"] = traceback.format_exc()
-                return result
-            t1 = time.perf_counter()
-            result["stages"]["vad"] = (t1 - t0) * 1000
-            
-            # ---------- ASR 阶段 ----------
-            t0 = time.perf_counter()
-            try:
-                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                    sf.write(tmp.name, audio, sr)
-                    tmp_path = tmp.name
-                asr_text = self.asr.transcribe(tmp_path).strip()
-                os.unlink(tmp_path)
-            except Exception as e:
-                result["status"] = f"ASR错误: {e}"
-                result["error_detail"] = traceback.format_exc()
-                return result
-            t1 = time.perf_counter()
-            result["stages"]["asr"] = (t1 - t0) * 1000
-            result["asr_text"] = asr_text
-            
-            if not asr_text or len(asr_text) &lt; 1:
-                result["status"] = "ASR结果为空"
-                result["error_detail"] = f"asr_text: '{asr_text}'"
-                return result
-            
-            # ---------- LLM 阶段 ----------
-            t0 = time.perf_counter()
-            try:
-                llm_answer = self.llm.chat(asr_text, history=[]).strip()
-            except Exception as e:
-                result["status"] = f"LLM错误: {e}"
-                result["error_detail"] = traceback.format_exc()
-                return result
-            t1 = time.perf_counter()
-            result["stages"]["llm"] = (t1 - t0) * 1000
-            result["llm_answer"] = llm_answer
-            
-            if not llm_answer:
-                result["status"] = "LLM回答为空"
-                result["error_detail"] = f"llm_answer: '{llm_answer}'"
-                return result
-            
-            # ---------- TTS 阶段 ----------
-            t0 = time.perf_counter()
-            try:
-                chunks = []
-                tts_sr = None
-                for chunk, sr_chunk in self.tts.synthesize_stream(llm_answer):
-                    if chunk is not None and len(chunk) &gt; 0:
-                        chunks.append(np.asarray(chunk, dtype=np.float32))
-                        if tts_sr is None:
-                            tts_sr = sr_chunk
-                if not chunks:
-                    result["status"] = "TTS未生成音频"
-                    result["error_detail"] = "TTS返回空chunks"
-                    return result
-            except Exception as e:
-                result["status"] = f"TTS错误: {e}"
-                result["error_detail"] = traceback.format_exc()
-                return result
-            t1 = time.perf_counter()
-            result["stages"]["tts"] = (t1 - t0) * 1000
-            
-            result["total_time"] = sum(result["stages"].values())
-            
-        except Exception as e:
-            result["status"] = f"未知错误: {e}"
-            result["error_detail"] = traceback.format_exc()
-        
-        return result
+    outputs = outputs[:, inputs.input_ids.shape[1]:]
 
-def run_batch_evaluation(test_set_path: str, evaluator: AudioEvaluator) -&gt; Dict:
-    with open(test_set_path, 'r', encoding='utf-8') as f:
-        test_set = json.load(f)
-    
-    samples = test_set["samples"]
-    total = len(samples)
-    
-    all_results = []
-    stage_times = defaultdict(list)
-    wer_list = []
-    bert_scores = []
-    e2e_latencies = []
-    errors = []
-    
-    for idx, sample in enumerate(samples):
-        print(f"评测进度: {idx+1}/{total} - {sample['id']}")
-        
-        result = evaluator.evaluate_single(sample["audio_path"])
-        result["id"] = sample["id"]
-        result["reference_text"] = sample["reference_text"]
-        result["reference_answer"] = sample["reference_answer"]
-        result["category"] = sample.get("category", "unknown")
-        result["noise_type"] = sample.get("noise_type", "clean")
-        result["speaker_accent"] = sample.get("speaker_accent", "standard")
-        result["speed_factor"] = sample.get("speed_factor", 1.0)
-        
-        # 打印错误详情
-        if result["status"] != "success":
-            print(f"❌ 样本 {sample['id']} 失败: {result['status']}")
-            print(f"   详情: {result.get('error_detail', '无详细信息')}")
-            errors.append(result)
-            all_results.append(result)
-            continue
-        
-        print(f"✅ 样本 {sample['id']} 成功")
-        
-        # 计算 WER
-        wer_value = wer(sample["reference_text"], result["asr_text"])
-        result["wer"] = wer_value
-        wer_list.append(wer_value)
-        
-        # 计算 BERTScore（使用本地 modelscope 加载的模型）
-        try:
-            score = compute_bert_score(
-                result["llm_answer"], 
-                sample["reference_answer"],
-                evaluator.bert_model,
-                evaluator.bert_tokenizer
-            )
-            result["bert_score"] = score
-            bert_scores.append(score)
-        except Exception as e:
-            print(f"⚠️ BERTScore计算失败: {e}")
-            result["bert_score"] = None
-        
-        e2e_latencies.append(result["total_time"])
-        
-        for stage, duration in result["stages"].items():
-            stage_times[stage].append(duration)
-        
-        all_results.append(result)
-    
-    wer_by_noise = {}
-    wer_by_accent = {}
-    wer_by_speed = {}
-    baseline_wer = None
-    
-    for r in all_results:
-        if r["status"] != "success":
-            continue
-        noise = r.get("noise_type", "clean")
-        wer_by_noise.setdefault(noise, []).append(r["wer"])
-        accent = r.get("speaker_accent", "standard")
-        wer_by_accent.setdefault(accent, []).append(r["wer"])
-        speed = str(r.get("speed_factor", 1.0))
-        wer_by_speed.setdefault(speed, []).append(r["wer"])
-        
-        if noise == "clean" and accent == "standard" and r.get("speed_factor", 1.0) == 1.0:
-            baseline_wer = r["wer"]
-    
-    robustness_results = {}
-    for noise, wers in wer_by_noise.items():
-        if noise == "clean":
-            continue
-        mean_wer = np.mean(wers)
-        robustness_results[f"noise_{noise}"] = {
-            "mean_wer": mean_wer,
-            "delta_from_baseline": mean_wer - baseline_wer if baseline_wer is not None else None,
-            "count": len(wers)
-        }
-    for accent, wers in wer_by_accent.items():
-        if accent == "standard":
-            continue
-        mean_wer = np.mean(wers)
-        robustness_results[f"accent_{accent}"] = {
-            "mean_wer": mean_wer,
-            "delta_from_baseline": mean_wer - baseline_wer if baseline_wer is not None else None,
-            "count": len(wers)
-        }
-    for speed, wers in wer_by_speed.items():
-        if speed == "1.0":
-            continue
-        mean_wer = np.mean(wers)
-        robustness_results[f"speed_{speed}x"] = {
-            "mean_wer": mean_wer,
-            "delta_from_baseline": mean_wer - baseline_wer if baseline_wer is not None else None,
-            "count": len(wers)
-        }
-    
-    summary = {
-        "total_samples": total,
-        "success_count": len([r for r in all_results if r["status"] == "success"]),
-        "error_count": len(errors),
-        "errors": errors,
-        "wer": {
-            "mean": np.mean(wer_list) if wer_list else None,
-            "std": np.std(wer_list) if wer_list else None,
-            "min": np.min(wer_list) if wer_list else None,
-            "max": np.max(wer_list) if wer_list else None
-        },
-        "bert_score": {
-            "mean": np.mean([s for s in bert_scores if s is not None]) if bert_scores else None,
-            "std": np.std([s for s in bert_scores if s is not None]) if bert_scores else None,
-            "min": np.min([s for s in bert_scores if s is not None]) if bert_scores else None,
-            "max": np.max([s for s in bert_scores if s is not None]) if bert_scores else None
-        },
-        "e2e_latency_ms": {
-            "mean": np.mean(e2e_latencies) if e2e_latencies else None,
-            "p50": np.percentile(e2e_latencies, 50) if e2e_latencies else None,
-            "p90": np.percentile(e2e_latencies, 90) if e2e_latencies else None,
-            "p99": np.percentile(e2e_latencies, 99) if e2e_latencies else None
-        },
-        "stage_times_ms": {
-            stage: {
-                "mean": np.mean(times),
-                "std": np.std(times),
-                "p50": np.percentile(times, 50),
-                "p90": np.percentile(times, 90),
-                "p99": np.percentile(times, 99)
-            }
-            for stage, times in stage_times.items()
-        },
-        "robustness": robustness_results,
-        "details": all_results
-    }
-    
-    return summary
+    report = tokenizer.decode(
+        outputs[0],
+        skip_special_tokens=True
+    )
 
-# ============================================================
-# 在 Jupyter Notebook 中直接运行
-# ============================================================
+    del model, tokenizer
+    gc.collect()
+    torch.cuda.empty_cache()
 
-print("🚀 加载模型...")
+    return report</code></pre>
+<h3>完整质检流程</h3>
+<p>主程序还需要定义几个辅助函数，用于根据时间将 ASR 文本与说话人片段对齐、生成完整通话文本以及保存质检报告。</p>
+<pre data-language="Python"><code>def merge_asr_speakers(asr_segments, speaker_segments):
+    results = [{"turn_id": i + 1, "speaker": seg["speaker"], "start": seg["start"], "end": seg["end"], "texts": []} for i, seg in enumerate(speaker_segments)]
 
-# 1. 加载 VAD
-# vad = StreamingVAD(mode=3, silence_seconds=1.0)
+    for item in asr_segments:
+        best_index, best_overlap = None, 0
+        for i, seg in enumerate(speaker_segments):
+            overlap = min(seg["end"], item["end"]) - max(seg["start"], item["start"])
+            if overlap &gt; best_overlap:
+                best_overlap, best_index = overlap, i
+        if best_index is not None and best_overlap &gt; 0:
+            results[best_index]["texts"].append(item["text"])
 
-# # 2. 加载 ASR
-# asr = ASRService()
+    results = [item for item in results if item["texts"]]
 
-# # 3. 加载 LLM
-# llm = LLMService()
+    for i, item in enumerate(results):
+        item["turn_id"] = i + 1
+        item["text"] = "".join(item.pop("texts"))
 
-# # 4. 加载 TTS
-tts = TTSService()
+    return results
 
-# 5. 加载 BERT 模型（使用 modelscope）
-print("📚 加载 BERT 模型...")
-bert_model_name = "google-bert/bert-base-chinese"
-bert_tokenizer = AutoTokenizer.from_pretrained(bert_model_name)
-bert_model = AutoModel.from_pretrained(bert_model_name)
-bert_model.eval()
-print("✅ BERT 模型加载完成")
+def build_transcript(segments):
+    return "\n".join(
+        f"第{seg['turn_id']}轮 [{seg['speaker']}] {seg['start']:.2f}-{seg['end']:.2f}秒：{seg['text']}"
+        for seg in segments
+    )
 
-print("✅ 所有模型加载完成")
+def save_report(report, output_path="./customer_service/客服质检报告.md"):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(report)
+    return output_path
 
-# 创建评测执行器
-evaluator = AudioEvaluator(vad, asr, llm, tts, bert_model, bert_tokenizer)
+QC_RULES = """
+电话客服质检规则，总分100分：
 
-# 设置测试集路径
-TEST_SET_PATH = "/mnt/workspace/test.json"
+1. 开场与身份说明（5分）
+检查是否主动问候，说明机构和本人身份，并询问客户需求。
 
-# 加载测试集
-print(f"📂 加载测试集: {TEST_SET_PATH}")
-with open(TEST_SET_PATH, 'r', encoding='utf-8') as f:
-    test_set = json.load(f)
+2. 需求识别与回应完整性（20分）
+检查是否识别客户提出的问题，并逐项进行有效回应。
 
-# 执行评测
-print(f"开始评测 {len(test_set['samples'])} 条样本...")
-summary = run_batch_evaluation(TEST_SET_PATH, evaluator)
+3. 信息准确性与风险控制（15分）
+检查客服是否编造不确定的信息，是否对课程效果、学习成果等作出不当承诺。
+需要特别注意学习效果相关的保证性表述。学习效果受到学员基础、学习投入、练习情况等多种因素影响，客服不得对学习效果作出确定性保证。
+如果客服使用“保证”“一定可以”“肯定能”等确定性表述，或者明确承诺在固定时间内达到某种学习效果，应判定为不当承诺并扣分。
 
-# 打印结果摘要
-print("\n" + "=" * 60)
-print("自动化评测结果摘要")
-print("=" * 60)
-print(f"样本总数: {summary['total_samples']}")
-print(f"成功数: {summary['success_count']} | 失败数: {summary['error_count']}")
+例如，“坚持一个月基本就能流利说英语”“这个效果可以保证”等表述，属于学习效果不当承诺。
+4. 问题解决与承诺闭环（15分）
+检查客户核心问题是否解决；无法立即解决时，是否说明后续处理方式。
 
-if summary["wer"]["mean"] is not None:
-    print(f"\n📊 ASR WER: {summary['wer']['mean']*100:.2f}% ± {summary['wer']['std']*100:.2f}%")
+5. 服务态度与专业措辞（15分）
+检查是否存在不耐烦、责怪、敷衍、辱骂或推卸责任等表达。
 
-if summary["bert_score"]["mean"] is not None:
-    print(f"📊 LLM BERTScore: {summary['bert_score']['mean']:.3f} ± {summary['bert_score']['std']:.3f}")
+6. 打断与通话节奏（10分）
+检查是否频繁打断客户、抢话或存在明显影响沟通的异常节奏。
 
-if summary["e2e_latency_ms"]["mean"] is not None:
-    print(f"⏱️  端到端耗时: {summary['e2e_latency_ms']['mean']:.1f} ms (P50: {summary['e2e_latency_ms']['p50']:.1f} ms, P90: {summary['e2e_latency_ms']['p90']:.1f} ms)")
+7. 客户情绪与服务修复（10分）
+检查客户是否出现明显负面情绪，客服是否及时解释和安抚。
 
-print("\n⏱️  各阶段耗时 (均值 ± 标准差):")
-for stage, stats in summary["stage_times_ms"].items():
-    print(f"  {stage.upper()}: {stats['mean']:.1f} ± {stats['std']:.1f} ms")
+8. 结束语与待办确认（10分）
+检查是否礼貌结束，并对尚未完成的事项进行确认。
+"""
 
-if summary["robustness"]:
-    print("\n🛡️  鲁棒性 (各条件下WER劣化):")
-    for cond, stats in summary["robustness"].items():
-        if stats["delta_from_baseline"] is not None:
-            print(f"  {cond}: +{stats['delta_from_baseline']*100:.2f}% (WER={stats['mean_wer']*100:.2f}%)")
+def main(audio_path, report_save_path):
+    result = {}
 
-if summary["errors"]:
-    print("\n❌ 失败样本详情:")
-    for err in summary["errors"]:
-        print(f"  - {err['id']}: {err['status']}")
-        if err.get("error_detail"):
-            detail = err["error_detail"][:500]
-            print(f"    详情: {detail}...")
+    # 音频预处理
+    audio_path = preprocess_audio(audio_path)
+    print("音频预处理 已完成✅️")
 
-print("=" * 60)
+    # 说话人分析
+    speaker_segments = analyze_speakers(audio_path)
+    print("说话人分析 已完成✅️")
 
-# 保存报告到文件
-with open("evaluation_result.json", "w", encoding="utf-8") as f:
-    json.dump(summary, f, ensure_ascii=False, indent=2)
-print("📊 报告已保存至 evaluation_result.json")</code></pre>
-<p>结果展示：</p>
-<img src="../../assets/manuscript-20260914/c18-ecd830fca53415.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+    # 语音识别
+    asr_result = analyze_asr(audio_path)
+    print("语音识别 已完成✅️")
+
+    # 文本与说话人对齐
+    segments = merge_asr_speakers(asr_result["segments"], speaker_segments)
+    print("文本与说话人对齐 已完成✅️")
+
+    # 说话人角色识别
+    segments = identify_speaker_roles(segments)
+    result["transcript"] = build_transcript(segments)
+    print("说话人角色识别 已完成✅️")
+
+    # 语音综合分析
+    result["audio_analysis"] = analyze_audio(audio_path, segments)
+    print("语音综合分析 已完成✅️")
+
+    # 汇总分析结果
+    analysis_text = format_analysis_result(result["transcript"], result["audio_analysis"])
+    print("分析结果汇总 已完成✅️")
+
+    # 综合质检
+    report = generate_qc_report(analysis_text, QC_RULES)
+    print("综合质检 已完成✅️")
+
+    # 保存并输出结果
+    report_path = save_report(report, report_save_path)
+    print("\n========== 规范化分析结果 ==========\n")
+    print(analysis_text)
+    print("\n========== 客服质检报告 ==========\n")
+    print(report)
+    print(f"\n质检报告已保存到：{report_path}")
+    return report</code></pre>
+<h3>运行测试</h3>
+<p>输入测试音频进行客服质检测试。</p>
+<pre data-language="Plain Text"><code>if __name__ == "__main__":
+    main(
+    audio_path="./customer_service/客服通话记录.wav", 
+    report_save_path="./customer_service/客服质检报告.md"
+    )</code></pre>
+<img src="../../assets/manuscript-20260914/c17-6bdbf54a06b196.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>...</p>
+<img src="../../assets/manuscript-20260914/c17-ef059711b5dabe.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>生成的质检报告如下：</p>
+<figure><a href="../../assets/manuscript-20260914/c17-d1f09657da099c.md" class="attachment" download="客服质检报告.md">客服质检报告.md</a></figure>
 <p />
-<p>本章代码及相关文件见：https://www.modelscope.cn/gallery/liucong/59e8531d-ec1b-4a83-bf3e-fe463e3fdfa2</p>
+<p>本章代码及相关文件见：https://www.modelscope.cn/gallery/liucong/df09152b-2d3c-414e-abe6-f2e768a4ef4b</p>
+<p />
 </article>

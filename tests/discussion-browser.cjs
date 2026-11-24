@@ -73,19 +73,19 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'practice mobile overflow');
   await page.locator('#sceneGrid').screenshot({path:'/tmp/purplebook-practice-art-mobile.png'});
   await page.setViewportSize({width:1280,height:900});
-  for(const [title,id] of [['手机巡检助手',21],['开源决策模型',22],['教学海报生成',27],['产线巡检 Agent',36],['Mini AI Scientist',37]]){
+  for(const [title,id] of [['手机巡检助手',22],['开源决策模型',23],['教学海报生成',28],['产线巡检 Agent',37],['Mini AI Scientist',38]]){
     await page.getByRole('heading',{name:title,exact:true}).getByRole('link').click();
     await page.locator('#chapterNumber').getByText('第 '+id+' 章',{exact:true}).waitFor();
     await page.goto(env.APP_BASE_URL+'/#practice');
   }
-  await page.goto(env.APP_BASE_URL+'/#chapter-22');
+  await page.goto(env.APP_BASE_URL+'/#chapter-23');
   await page.locator('#chapterTitle').getByText('我们每天都在做决策，AI 能帮我们做吗？',{exact:true}).waitFor();
   assert.equal(await page.locator('#articleBody img').count(),21);
   assert.equal(await page.locator('#articleBody pre').count(),16);
   assert.equal(await page.locator('#articleBody table').count(),6);
-  assert.equal(await page.locator('#previousChapter').getAttribute('href'),'#chapter-21');
-  assert.equal(await page.locator('#nextChapter').getAttribute('href'),'#chapter-23');
-  assert.ok((await page.locator('#chapterSource').getAttribute('href')).endsWith('/content/chapters/chapter-22.md'));
+  assert.equal(await page.locator('#previousChapter').getAttribute('href'),'#chapter-22');
+  assert.equal(await page.locator('#nextChapter').getAttribute('href'),'#chapter-24');
+  assert.ok((await page.locator('#chapterSource').getAttribute('href')).endsWith('/content/chapters/chapter-23.md'));
   await page.locator('#articleBody img').evaluateAll(images=>Promise.all(images.map(image=>{image.loading='eager';return image.decode();})));
   await page.screenshot({path:'/tmp/purplebook-jev-desktop.png'});
   await page.setViewportSize({width:390,height:844});
@@ -114,7 +114,7 @@ const fs=require('node:fs');const os=require('node:os');const path=require('node
   await page.getByRole('button',{name:'感兴趣组织工作坊？',exact:true}).click();
   await page.getByRole('dialog',{name:'一起组织一场工作坊',exact:true}).waitFor();
   await page.getByRole('button',{name:'关闭工作坊支持',exact:true}).click();
-  await page.goto(env.APP_BASE_URL+'/#chapter-24');
+  await page.goto(env.APP_BASE_URL+'/#chapter-25');
   const videos=page.locator('#articleBody video');assert.equal(await videos.count(),5);
   for(let i=0;i<5;i++){
     await videos.nth(i).evaluate(async video=>{video.muted=true;await video.play();});
