@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {parseHash, chapterHash, pathStep} = require('../assets/reader-routes.js');
-const paths = {beginner:{name:'从零开始',chapters:[1,5,7]},aigc:{name:'AIGC 创作',chapters:[23,24,25,26,28]}};
+const paths = {beginner:{name:'从零开始',chapters:[1,5,7]},aigc:{name:'AIGC 创作',chapters:[24,25,26,27,29]}};
 
 test('从零开始沿 1→5→7 导航，首尾不越界',()=>{
   assert.equal(pathStep(paths,'beginner',1).next,5);
@@ -11,11 +11,11 @@ test('从零开始沿 1→5→7 导航，首尾不越界',()=>{
   assert.equal(pathStep(paths,'beginner',7).next,null);
   assert.equal(pathStep(paths,'beginner',7).index,2);
 });
-test('AIGC 路径包含新第 26 章，再跳过待补充的 27',()=>{
-  assert.equal(pathStep(paths,'aigc',25).next,26);
-  assert.equal(pathStep(paths,'aigc',26).previous,25);
-  assert.equal(pathStep(paths,'aigc',26).next,28);
-  assert.equal(pathStep(paths,'aigc',28).total,5);
+test('AIGC 路径顺延后包含第 27 章，再跳过待补充的 28',()=>{
+  assert.equal(pathStep(paths,'aigc',26).next,27);
+  assert.equal(pathStep(paths,'aigc',27).previous,26);
+  assert.equal(pathStep(paths,'aigc',27).next,29);
+  assert.equal(pathStep(paths,'aigc',29).total,5);
 });
 test('路径与小节可同时写入链接，刷新后可从 URL 恢复',()=>{
   const hash=chapterHash('chapter-5','c5-s2','beginner');

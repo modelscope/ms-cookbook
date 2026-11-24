@@ -12,9 +12,9 @@ def test_existing_reader_comments_have_clickable_profile(site):
     item=client.get(ENDPOINT).json()['items'][0]
     assert item['profileUrl'], 'Existing comments render a strong element instead of a profile link'
 
-def test_chapter_23_video_links_play_instead_of_download():
+def test_aigc_case_video_links_play_instead_of_download():
     data=json.loads((Path(__file__).resolve().parents[1]/'assets/content.js').read_text().removeprefix('window.BOOK_DATA = ').removesuffix(';\n'))
-    chapter=next(c for c in data['chapters'] if c['number']==23)
+    chapter=next(c for c in data['chapters'] if c['discussionId']=='chapter-20')
     assert '<video' in chapter['html'], 'Videos are download-only attachments without a player'
     assert chapter['html'].count('<video')==5
     assert 'download=' not in chapter['html']

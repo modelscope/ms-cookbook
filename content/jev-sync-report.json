@@ -1,0 +1,317 @@
+{
+  "syncedAt": "2026-11-24",
+  "sourceUrl": "https://my.feishu.cn/wiki/KltQw6TnniD7qFkW8vncqaSqnoe",
+  "sourceDocumentId": "BnaXdLIEiome6IxNbLscOgAynr3",
+  "revision": 319,
+  "number": 22,
+  "title": "我们每天都在做决策，AI 能帮我们做吗？",
+  "sourceXmlSha256": "37a9da931c8b0b849b8268e9e03d6dad642fdc48fa6da818b39b80b740659a27",
+  "sourceMarkdownSha256": "65d915673a753b7ecb2abc3e725ac74ea1fec4271dd50a785cc4a332397d6dca",
+  "chapterFileSha256": "6cb2eb25e35bee4064fa2f211cc6da45efe9d3d1e6840a14cdace715344f3a65",
+  "headings": 23,
+  "codeBlocks": 16,
+  "codeSha256": [
+    "4324d23856f8103b4fb441e78269aed414586d0941ec272e10713e572ff8ad01",
+    "55fd4ffea6bee340dabadfb7aeb7817d8110062209312141a0f5205ab9749081",
+    "4567b922f5b5a9057bd4297dabdea60f0ac466c0f85945579f5ce9f37f8d734c",
+    "9535a3e0c96167898a367135ce41f0614af04c4a8d22b9ab8141b44351f36bbb",
+    "ac783fc8f4f52a7f18608d3d7cecd38f0ebd3cbe38a4912a6ccc0060b23d6c80",
+    "ed4ee9ef2baea1ea4522705c4f9222f3f34e36217655ac3f4b4c1d5f1f25fef6",
+    "570d6e42aa2e44f3a9e3655ab91e32c86abdf55c27626a97eb8f999e55db0791",
+    "f61c8412a76afef615674d4d123a74b3ff054f14bbb2d2b0ffb2125fdd6aba03",
+    "e5d171461486be5f93528b48f8b16767b4c845cd2110c334cc4617126fb5d627",
+    "30590fba148d5313575a5cdbc51c809f530fcb68adbe92f4760a47d62d4a0b6e",
+    "4c4f68314e0d50f2d08aa28ecc2977c9797a009ddc878a2add1bbea16817269c",
+    "bce00de8e7dc9902e8a64aa68513c2efcc660422a42b761a0aabe4b64761821a",
+    "5c0bd008fce0a4737a93849d56d714876d309db0a0cf26c14aa1a7f833d4cd44",
+    "2d2fcc7a0a7a0146c01c4a2f2c09a9bbd7c341aa602a15e56978722822ae213a",
+    "b108052d1a22644049305a2bee0c1ccca0a7fa2c9c5aa48b0d34210c1709f6c7",
+    "0a16a895164a355f631ed1783e9cb118750b63a487ef1941027a3b2585d5ec24"
+  ],
+  "images": 21,
+  "tables": 6,
+  "attachments": 0,
+  "proseVerified": true,
+  "headingOrderVerified": true,
+  "codeVerified": true,
+  "tablesVerified": true,
+  "existingSourceFilesUnchanged": true,
+  "existingDiscussionIdsPreserved": true,
+  "media": [
+    {
+      "index": 1,
+      "file": "assets/jev-20261124/01-8ed3334906a645.png",
+      "sha256": "8ed3334906a6456e1a5483b0b09e3bfd17ec6cbd89235a191352f540c274bac7",
+      "bytes": 1315530,
+      "sourceBlock": "KwWndmKpGoaKTQxMpNHc7OWonaf"
+    },
+    {
+      "index": 2,
+      "file": "assets/jev-20261124/02-4b2b80a3beda16.png",
+      "sha256": "4b2b80a3beda160b899349c0b40f95827e17e44d9bcf525ad13aec4ac15400ef",
+      "bytes": 1437267,
+      "sourceBlock": "S0pRdvP5Bo6Rm2x2MQwciz4onXc"
+    },
+    {
+      "index": 3,
+      "file": "assets/jev-20261124/03-1606bac2e732cb.png",
+      "sha256": "1606bac2e732cb0475e9f393342310f7f3e54464a629cf196494c3b6e2c74084",
+      "bytes": 1003569,
+      "sourceBlock": "KsCydABNLo8oI3xhi5mc4adVn4c"
+    },
+    {
+      "index": 4,
+      "file": "assets/jev-20261124/04-dd2fb590c3b5e2.png",
+      "sha256": "dd2fb590c3b5e2d278db36f766754b30c8cbb067ccc3b1ba36f75b11ccc9c526",
+      "bytes": 314039,
+      "sourceBlock": "ARRGdjoESoB7lNxxxS3cdFlNnAh"
+    },
+    {
+      "index": 5,
+      "file": "assets/jev-20261124/05-78b1ffb08e9981.png",
+      "sha256": "78b1ffb08e998103ab6d99f5cf009130ef4808f230cf7d3aa074d0ca876550c9",
+      "bytes": 369423,
+      "sourceBlock": "LhiOd8JvOo3TbPxTqvGcGG41nRf"
+    },
+    {
+      "index": 6,
+      "file": "assets/jev-20261124/06-d4a08ec7251dea.png",
+      "sha256": "d4a08ec7251deaa0a74869587bd3cdc1fb7155b9480177c17705c52eef537fcc",
+      "bytes": 1527468,
+      "sourceBlock": "OxJsdh7xxoLCjqxtcOQcyuNBnXg"
+    },
+    {
+      "index": 7,
+      "file": "assets/jev-20261124/07-38d212c64c0a53.png",
+      "sha256": "38d212c64c0a53bf3ef7b14ac27d1e00cf33ffe9d5a99de4c90e7cb413e71983",
+      "bytes": 658301,
+      "sourceBlock": "GtDNdmk0xoAs1Tx3uJ6crCNantO"
+    },
+    {
+      "index": 8,
+      "file": "assets/jev-20261124/08-f726e985b190b5.png",
+      "sha256": "f726e985b190b5d53f1a27a836a97fc08cdd3e78285b24e528ea6663f6a43698",
+      "bytes": 939613,
+      "sourceBlock": "H4Hud6MZIoC4tdx0o29c4earn2g"
+    },
+    {
+      "index": 9,
+      "file": "assets/jev-20261124/09-ba13fecd3e45bb.png",
+      "sha256": "ba13fecd3e45bbe61913f5d61d5377e2e94ffe340bda2e9a185f8cd20b25ef90",
+      "bytes": 642329,
+      "sourceBlock": "DpWTdvedSoCUjXxV6bic6AQmnJd"
+    },
+    {
+      "index": 10,
+      "file": "assets/jev-20261124/10-78dbc25f75f093.png",
+      "sha256": "78dbc25f75f0931eebc6bbf222d27d6f13fc87a4441cbd51a812006747959dd6",
+      "bytes": 1049753,
+      "sourceBlock": "YVgsdOe5RoAWznxkYOrcymkNn3f"
+    },
+    {
+      "index": 11,
+      "file": "assets/jev-20261124/11-7af6cdfd3c0c54.png",
+      "sha256": "7af6cdfd3c0c54ff627984f2043614385bdb5a95bb3ee1e2a3c9c624ab616c9e",
+      "bytes": 214728,
+      "sourceBlock": "SD6cd52gIom69vx1AN1cOOEMnLc"
+    },
+    {
+      "index": 12,
+      "file": "assets/jev-20261124/12-5eb451b0b1fced.png",
+      "sha256": "5eb451b0b1fcedfe77f681f33444832b5ae5f37d58bb161724bdf53a9af84513",
+      "bytes": 93855,
+      "sourceBlock": "FnnId4G7ToVmycx4DO1cyucLntf"
+    },
+    {
+      "index": 13,
+      "file": "assets/jev-20261124/13-cb715771a2cf14.png",
+      "sha256": "cb715771a2cf14a0fb28ccfe01beb2c3982ad5e5fc4a92eb10b0aff4e4c8022f",
+      "bytes": 427932,
+      "sourceBlock": "LqV3dy5W8oK5XxxZHgVc87jVnPh"
+    },
+    {
+      "index": 14,
+      "file": "assets/jev-20261124/14-dd34bde0d87084.png",
+      "sha256": "dd34bde0d87084d7c9e3db75715f6411a185df661fa589c0c8bb40c15e806d86",
+      "bytes": 89191,
+      "sourceBlock": "Oja5d105doEV9tx5FFLcaDx4n2b"
+    },
+    {
+      "index": 15,
+      "file": "assets/jev-20261124/15-c10e918496c32d.png",
+      "sha256": "c10e918496c32d5a2eda8e370450f4777c622c47e2f3bbf97142c9e1090c7415",
+      "bytes": 705970,
+      "sourceBlock": "NAVfd7eu2ou2EgxCUszcSlfyn01"
+    },
+    {
+      "index": 16,
+      "file": "assets/jev-20261124/16-f234aa89b2f659.png",
+      "sha256": "f234aa89b2f6590e4448baf0987e23be534d8e7c225a3078226d0760ab46bd5e",
+      "bytes": 313855,
+      "sourceBlock": "RiaWdlbcPo2mI8x8cHgcC8imnKc"
+    },
+    {
+      "index": 17,
+      "file": "assets/jev-20261124/17-93e902bd2a8fab.png",
+      "sha256": "93e902bd2a8fab3d9f242ca76937382267e0bcd4950fd78ae7e04337b01cccca",
+      "bytes": 597412,
+      "sourceBlock": "DVMvdQvatowMXKxNVNOcN7yAn0c"
+    },
+    {
+      "index": 18,
+      "file": "assets/jev-20261124/18-2ef513a5bc94e1.png",
+      "sha256": "2ef513a5bc94e17cfab0f9458d1a76ecf6b821da61177365e2f4fb9441fa9436",
+      "bytes": 253242,
+      "sourceBlock": "HTK3dkR8KoAPPRxN20mcb146nua"
+    },
+    {
+      "index": 19,
+      "file": "assets/jev-20261124/19-b8c113746c3a68.png",
+      "sha256": "b8c113746c3a686d2c26733d1a11fcdbfa8aef08f4cf33d5038ad3a718a45f16",
+      "bytes": 412245,
+      "sourceBlock": "WUmRd4CkmooxAYxHUTqcPm6dnnc"
+    },
+    {
+      "index": 20,
+      "file": "assets/jev-20261124/20-fa49a63d584758.png",
+      "sha256": "fa49a63d584758b9b3a93950448f7a537ee9ca9867ce58f0d0f0ba404ee30822",
+      "bytes": 584187,
+      "sourceBlock": "ZooYdHdC2oyHzBxcZoxc3SO9nbd"
+    },
+    {
+      "index": 21,
+      "file": "assets/jev-20261124/21-0462ca1e5bfc01.png",
+      "sha256": "0462ca1e5bfc0100f32fc276d01c3b0ff37f47ba1069dd29ec8c2326649200c2",
+      "bytes": 261674,
+      "sourceBlock": "PrE7d2MTros9BZxKlXfcZ9CCnBd"
+    }
+  ],
+  "renumbering": [
+    {
+      "oldNumber": 22,
+      "newNumber": 23,
+      "title": "场景有千千万，欢迎你来共建出你的场景",
+      "discussionId": "chapter-32",
+      "sourceSha256": "ebdab8190cf6a95928b4cf18785349f729c4a152070d7a5e652414fb758182f2"
+    },
+    {
+      "oldNumber": 23,
+      "newNumber": 24,
+      "title": "10 个 Case，带你看看 AIGC 的开源模型能做到什么地步",
+      "discussionId": "chapter-20",
+      "sourceSha256": "4eae105331c234c744ed6f6c50eab3a2291ad0c1717e5bc0c7134544ec238c24"
+    },
+    {
+      "oldNumber": 24,
+      "newNumber": 25,
+      "title": "定制？使用 DiffSynth 训练图像 LoRA",
+      "discussionId": "chapter-21",
+      "sourceSha256": "293032a33760941d94b5a21dda999c11000e97b67abf82a1e9061398a17ac604"
+    },
+    {
+      "oldNumber": 25,
+      "newNumber": 26,
+      "title": "一张商品营销图，从生成到修改怎么做？",
+      "discussionId": "chapter-22",
+      "sourceSha256": "922b07afd1cb134629eb48af658be3ebcaf9ae2524528a1a83955ae97dd9c942"
+    },
+    {
+      "oldNumber": 26,
+      "newNumber": 27,
+      "title": "想要教学海报？要不试试让 AI 帮忙画一张",
+      "discussionId": "qwen-image-21-teaching-poster",
+      "sourceSha256": "f5facf6df4e2bd5b9f556136e78a03160d9638a24c40b7e0783f363382f0b5e6"
+    },
+    {
+      "oldNumber": 27,
+      "newNumber": 28,
+      "title": "开源模型也能做出像样的 AI 视频吗？",
+      "discussionId": "chapter-23",
+      "sourceSha256": "f188af11f278c59e17f2a6b65b400941eac9a071e34110fc4435325a9dd5815b"
+    },
+    {
+      "oldNumber": 28,
+      "newNumber": 29,
+      "title": "补充：AIGC 理论知识",
+      "discussionId": "chapter-24",
+      "sourceSha256": "902b065331de559ed9473133b74a40afc58a8704eaab42c29f085b0aec0536c5"
+    },
+    {
+      "oldNumber": 29,
+      "newNumber": 30,
+      "title": "Agent 是什么，它能做什么事？",
+      "discussionId": "chapter-33",
+      "sourceSha256": "84675b8ddfb567de60b68613001762d82d8012329beb8749090841b7edba4969"
+    },
+    {
+      "oldNumber": 30,
+      "newNumber": 31,
+      "title": "MCP：让模型连接外部工具",
+      "discussionId": "chapter-25",
+      "sourceSha256": "1dc4147b9b594d554ccf278506a887172ec2132dee7710e878da3678479d6e0f"
+    },
+    {
+      "oldNumber": 31,
+      "newNumber": 32,
+      "title": "Skill：把任务方法封装成能力",
+      "discussionId": "chapter-26",
+      "sourceSha256": "53c410451c645b53cca2191e6b6ec2b18172446f1132f9be26f8b2bfe838d18c"
+    },
+    {
+      "oldNumber": 32,
+      "newNumber": 33,
+      "title": "快速使用 Claude Code",
+      "discussionId": "chapter-27",
+      "sourceSha256": "f6eb9c0b8181f43c278ae1e14c334c62a7cc70ece1ae78f2995d154adb38e963"
+    },
+    {
+      "oldNumber": 33,
+      "newNumber": 34,
+      "title": "快速使用 PI",
+      "discussionId": "chapter-28",
+      "sourceSha256": "1a6b63c17682a7a29411ed97e745e715de8d46a8dfe0db7a2589cf7d8ad5ef5d"
+    },
+    {
+      "oldNumber": 34,
+      "newNumber": 35,
+      "title": "快速使用 DeepSeek Harness",
+      "discussionId": "chapter-29",
+      "sourceSha256": "d274160c0b8830fcfee06cbdbda30d70fdcecd39a60977c8399cbf0d4fd59ba5"
+    },
+    {
+      "oldNumber": 35,
+      "newNumber": 36,
+      "title": "产线巡检 Agent：用 Penguin Harness 快速开发与优化",
+      "discussionId": "penguin-harness-line-inspection",
+      "sourceSha256": "2b21a70eb6de6660de9a9acd8f8db028449a0042c5290a68d18e90c330062cf6"
+    },
+    {
+      "oldNumber": 36,
+      "newNumber": 37,
+      "title": "Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律",
+      "discussionId": "mini-ai-scientist",
+      "sourceSha256": "438805de5bea84be08232398f70d43a6a3e88f1982ffa648d90639bf269624fa"
+    },
+    {
+      "oldNumber": 37,
+      "newNumber": 38,
+      "title": "补充：Agent 框架知识",
+      "discussionId": "chapter-30",
+      "sourceSha256": "6288481ad6426548455d6bddca8362db0e73ef096b57a9e55b08951b19220f9f"
+    },
+    {
+      "oldNumber": 38,
+      "newNumber": 39,
+      "title": "补充：大模型基础知识",
+      "discussionId": "chapter-31",
+      "sourceSha256": "54987b623938753207a73970bef21d9a420e7181353ed0bd174e22f6c4c8a2fa"
+    },
+    {
+      "oldNumber": 39,
+      "newNumber": 40,
+      "title": "主流 LLM 评测",
+      "discussionId": "chapter-34",
+      "sourceSha256": "c8881a1eeaf70575391b30df3896d2f877e3a630ffa15482c535236f4d7a17f0"
+    }
+  ]
+}

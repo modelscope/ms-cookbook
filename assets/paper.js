@@ -14,8 +14,8 @@
   const paths = {
     beginner: {name:'从零开始',title:'从零开始，跑通第一个模型',art:'seedling',desc:'适合刚接触开源模型的读者。从理解模型，到选择任务，再到看到第一个结果。',brief:'建立基础认知，快速上手实践。',steps:'认识 → 选型 → 运行',link:'开始这条路径',chapters:[1,5,7],labels:['建立基础认知','找到业务任务','跑通第一个示例'],notes:['理解开源模型与使用边界','明确输入、输出与评估方式','完成一次模型运行']},
     model: {name:'深入模型',title:'深入模型，把通用能力变成场景能力',art:'mountain',desc:'适合已经跑通过模型的开发者。从业务数据准备开始，完成轻量微调，并用评测检验模型效果。',brief:'掌握核心技术，提升实践能力。',steps:'数据 → 微调 → 评测',link:'探索核心内容',chapters:[13,14,16],labels:['准备训练数据','完成轻量微调','验证模型效果'],notes:['将业务知识整理成训练样本','用 ms-swift 完成模型训练','比较基线与微调后的表现']},
-    application: {name:'走向应用',title:'带着真实任务，探索模型的应用方式',art:'cubes',desc:'从企业知识问答到 MCP 与 Skill。结合任务选择章节，理解模型与工具怎样协同工作。',brief:'将模型能力转化为实际价值。',steps:'知识问答 → 工具 → Agent',link:'查看应用实践',chapters:[20,30,31],labels:['知识问答','连接工具','封装能力'],notes:['结合知识库生成有依据的回答','通过 MCP 连接外部工具','用 Skill 组织可复用的任务方法']},
-    aigc: {name:'AIGC 创作',title:'从生成到定制，探索 AIGC 创作',art:'palette',desc:'面向创作者与 AIGC 实践者。从开源生成模型的案例出发，学习图像 LoRA 定制、商品营销图与教学海报创作，再补充生成模型的理论知识。',brief:'理解生成能力，跑通创作流程。',steps:'案例 → 定制 → 图像创作',link:'开始 AIGC 创作',chapters:[23,24,25,26,28],labels:['认识生成能力','定制图像 LoRA','创作商品营销图','制作教学海报','补充理论基础'],notes:['通过现有案例了解开源模型的创作能力','使用 DiffSynth 训练图像 LoRA','完成图像生成与修改流程','使用 Qwen-Image 生成并校核教学海报','理解 AIGC 相关理论知识']}
+    application: {name:'走向应用',title:'带着真实任务，探索模型的应用方式',art:'cubes',desc:'从企业知识问答到 MCP 与 Skill。结合任务选择章节，理解模型与工具怎样协同工作。',brief:'将模型能力转化为实际价值。',steps:'知识问答 → 工具 → Agent',link:'查看应用实践',chapters:[20,31,32],labels:['知识问答','连接工具','封装能力'],notes:['结合知识库生成有依据的回答','通过 MCP 连接外部工具','用 Skill 组织可复用的任务方法']},
+    aigc: {name:'AIGC 创作',title:'从生成到定制，探索 AIGC 创作',art:'palette',desc:'面向创作者与 AIGC 实践者。从开源生成模型的案例出发，学习图像 LoRA 定制、商品营销图与教学海报创作，再补充生成模型的理论知识。',brief:'理解生成能力，跑通创作流程。',steps:'案例 → 定制 → 图像创作',link:'开始 AIGC 创作',chapters:[24,25,26,27,29],labels:['认识生成能力','定制图像 LoRA','创作商品营销图','制作教学海报','补充理论基础'],notes:['通过现有案例了解开源模型的创作能力','使用 DiffSynth 训练图像 LoRA','完成图像生成与修改流程','使用 Qwen-Image 生成并校核教学海报','理解 AIGC 相关理论知识']}
   };
   const scenes = data.scenes;
   $('#contentContributors').innerHTML=data.contributors.content.map(person=>`<article class="contributor-person"><div class="contributor-name"><strong>${esc(person.name)}</strong><nav aria-label="${esc(person.name)}的主页">${person.links.map(link=>`<a href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(person.name)}的${esc(link.label)}主页（新窗口）" title="${esc(link.label)}"><img src="assets/brand/${esc(link.icon)}" width="20" height="20" alt="${esc(link.label)}"></a>`).join('')}</nav></div>${person.bio?`<p>${esc(person.bio)}</p>`:''}</article>`).join('');
@@ -113,7 +113,7 @@
     let results,total;
     if(query) ({results,total}=window.BookSearch.search(bookSearchDocuments,query));
     else {
-      const ids=[...new Set([currentChapter?.id,'chapter-1','chapter-14','chapter-20','chapter-24','chapter-30'])];
+      const ids=[...new Set([currentChapter?.id,'chapter-1','chapter-14','chapter-20','chapter-25','chapter-31'])];
       results=ids.map(id=>bookSearchDocuments.find(d=>d.chapterId===id&&!d.headingId)).filter(Boolean);
     }
     $('#bookSearchStatus').textContent=query?(total?`找到 ${total} 处匹配${total>results.length?`，显示前 ${results.length} 条；可添加关键词缩小范围`:''}`:'没有找到匹配内容'):'输入关键词搜索全书，或直接打开以下章节';

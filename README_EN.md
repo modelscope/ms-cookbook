@@ -34,7 +34,7 @@ A useful model application starts with practical decisions: which model fits the
 
 The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, product-image creation, production-line inspection, and AI-driven scientific discovery.
 
-> **8 parts · 39 chapters · 38 available to read**
+> **8 parts · 40 chapters · 39 available to read**
 
 ## Start reading
 
@@ -60,8 +60,8 @@ Reading locally requires Python 3 and a modern browser; it requires no project d
 | --- | --- | --- |
 | **Get started** | [01](content/chapters/chapter-01.md) → [05](content/chapters/chapter-05.md) → [07](content/chapters/chapter-07.md) | Understand models, define a task, and run a first inference |
 | **Adapt a model** | [13](content/chapters/chapter-13.md) → [14](content/chapters/chapter-14.md) → [16](content/chapters/chapter-16.md) | Prepare training data, fine-tune, and evaluate against a baseline |
-| **Build an application** | [20](content/chapters/chapter-20.md) → [30](content/chapters/chapter-30.md) → [31](content/chapters/chapter-31.md) | Combine knowledge retrieval, external tools, and reusable skills |
-| **Create with generative AI** | [23](content/chapters/chapter-23.md) → [24](content/chapters/chapter-24.md) → [25](content/chapters/chapter-25.md) → [26](content/chapters/chapter-26.md) → [28](content/chapters/chapter-28.md) | Explore examples, customize image LoRA, create product visuals, and study the foundations |
+| **Build an application** | [20](content/chapters/chapter-20.md) → [31](content/chapters/chapter-31.md) → [32](content/chapters/chapter-32.md) | Combine knowledge retrieval, external tools, and reusable skills |
+| **Create with generative AI** | [24](content/chapters/chapter-24.md) → [25](content/chapters/chapter-25.md) → [26](content/chapters/chapter-26.md) → [27](content/chapters/chapter-27.md) → [29](content/chapters/chapter-29.md) | Explore examples, customize image LoRA, create product visuals, and study the foundations |
 
 ### Who is this for?
 
@@ -103,27 +103,28 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | [19 · 搭建一个能听也能说的语音助手](content/chapters/chapter-19.md) | Speech recognition, Q&A, and synthesis |
 | [20 · 实现一个企业知识问答助手](content/chapters/chapter-20.md) | Knowledge retrieval and RAG |
 | [21 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-21.md) | On-device visual inspection, human confirmation, and offline synchronization |
-| [22 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-22.md) | Invitation to contribute reproducible application tutorials |
+| [22 · 我们每天都在做决策，AI 能帮我们做吗？](content/chapters/chapter-22.md) | Use an open Chinese decision model for work-message decisions and sentiment analysis |
+| [23 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-23.md) | Invitation to contribute reproducible application tutorials |
 | **Part 6 · Generative AI** | |
-| [23 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-23.md) | Open generative-model use cases |
-| [24 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-24.md) | Image LoRA customization with DiffSynth |
-| [25 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-25.md) | Product-image generation and editing |
-| [26 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-26.md) | Qwen-Image deployment and educational posters on ModelScope |
-| [27 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-27.md) | MiniMax H3 deployment tutorial pending |
-| [28 · 补充：AIGC 理论知识](content/chapters/chapter-28.md) | Image and video generation fundamentals |
+| [24 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-24.md) | Open generative-model use cases |
+| [25 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-25.md) | Image LoRA customization with DiffSynth |
+| [26 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-26.md) | Product-image generation and editing |
+| [27 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-27.md) | Qwen-Image deployment and educational posters on ModelScope |
+| [28 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-28.md) | MiniMax H3 deployment tutorial pending |
+| [29 · 补充：AIGC 理论知识](content/chapters/chapter-29.md) | Image and video generation fundamentals |
 | **Part 7 · Agents** | |
-| [29 · Agent 是什么，它能做什么事？](content/chapters/chapter-29.md) | Agent components, execution loop, and use cases |
-| [30 · MCP：让模型连接外部工具](content/chapters/chapter-30.md) | Connecting models to external tools |
-| [31 · Skill：把任务方法封装成能力](content/chapters/chapter-31.md) | Reusable task methods and workflows |
-| [32 · 快速使用 Claude Code](content/chapters/chapter-32.md) | Getting started with Claude Code |
-| [33 · 快速使用 PI](content/chapters/chapter-33.md) | Getting started with PI |
-| [34 · 快速使用 DeepSeek Harness](content/chapters/chapter-34.md) | Getting started with DeepSeek Harness |
-| [35 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-35.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
-| [36 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-36.md) | Build a verifiable scientific-discovery Agent with Qwen3 and compare model size and thinking mode |
-| [37 · 补充：Agent 框架知识](content/chapters/chapter-37.md) | Agent framework fundamentals |
+| [30 · Agent 是什么，它能做什么事？](content/chapters/chapter-30.md) | Agent components, execution loop, and use cases |
+| [31 · MCP：让模型连接外部工具](content/chapters/chapter-31.md) | Connecting models to external tools |
+| [32 · Skill：把任务方法封装成能力](content/chapters/chapter-32.md) | Reusable task methods and workflows |
+| [33 · 快速使用 Claude Code](content/chapters/chapter-33.md) | Getting started with Claude Code |
+| [34 · 快速使用 PI](content/chapters/chapter-34.md) | Getting started with PI |
+| [35 · 快速使用 DeepSeek Harness](content/chapters/chapter-35.md) | Getting started with DeepSeek Harness |
+| [36 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-36.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
+| [37 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-37.md) | Build a verifiable scientific-discovery Agent with Qwen3 and compare model size and thinking mode |
+| [38 · 补充：Agent 框架知识](content/chapters/chapter-38.md) | Agent framework fundamentals |
 | **Part 8 · Supplementary fundamentals** | |
-| [38 · 补充：大模型基础知识](content/chapters/chapter-38.md) | Model architecture, training, inference, and limitations |
-| [39 · 主流 LLM 评测](content/chapters/chapter-39.md) | Invitation to contribute evaluations of mainstream models |
+| [39 · 补充：大模型基础知识](content/chapters/chapter-39.md) | Model architecture, training, inference, and limitations |
+| [40 · 主流 LLM 评测](content/chapters/chapter-40.md) | Invitation to contribute evaluations of mainstream models |
 
 ## Application examples
 
@@ -133,9 +134,10 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | Customer-service quality analysis | Turn call recordings into text and analysis | [18](content/chapters/chapter-18.md) |
 | Speech assistant | Connect speech recognition, model responses, and speech synthesis | [19](content/chapters/chapter-19.md) |
 | Enterprise knowledge assistant | Retrieve reference material for grounded answers | [20](content/chapters/chapter-20.md) |
-| Product marketing visuals | Generate and edit product images | [25](content/chapters/chapter-25.md) |
-| Production-line inspection | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation | [35](content/chapters/chapter-35.md) |
-| Mini AI Scientist | Let open models propose hypotheses, design experiments, and verify discoveries automatically | [36](content/chapters/chapter-36.md) |
+| Open decision models | Classify work messages and sentiment with a 0.8B Chinese model | [22](content/chapters/chapter-22.md) |
+| Product marketing visuals | Generate and edit product images | [26](content/chapters/chapter-26.md) |
+| Production-line inspection | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation | [36](content/chapters/chapter-36.md) |
+| Mini AI Scientist | Let open models propose hypotheses, design experiments, and verify discoveries automatically | [37](content/chapters/chapter-37.md) |
 
 ## Community
 
