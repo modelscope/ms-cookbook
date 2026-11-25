@@ -1,9 +1,490 @@
 <!-- Generated from ../source-html/chapter-28.html; do not edit independently. -->
 
-# 开源模型也能做出像样的 AI 视频吗？
+# 想要教学海报？要不试试让 AI 帮忙画一张
 
-敬请期待，我们即将上部署 MiniMax H3 模型教程。
+作者：吴晨飞 Qwen-image负责人、魔搭共建者
 
-同时呼唤这个领域做出过优秀作品的共建者！！
+准备一节化学课时，想把一个实验讲清楚，除了有文字说明，还可以配上一张图。比如，讲铁钉放入硫酸铜溶液的实验，就需要展示实验前后的变化，把反应方程式、实验现象和关键知识点放在一起，方便学生对照着看。
+
+这类工作能不能请图像生成模型帮忙呢？我们可以把已经核对过的知识内容，以及希望呈现的画面、文字和布局，整理成一份详细的提示词，让模型尝试生成整张海报，再根据结果检查和调整。
+
+本章就从这个需求出发，用 Qwen-Image-2.1-Turbo 生成一张化学知识海报。
+
+<p></p>
+
+<a id="c28-s1"></a>
+
+## Qwen-Image-2.1介绍
+
+Qwen-Image-2.1发布以来，收到社区很多关注。Qwen-Image-2.1将文生图与图像编辑统一在一个模型中。模型视觉生成部分仅 <strong>7B 参数</strong>，采用 <strong>32 层 Single-Stream DiT</strong>，在官方 Qwen-Image-Bench 公开评测中获得 <strong>60.28 分</strong>，并原生支持透明图生成与<strong>最多 10 张参考图编辑。社区内评价不错，我们以这个模型为例跑一遍部署和场景的实践。</strong>
+
+<p></p>
+
+<a id="c28-s2"></a>
+
+## Qwen-Image-2.1部署
+
+注意：整个代码已经放在魔搭灵感流（notebook）上，打开就可以一键运行。[https://www.modelscope.cn/gallery/ms-cookbook-team/Qwen-Image-2_1-24GB](<https://www.modelscope.cn/gallery/ms-cookbook-team/Qwen-Image-2_1-24GB>) 
+
+<p></p>
+
+我们在终端安装Qwen-Image-2.1需要的依赖：
+
+```bash
+pip install "torch>=2.4.0" "transformers>=5.17" -U "git+https://github.com/huggingface/diffusers" modelscope accelerate
+```
+
+安装完成之后，我们在/mnt/workspace下新建image.py文件，内容如下：
+
+```text
+import torchfrom modelscope import QwenImage21PipelinePROMPT = "A vertically oriented educational chemistry study poster fills the frame, designed like a hand-drawn classroom notes page with a clean white background, thick dark navy-blue outer border, and thin inner navy rectangular border lines. The overall aesthetic is colorful, high-contrast, and hand-lettered in a signature Topper style using marker and watercolor effects. At the top left, a small header in black handwriting reads \"Topper’s Notes\", accented by short decorative navy strokes radiating from it. Centered across the top is the main lesson heading in large stylized black-and-yellow bold lettering: \"Science – Chapter 1:\" followed below by the much larger title \"Chemical Reactions and Equations\". The title has energetic yellow highlighter strokes underneath and small sparkle doodles nearby. At the top right, inside a small outlined page-number box, the label reads \"Page X\". Below the header, a wide rounded rectangle framed in dark navy contains a pink brush-stroke highlight banner with the subheading \"IMPORTANT CHEMICAL EQUATION:\" in black. Inside the same equation panel, the reaction is written very large as \"Fe + CuSO₄ → FeSO₄ + Cu\". The symbol \"Fe\" is highlighted in bright orange with an underline, \"CuSO₄\" is vivid blue and underlined, \"FeSO₄\" is bright green and underlined, and \"Cu\" is metallic bronze and underlined. Beneath the left side of the equation is a lavender rounded label connected by a leader line to the iron component; it says \"Reactants\" and below it \"(before the reaction)\", with \"Reactants\" colored purple and underlined. Beneath the right side is a matching pale-green rounded label connected by a leader line to the products; it says \"Products\" and below it \"(after the reaction)\", with \"Products\" colored green and underlined. Along the lower part of this equation box are stylized ball-and-stick molecule models and atomic orbital drawings: a silver-gray sphere labeled \"Fe\" sits left of center, another cluster shows gray, red, and white spheres representing sulfate groups around blue and green atoms, and a copper-colored sphere appears near the right. Small atom-and-orbit icons sit along the bottom edge of the panel in blue, green, and brown outline styles. The middle portion is enclosed by a large dashed green rounded rectangle titled \"REACTIVITY CONCEPT\" in green uppercase letters with decorative rays. On the left side of this section, a stepped vertical reactivity-series ladder is drawn with alternating colored horizontal blocks. From top to bottom it lists \"K\", \"Na\", \"Ca\", \"Mg\", \"Al\", \"Zn\", \"Fe\" with a green oval callout reading \"(More reactive)\", then continues downward with \"Cu\", \"Ag\", \"Hg\", \"Pt\", \"Au\" with an orange oval callout reading \"(Less reactive)\". Each step is marked by a dark upward-pointing triangular arrow, showing decreasing reactivity downward. In the central-right area, full body text as follows: \"Iron (Fe) is higher in the reactivity series than Copper (Cu). This makes Iron more reactive.\" Below this definition is a visual arrow sequence of overlapping circles: orange \"Fe\" overlaps blue \"Cu\", followed by a red arrow pointing toward the phrase \"→ More displacement ↓ less reactivity\". Under it, a prominent statement in dark handwriting reads \"More reactive element displaces less reactive element\", emphasized with a bright pink marker underline. On the right, a shield-like badge with a navy outline and light interior contains the bold contrasting font label \"DISPLACEMENT REACTION\". Below the badge, full body text as follows: \"A more reactive element displaces a less reactive element from its compound.\" The badge includes an internal miniature illustration of circular electron shells and colored particles, reinforcing the chemistry theme. Directly below the reactivity concept box, a smaller rounded rectangular table titled \"PROPERTY COMPARISON\" compares Iron and Copper. The table has three columns: \"IRON (Fe)\", \"COPPER (Cu)\", and a central property column. Row one reads \"Reactivity series position\" with Iron shown as \"Higher (more reactive)\" and Copper shown as \"Lower (less reactive)\". Row two reads \"Displaces hydrogen from acids\" with Iron marked \"Yes\" and Copper marked \"No\". Row three reads \"Displaced by other metals\" with Iron shown as \"Displaced by Zn, Mg, Al, etc.\" and Copper shown as \"Displaced by Fe, Zn, Mg, etc.\". Row four reads \"Oxidation tendency\" with Iron shown as \"Gets oxidized easily\" and Copper shown as \"Does not get oxidized easily\". Row five reads \"Useful property\" with Iron described as \"Used where strength & corrosion resistance needed\" and Copper described as \"Used where conductivity & corrosion resistance needed\". The table uses thin navy grid lines, orange tinting for the iron column, pale blue tinting for the copper column, black condensed handwriting, and green checkmarks next to positive traits and red crosses next to limitations. The lower half introduces a large illustrated experiment section with a cream highlight behind the title \"BEFORE/AFTER IRON NAIL EXPERIMENT\" in bold dark navy uppercase letters. The section is split visually into a left \"Before\" state and a right \"After\" state. On the left, a beaker filled with bright blue solution contains a shiny silver iron nail standing diagonally. The beaker label reads \"CuSO₄(aq)\" in blue, and the bottom label near the nail reads \"Fe(s)\". A rounded annotation box beside the beaker says \"Initial State: Blue Solution & Silver Nail\". Two glass test tubes stand to the right of this beaker: the upper test tube is filled with blue solution and labeled \"CuSO₄(aq)\", while the lower one contains a pale green liquid. Red and blue directional arrows connect these visual elements to explanations: one red arrow points toward the nail with the text \"Copper gets deposited\", and one blue arrow points toward the liquid with the text \"Solution turns pale green\". On the right side of the experiment section, another beaker shows the after state with the iron nail now coated in brown copper deposits. Its solution is faded to a pale greenish-blue, and the beaker label reads \"FeSO₄(aq)\" in green. A nearby rounded annotation box says \"Final State: Pale Green Solution & Brown Coated Nail\". To the far right are additional test tubes and ion symbols: a test tube containing blue liquid labeled \"CuSO₄(aq)\" with the note \"Blue colour due to Cu²⁺ ions\", and a lower test tube containing pale green liquid labeled \"FeSO₄(aq)\" with the note \"Pale green due to Fe²⁺ ions\". Beside them are ion diagrams labeled \"Cu²⁺(aq)\" and \"Fe²⁺(aq)\", shown as colored charged particles encircled by simple electron-shell rings; the copper ion uses blue particles and the iron ion uses green particles. Small sparkles, arrows, and dashed guide lines emphasize the transformation from blue copper sulfate solution to pale green iron sulfate solution. Near the bottom, a horizontal summary strip has a blue star icon followed by the heading \"SUMMARY\". Full body text as follows: \"In this reaction, Iron (Fe) displaces Copper (Cu) from Copper Sulphate (CuSO₄) solution to form Iron(II) Sulphate (FeSO₄) solution and Copper (Cu).\" To the lower left, a bordered key-points box titled \"KEY POINTS\" lists three starred bullet statements: \"Iron is above copper in the reactivity series.\", \"Fe displaces Cu from CuSO₄ solution.\", and \"Result: Blue solution turns pale green; copper metal deposits on iron nail.\" At the very bottom, inside the footer border, spaced text reads \"CHEMISTRY • CHANGE IS EVERYWHERE • TOPPER’S NOTES\", flanked by small leaf-like ornaments and thin horizontal divider lines. The entire page uses dark navy borders and headings, bright highlighter strokes, watercolor shading, realistic glassware illustrations, and playful scientific doodles to present a chemistry lesson clearly and attractively."WIDTH, HEIGHT = 1664, 2496SEED = 42pipe = QwenImage21Pipeline.from_pretrained("Qwen/Qwen-Image-2.1-Turbo",torch_dtype=torch.bfloat16,).to("cuda")image = pipe(prompt=PROMPT,width=WIDTH,height=HEIGHT,use_kv_cache=True,generator=torch.Generator("cpu").manual_seed(SEED),).images[0]print(f"peak allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GiB")image.save("t2i_example.png")print("saved: t2i_example.png")
+```
+
+在继续之前，我们可以一起来阅读一下image.py：
+
+image.py是一段文生图（Text-to-Image）的推理脚本。脚本由以下几个部分组成：
+
+【1】载入部分
+
+```text
+import torchfrom modelscope import QwenImage21Pipeline
+```
+
+值得一提的是,这里 从 modelscope 而非 diffusers 导入 QwenImage21Pipeline。两者 API 完全一致,因为 ModelScope在底层 复用了 diffusers 的 Pipeline 类定义,只是在 from&#95;pretrained 的权重解析层做了一次重定向:把 repo id 指向 [modelscope.cn](<https://link.zhihu.com/?target=http%3A//modelscope.cn/>)的国内镜像,而不是 [huggingface.co](<https://link.zhihu.com/?target=http%3A//huggingface.co/>)。好处是国内直连，待会儿我们可以高速的下载模型。
+
+【2】输入参数部分
+
+```text
+PROMPT = "A vertically oriented educational chemistry study poster fills the frame, designed like a hand-drawn classroom notes page with a clean white background, thick dark navy-blue outer border, and thin inner navy rectangular border lines. The overall aesthetic is colorful, high-contrast, and hand-lettered in a signature Topper style using marker and watercolor effects. At the top left, a small header in black handwriting reads \"Topper’s Notes\", accented by short decorative navy strokes radiating from it. Centered across the top is the main lesson heading in large stylized black-and-yellow bold lettering: \"Science – Chapter 1:\" followed below by the much larger title \"Chemical Reactions and Equations\". The title has energetic yellow highlighter strokes underneath and small sparkle doodles nearby. At the top right, inside a small outlined page-number box, the label reads \"Page X\". Below the header, a wide rounded rectangle framed in dark navy contains a pink brush-stroke highlight banner with the subheading \"IMPORTANT CHEMICAL EQUATION:\" in black. Inside the same equation panel, the reaction is written very large as \"Fe + CuSO₄ → FeSO₄ + Cu\". The symbol \"Fe\" is highlighted in bright orange with an underline, \"CuSO₄\" is vivid blue and underlined, \"FeSO₄\" is bright green and underlined, and \"Cu\" is metallic bronze and underlined. Beneath the left side of the equation is a lavender rounded label connected by a leader line to the iron component; it says \"Reactants\" and below it \"(before the reaction)\", with \"Reactants\" colored purple and underlined. Beneath the right side is a matching pale-green rounded label connected by a leader line to the products; it says \"Products\" and below it \"(after the reaction)\", with \"Products\" colored green and underlined. Along the lower part of this equation box are stylized ball-and-stick molecule models and atomic orbital drawings: a silver-gray sphere labeled \"Fe\" sits left of center, another cluster shows gray, red, and white spheres representing sulfate groups around blue and green atoms, and a copper-colored sphere appears near the right. Small atom-and-orbit icons sit along the bottom edge of the panel in blue, green, and brown outline styles. The middle portion is enclosed by a large dashed green rounded rectangle titled \"REACTIVITY CONCEPT\" in green uppercase letters with decorative rays. On the left side of this section, a stepped vertical reactivity-series ladder is drawn with alternating colored horizontal blocks. From top to bottom it lists \"K\", \"Na\", \"Ca\", \"Mg\", \"Al\", \"Zn\", \"Fe\" with a green oval callout reading \"(More reactive)\", then continues downward with \"Cu\", \"Ag\", \"Hg\", \"Pt\", \"Au\" with an orange oval callout reading \"(Less reactive)\". Each step is marked by a dark upward-pointing triangular arrow, showing decreasing reactivity downward. In the central-right area, full body text as follows: \"Iron (Fe) is higher in the reactivity series than Copper (Cu). This makes Iron more reactive.\" Below this definition is a visual arrow sequence of overlapping circles: orange \"Fe\" overlaps blue \"Cu\", followed by a red arrow pointing toward the phrase \"→ More displacement ↓ less reactivity\". Under it, a prominent statement in dark handwriting reads \"More reactive element displaces less reactive element\", emphasized with a bright pink marker underline. On the right, a shield-like badge with a navy outline and light interior contains the bold contrasting font label \"DISPLACEMENT REACTION\". Below the badge, full body text as follows: \"A more reactive element displaces a less reactive element from its compound.\" The badge includes an internal miniature illustration of circular electron shells and colored particles, reinforcing the chemistry theme. Directly below the reactivity concept box, a smaller rounded rectangular table titled \"PROPERTY COMPARISON\" compares Iron and Copper. The table has three columns: \"IRON (Fe)\", \"COPPER (Cu)\", and a central property column. Row one reads \"Reactivity series position\" with Iron shown as \"Higher (more reactive)\" and Copper shown as \"Lower (less reactive)\". Row two reads \"Displaces hydrogen from acids\" with Iron marked \"Yes\" and Copper marked \"No\". Row three reads \"Displaced by other metals\" with Iron shown as \"Displaced by Zn, Mg, Al, etc.\" and Copper shown as \"Displaced by Fe, Zn, Mg, etc.\". Row four reads \"Oxidation tendency\" with Iron shown as \"Gets oxidized easily\" and Copper shown as \"Does not get oxidized easily\". Row five reads \"Useful property\" with Iron described as \"Used where strength & corrosion resistance needed\" and Copper described as \"Used where conductivity & corrosion resistance needed\". The table uses thin navy grid lines, orange tinting for the iron column, pale blue tinting for the copper column, black condensed handwriting, and green checkmarks next to positive traits and red crosses next to limitations. The lower half introduces a large illustrated experiment section with a cream highlight behind the title \"BEFORE/AFTER IRON NAIL EXPERIMENT\" in bold dark navy uppercase letters. The section is split visually into a left \"Before\" state and a right \"After\" state. On the left, a beaker filled with bright blue solution contains a shiny silver iron nail standing diagonally. The beaker label reads \"CuSO₄(aq)\" in blue, and the bottom label near the nail reads \"Fe(s)\". A rounded annotation box beside the beaker says \"Initial State: Blue Solution & Silver Nail\". Two glass test tubes stand to the right of this beaker: the upper test tube is filled with blue solution and labeled \"CuSO₄(aq)\", while the lower one contains a pale green liquid. Red and blue directional arrows connect these visual elements to explanations: one red arrow points toward the nail with the text \"Copper gets deposited\", and one blue arrow points toward the liquid with the text \"Solution turns pale green\". On the right side of the experiment section, another beaker shows the after state with the iron nail now coated in brown copper deposits. Its solution is faded to a pale greenish-blue, and the beaker label reads \"FeSO₄(aq)\" in green. A nearby rounded annotation box says \"Final State: Pale Green Solution & Brown Coated Nail\". To the far right are additional test tubes and ion symbols: a test tube containing blue liquid labeled \"CuSO₄(aq)\" with the note \"Blue colour due to Cu²⁺ ions\", and a lower test tube containing pale green liquid labeled \"FeSO₄(aq)\" with the note \"Pale green due to Fe²⁺ ions\". Beside them are ion diagrams labeled \"Cu²⁺(aq)\" and \"Fe²⁺(aq)\", shown as colored charged particles encircled by simple electron-shell rings; the copper ion uses blue particles and the iron ion uses green particles. Small sparkles, arrows, and dashed guide lines emphasize the transformation from blue copper sulfate solution to pale green iron sulfate solution. Near the bottom, a horizontal summary strip has a blue star icon followed by the heading \"SUMMARY\". Full body text as follows: \"In this reaction, Iron (Fe) displaces Copper (Cu) from Copper Sulphate (CuSO₄) solution to form Iron(II) Sulphate (FeSO₄) solution and Copper (Cu).\" To the lower left, a bordered key-points box titled \"KEY POINTS\" lists three starred bullet statements: \"Iron is above copper in the reactivity series.\", \"Fe displaces Cu from CuSO₄ solution.\", and \"Result: Blue solution turns pale green; copper metal deposits on iron nail.\" At the very bottom, inside the footer border, spaced text reads \"CHEMISTRY • CHANGE IS EVERYWHERE • TOPPER’S NOTES\", flanked by small leaf-like ornaments and thin horizontal divider lines. The entire page uses dark navy borders and headings, bright highlighter strokes, watercolor shading, realistic glassware illustrations, and playful scientific doodles to present a chemistry lesson clearly and attractively."WIDTH, HEIGHT = 1664, 2496SEED = 42
+```
+
+PROMPT是模型的输入提示词，在这里特指positive prompt。关于提示词，我们有三个概念：positive prompt, negative prompt和user prompt。我们分别说一下：
+
+- positive prompt（正向提示词）：即"想要什么"，也就是这段代码的PROMPT变量。我们在这里描述目标图像应该包含的内容、风格、构图、细节。因为一般来说，positive prompt写的越丰富,生成效果越可控。因此，我们这个例子中的positive prompt非常详细。positive prompt会直接给text encoder进行编码，后续通过denoise过程把高斯噪声“拉”向符合描述的分布。
+- negative prompt（负向提示词）：即"不想要什么"，negative prompt同样会直接给 text encoder 编码，效果上等价于让模型 远离 negative prompt 描述的特征。这里需要特别指出的是，本脚本代码里没有 negative prompt，这不是遗漏，而是因为 Qwen-Image-2.1（当然也包括Qwen-Image-2.1-Turbo）蒸馏掉了CFG，以提升模型推理效率，因此不需要输入negative prompt。
+- user prompt（用户提示词）：即"用户真正会打字输入的那句话"。真实场景里,用户不会写一千词的海报描述,他们只会说："帮我画一张讲铁置换铜的化学笔记海报"。user prompt 的特点是:短、口语化、多语言、信息量低。而与之对应的positive prompt的特点是长、结构化、中英文、信息密度高。由于模型一般采用positive prompt训练（为了更好的图文对应），而非user prompt，因此user prompt并不适合直接使用，通常会由一个语言模型来承担改写，把用户朴素意图的user prompt改写成具备风格、构图、细节的完整的user prompt。此外，对于专业的AIGC设计师而言，他们可以直接把自己的user prompt意图人工手动编写为高质量的positive prompt，这常常会优于语言模型自动改写的效果。值得一提的是，为了展示最精简的代码，我们没有从user prompt开始生图，而是跳过改写，直接从positive prompt开始。
+
+WIDTH, HEIGHT是模型输出图片的宽度和高度。Qwen-Image-2.1支持2k图片的生成，这里2k的含义是WIDTH乘以HEIGHT得到的图像面积约等于 。我们这里选取的 （约为415万像素），相比于 （约为419万像素）是接近的。
+
+SEED 用来控制模型随机性。
+
+【3】构建管线
+
+```text
+pipe = QwenImage21Pipeline.from_pretrained("Qwen/Qwen-Image-2.1-Turbo",torch_dtype=torch.bfloat16,).to("cuda")
+```
+
+QwenImage21Pipeline 管线继承自 diffusers 的 DiffusionPipeline，它本身不包含任何可训练参数，只是一个把多个组件按正确顺序串起来的模块，那这些组件具体是什么呢？重点是由from&#95;pretrained函数定义。我们以装载"Qwen/Qwen-Image-2.1-Turbo"为例。在浏览器增加前缀，"[www.modelscope.cn/models/Qwen/Qwen-Image-2.1-Turbo](<https://link.zhihu.com/?target=https%3A//www.modelscope.cn/models/Qwen/Qwen-Image-2.1-Turbo>)"进入到页面，并且点击“模型文件”按钮，可以看到一个名为"model&#95;index.json"的文件
+
+![ModelScope 模型文件列表中的 model&#95;index.json](<../../assets/qwen-image-20261016/model-index-file.jpg>)
+
+点击进入"model&#95;index.json"文件，可以看到具体内容：
+
+```text
+{
+  "_class_name": "QwenImage21Pipeline",
+  "_diffusers_version": "0.41.0.dev0",
+  "processor": [
+    "transformers",
+    "Qwen3VLProcessor"
+  ],
+  "scheduler": [
+    "diffusers",
+    "FlowMatchEulerDiscreteScheduler"
+  ],
+  "text_encoder": [
+    "transformers",
+    "Qwen3VLForConditionalGeneration"
+  ],
+  "transformer": [
+    "diffusers",
+    "QwenImage21Transformer2DModel"
+  ],
+  "vae": [
+    "diffusers",
+    "AutoencoderKLQwenImage21"
+  ],
+  "sample_sigmas": [
+    1.0,
+    0.978453,
+    0.95418,
+    0.926626,
+    0.89508,
+    0.845148,
+    0.704534,
+    0.414568
+  ]
+}
+```
+
+其中，text&#95;encoder、transformer和vae定义了模型三个最为重要的部分：Qwen3VLForConditionalGeneration作为文本编码器、QwenImage21Transformer2DModel作为图像渲染器、AutoencoderKLQwenImage21作为图像压缩器。sample&#95;sigmas则是揭示了Qwen-Image-2.1-Turbo这一命名的“Turbo”所在，步长只有 8步。
+
+from&#95;pretrained函数在得到这一列表后，会逐个找到子模块同名文件夹下面的json文件进行下载。例如，如果我们希望更多了解transformer（即QwenImage21Transformer2DModel）图像渲染器的信息，可以到根目录下面找到对应的同名文件夹，即transformer文件夹：
+
+![ModelScope 模型文件列表中的 transformer 文件夹](<../../assets/qwen-image-20261016/transformer-folder.jpg>)
+
+点击transformer文件夹，可以找到config.json，如下：
+
+![transformer 文件夹中的 config.json](<../../assets/qwen-image-20261016/transformer-config-file.jpg>)
+
+点击config.json，就可以看到图像渲染器QwenImage21Transformer2DModel的配置了：
+
+```json
+{"_class_name": "QwenImage21Transformer2DModel","_diffusers_version": "0.41.0.dev0","attention_head_dim": 128,"axes_dims_rope": [16,56,56],"causal_condition": true,"context_in_dim": 4096,"eps": 1e-06,"in_channels": 64,"mlp_ratio": 3,"num_attention_heads": 32,"num_layers": 32,"out_channels": 64,"patch_size": 1}
+```
+
+从这里，我们可以看出Qwen-Image-2.1-Turbo的核心结构：比如，这是32层、32头的transformer。
+
+【4】执行推理
+
+```python
+image = pipe(prompt=PROMPT,width=WIDTH,height=HEIGHT,use_kv_cache=True,generator=torch.Generator("cpu").manual_seed(SEED),).images[0]
+```
+
+完成pipe的加载之后，我们就可以来进行模型推理了。这里pipe实际上内部包含了多个操作，如何得知pipe究竟执行了什么操作呢？
+
+这里，pipe是QwenImage21Pipeline的类方法from&#95;pretrained新建的实例，直接调用实例相当于调用pipe的&#95;&#95;call&#95;&#95;函数。因此，我们可以通过inspect查看源码：
+
+```bash
+python3 -c "from modelscope import QwenImage21Pipeline as P; c=P.__call__.__code__; print(f'{c.co_filename}:{c.co_firstlineno}')" 
+```
+
+在上面代码中，我们找到QwenImage21Pipeline的&#95;&#95;call&#95;&#95;函数的代码，运行之后，打印对应的文件名和行号：
+
+```bash
+/usr/local/lib/python3.12/dist-packages/torch/utils/_contextlib.py:120
+```
+
+查看120行源码，拿到的是装饰器：
+
+![inspect 定位到的推理装饰器源码](<../../assets/qwen-image-20261016/call-decorator.jpg>)
+
+这里，我们可以通过inspect.unwrap（内置while循环的包装拆解器）拆解包装，稍微修改一下上述代码，得到：
+
+```bash
+python3 -c "import inspect; from modelscope import QwenImage21Pipeline as P; c=inspect.unwrap(P.__call__).__code__; print(f'{c.co_filename}:{c.co_firstlineno}')"
+```
+
+运行得到：
+
+```bash
+/usr/local/lib/python3.12/dist-packages/diffusers/pipelines/qwenimage21/pipeline_qwenimage21.py:509
+```
+
+pipeline&#95;qwenimage21.py的509行开始就是modelscope封装的Qwen-Image-2.1-Turbo推理的核心源码：
+
+![QwenImage21Pipeline 的推理方法源码](<../../assets/qwen-image-20261016/pipeline-source.jpg>)
+
+【5】保存图像
+
+```python
+print(f"peak allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GiB")image.save("t2i_example.png")print("saved: t2i_example.png")
+```
+
+推理完成之后，我们通过torch.cuda.max&#95;memory&#95;allocated()返回Pytorch在当前GPU上为tensor分配过的历史最大字节数，并且保存图片。
+
+让我们尝试运行一下吧！
+
+```text
+python /mnt/workspace/image.py
+```
+
+跑上之后，我们可能会遇到几种报错：
+
+第一、ImportError报错：
+
+```text
+ImportError: cannot import name 'QwenImage21Pipeline' from 'modelscope' (/usr/local/lib/python3.12/site-packages/modelscope/__init__.py)
+```
+
+修复方法：
+
+```text
+python3 -m pip install "torchvision==0.29.1+cu130" --no-deps -f https://mirrors.aliyun.com/pytorch-wheels/cu130/
+```
+
+修复之后，可以执行
+
+```text
+python3 -c "from modelscope import QwenImage21Pipeline; print('ok')"
+```
+
+如果结果是ok，就说明import问题修复了。
+
+第二、OOM报错：
+
+```text
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 96.00 MiB. GPU 0 has a total capacity of 22.18 GiB of which 42.69 MiB is free. Process 2220690 has 22.14 GiB memory in use. Of the allocated memory 21.75 GiB is allocated by PyTorch, and 166.58 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
+```
+
+这是很常见的报错，就是modelscope提供的免费GPU只有24GiB显存哈，一般来说按照image.py的方式，需要57GiB。不过不用担心哈，我们可以通过“腾挪”的方式节约显存。我们基于image.py进行了修改，新建image&#95;24G.py文件：
+
+```python
+import torchfrom modelscope import QwenImage21PipelinePROMPT = "A vertically oriented educational chemistry study poster fills the frame, designed like a hand-drawn classroom notes page with a clean white background, thick dark navy-blue outer border, and thin inner navy rectangular border lines. The overall aesthetic is colorful, high-contrast, and hand-lettered in a signature Topper style using marker and watercolor effects. At the top left, a small header in black handwriting reads \"Topper’s Notes\", accented by short decorative navy strokes radiating from it. Centered across the top is the main lesson heading in large stylized black-and-yellow bold lettering: \"Science – Chapter 1:\" followed below by the much larger title \"Chemical Reactions and Equations\". The title has energetic yellow highlighter strokes underneath and small sparkle doodles nearby. At the top right, inside a small outlined page-number box, the label reads \"Page X\". Below the header, a wide rounded rectangle framed in dark navy contains a pink brush-stroke highlight banner with the subheading \"IMPORTANT CHEMICAL EQUATION:\" in black. Inside the same equation panel, the reaction is written very large as \"Fe + CuSO₄ → FeSO₄ + Cu\". The symbol \"Fe\" is highlighted in bright orange with an underline, \"CuSO₄\" is vivid blue and underlined, \"FeSO₄\" is bright green and underlined, and \"Cu\" is metallic bronze and underlined. Beneath the left side of the equation is a lavender rounded label connected by a leader line to the iron component; it says \"Reactants\" and below it \"(before the reaction)\", with \"Reactants\" colored purple and underlined. Beneath the right side is a matching pale-green rounded label connected by a leader line to the products; it says \"Products\" and below it \"(after the reaction)\", with \"Products\" colored green and underlined. Along the lower part of this equation box are stylized ball-and-stick molecule models and atomic orbital drawings: a silver-gray sphere labeled \"Fe\" sits left of center, another cluster shows gray, red, and white spheres representing sulfate groups around blue and green atoms, and a copper-colored sphere appears near the right. Small atom-and-orbit icons sit along the bottom edge of the panel in blue, green, and brown outline styles. The middle portion is enclosed by a large dashed green rounded rectangle titled \"REACTIVITY CONCEPT\" in green uppercase letters with decorative rays. On the left side of this section, a stepped vertical reactivity-series ladder is drawn with alternating colored horizontal blocks. From top to bottom it lists \"K\", \"Na\", \"Ca\", \"Mg\", \"Al\", \"Zn\", \"Fe\" with a green oval callout reading \"(More reactive)\", then continues downward with \"Cu\", \"Ag\", \"Hg\", \"Pt\", \"Au\" with an orange oval callout reading \"(Less reactive)\". Each step is marked by a dark upward-pointing triangular arrow, showing decreasing reactivity downward. In the central-right area, full body text as follows: \"Iron (Fe) is higher in the reactivity series than Copper (Cu). This makes Iron more reactive.\" Below this definition is a visual arrow sequence of overlapping circles: orange \"Fe\" overlaps blue \"Cu\", followed by a red arrow pointing toward the phrase \"→ More displacement ↓ less reactivity\". Under it, a prominent statement in dark handwriting reads \"More reactive element displaces less reactive element\", emphasized with a bright pink marker underline. On the right, a shield-like badge with a navy outline and light interior contains the bold contrasting font label \"DISPLACEMENT REACTION\". Below the badge, full body text as follows: \"A more reactive element displaces a less reactive element from its compound.\" The badge includes an internal miniature illustration of circular electron shells and colored particles, reinforcing the chemistry theme. Directly below the reactivity concept box, a smaller rounded rectangular table titled \"PROPERTY COMPARISON\" compares Iron and Copper. The table has three columns: \"IRON (Fe)\", \"COPPER (Cu)\", and a central property column. Row one reads \"Reactivity series position\" with Iron shown as \"Higher (more reactive)\" and Copper shown as \"Lower (less reactive)\". Row two reads \"Displaces hydrogen from acids\" with Iron marked \"Yes\" and Copper marked \"No\". Row three reads \"Displaced by other metals\" with Iron shown as \"Displaced by Zn, Mg, Al, etc.\" and Copper shown as \"Displaced by Fe, Zn, Mg, etc.\". Row four reads \"Oxidation tendency\" with Iron shown as \"Gets oxidized easily\" and Copper shown as \"Does not get oxidized easily\". Row five reads \"Useful property\" with Iron described as \"Used where strength & corrosion resistance needed\" and Copper described as \"Used where conductivity & corrosion resistance needed\". The table uses thin navy grid lines, orange tinting for the iron column, pale blue tinting for the copper column, black condensed handwriting, and green checkmarks next to positive traits and red crosses next to limitations. The lower half introduces a large illustrated experiment section with a cream highlight behind the title \"BEFORE/AFTER IRON NAIL EXPERIMENT\" in bold dark navy uppercase letters. The section is split visually into a left \"Before\" state and a right \"After\" state. On the left, a beaker filled with bright blue solution contains a shiny silver iron nail standing diagonally. The beaker label reads \"CuSO₄(aq)\" in blue, and the bottom label near the nail reads \"Fe(s)\". A rounded annotation box beside the beaker says \"Initial State: Blue Solution & Silver Nail\". Two glass test tubes stand to the right of this beaker: the upper test tube is filled with blue solution and labeled \"CuSO₄(aq)\", while the lower one contains a pale green liquid. Red and blue directional arrows connect these visual elements to explanations: one red arrow points toward the nail with the text \"Copper gets deposited\", and one blue arrow points toward the liquid with the text \"Solution turns pale green\". On the right side of the experiment section, another beaker shows the after state with the iron nail now coated in brown copper deposits. Its solution is faded to a pale greenish-blue, and the beaker label reads \"FeSO₄(aq)\" in green. A nearby rounded annotation box says \"Final State: Pale Green Solution & Brown Coated Nail\". To the far right are additional test tubes and ion symbols: a test tube containing blue liquid labeled \"CuSO₄(aq)\" with the note \"Blue colour due to Cu²⁺ ions\", and a lower test tube containing pale green liquid labeled \"FeSO₄(aq)\" with the note \"Pale green due to Fe²⁺ ions\". Beside them are ion diagrams labeled \"Cu²⁺(aq)\" and \"Fe²⁺(aq)\", shown as colored charged particles encircled by simple electron-shell rings; the copper ion uses blue particles and the iron ion uses green particles. Small sparkles, arrows, and dashed guide lines emphasize the transformation from blue copper sulfate solution to pale green iron sulfate solution. Near the bottom, a horizontal summary strip has a blue star icon followed by the heading \"SUMMARY\". Full body text as follows: \"In this reaction, Iron (Fe) displaces Copper (Cu) from Copper Sulphate (CuSO₄) solution to form Iron(II) Sulphate (FeSO₄) solution and Copper (Cu).\" To the lower left, a bordered key-points box titled \"KEY POINTS\" lists three starred bullet statements: \"Iron is above copper in the reactivity series.\", \"Fe displaces Cu from CuSO₄ solution.\", and \"Result: Blue solution turns pale green; copper metal deposits on iron nail.\" At the very bottom, inside the footer border, spaced text reads \"CHEMISTRY • CHANGE IS EVERYWHERE • TOPPER’S NOTES\", flanked by small leaf-like ornaments and thin horizontal divider lines. The entire page uses dark navy borders and headings, bright highlighter strokes, watercolor shading, realistic glassware illustrations, and playful scientific doodles to present a chemistry lesson clearly and attractively."WIDTH, HEIGHT = 1664, 2496SEED = 42pipe = QwenImage21Pipeline.from_pretrained("Qwen/Qwen-Image-2.1-Turbo",torch_dtype=torch.bfloat16,)pipe.vae.enable_tiling()pipe.text_encoder.to("cuda")with torch.inference_mode():prompt_embeds, prompt_embeds_mask, _ = pipe.encode_prompt(PROMPT, device="cuda")pipe.text_encoder.to("cpu")torch.cuda.empty_cache()print(f"[stage 1] text encoder peak allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GiB")torch.cuda.reset_peak_memory_stats()pipe.transformer.to("cuda")pipe.vae.to("cuda")image = pipe(prompt_embeds=prompt_embeds,prompt_embeds_mask=prompt_embeds_mask,width=WIDTH,height=HEIGHT,use_kv_cache=True,generator=torch.Generator("cpu").manual_seed(SEED),).images[0]print(f"[stage 2] transformer+VAE peak allocated: {torch.cuda.max_memory_allocated() / 1024**3:.2f} GiB")image.save("t2i_24G_example.png")print("saved: t2i_24G_example.png")
+```
+
+我们解释一下这段代码几个修改点：
+
+【1】加载管线，包括Text Encoder、DiT、VAE到CPU。
+
+```python
+pipe = QwenImage21Pipeline.from_pretrained("Qwen/Qwen-Image-2.1-Turbo",torch_dtype=torch.bfloat16,)
+```
+
+【2】VAE分块解码
+
+```text
+pipe.vae.enable_tiling()
+```
+
+当开启enable&#95;tiling的时候，VAE的解码器会按照每块256\*256像素，步长192，相邻块重叠64像素，并加上接缝处的线性消融来进行推理。由于解码器每次只处理一块，解码时的激活峰值会大幅度下降。当然，这不是无损的——如果显存足够，关闭tiling能获得最好的结果。
+
+【3】把Text Encoder先放上GPU，计算文本表示
+
+```python
+pipe.text_encoder.to("cuda")with torch.inference_mode():prompt_embeds, prompt_embeds_mask, _ = pipe.encode_prompt(PROMPT, device="cuda")
+```
+
+【4】把Text Encoder搬回CPU，把GPU缓存还给驱动。
+
+```text
+pipe.text_encoder.to("cpu")
+torch.cuda.empty_cache()
+```
+
+【5】把DiT和VAE放上GPU，计算生成的图片
+
+```text
+pipe.transformer.to("cuda")
+pipe.vae.to("cuda")
+image = pipe(
+    prompt_embeds=prompt_embeds,
+    prompt_embeds_mask=prompt_embeds_mask,
+    width=WIDTH,
+    height=HEIGHT,
+    use_kv_cache=True,
+    generator=torch.Generator("cpu").manual_seed(SEED),
+).images[0]
+```
+
+实际上，上述这种在CPU和GPU之间腾挪的方式，diffusers有封装好的函数，叫做enable&#95;model&#95;cpu&#95;offload()，读者可以自行尝试。
+
+最后，我们也可以把代码放到jupyter，进行更敏捷的测试，避免image&#95;24G.py每次推理都载入模型。
+
+我们可以创建image&#95;24G.ipynb，写上两个CELL。
+
+第一个CELL只需要运行一次，我们把模型装载到CPU：
+
+```python
+import torchfrom IPython.display import displayfrom modelscope import QwenImage21PipelineDEVICE = "cuda"pipe = QwenImage21Pipeline.from_pretrained("Qwen/Qwen-Image-2.1-Turbo",torch_dtype=torch.bfloat16,)pipe.vae.enable_tiling()
+```
+
+第二个CELL我们可以反复运行生图，通过不断腾挪，实现在24GiB显卡上完成本地部署生图：
+
+```python
+prompt = "A vertically oriented educational chemistry study poster fills the frame, designed like a hand-drawn classroom notes page with a clean white background, thick dark navy-blue outer border, and thin inner navy rectangular border lines. The overall aesthetic is colorful, high-contrast, and hand-lettered in a signature Topper style using marker and watercolor effects. At the top left, a small header in black handwriting reads \"Topper’s Notes\", accented by short decorative navy strokes radiating from it. Centered across the top is the main lesson heading in large stylized black-and-yellow bold lettering: \"Science – Chapter 1:\" followed below by the much larger title \"Chemical Reactions and Equations\". The title has energetic yellow highlighter strokes underneath and small sparkle doodles nearby. At the top right, inside a small outlined page-number box, the label reads \"Page X\". Below the header, a wide rounded rectangle framed in dark navy contains a pink brush-stroke highlight banner with the subheading \"IMPORTANT CHEMICAL EQUATION:\" in black. Inside the same equation panel, the reaction is written very large as \"Fe + CuSO₄ → FeSO₄ + Cu\". The symbol \"Fe\" is highlighted in bright orange with an underline, \"CuSO₄\" is vivid blue and underlined, \"FeSO₄\" is bright green and underlined, and \"Cu\" is metallic bronze and underlined. Beneath the left side of the equation is a lavender rounded label connected by a leader line to the iron component; it says \"Reactants\" and below it \"(before the reaction)\", with \"Reactants\" colored purple and underlined. Beneath the right side is a matching pale-green rounded label connected by a leader line to the products; it says \"Products\" and below it \"(after the reaction)\", with \"Products\" colored green and underlined. Along the lower part of this equation box are stylized ball-and-stick molecule models and atomic orbital drawings: a silver-gray sphere labeled \"Fe\" sits left of center, another cluster shows gray, red, and white spheres representing sulfate groups around blue and green atoms, and a copper-colored sphere appears near the right. Small atom-and-orbit icons sit along the bottom edge of the panel in blue, green, and brown outline styles. The middle portion is enclosed by a large dashed green rounded rectangle titled \"REACTIVITY CONCEPT\" in green uppercase letters with decorative rays. On the left side of this section, a stepped vertical reactivity-series ladder is drawn with alternating colored horizontal blocks. From top to bottom it lists \"K\", \"Na\", \"Ca\", \"Mg\", \"Al\", \"Zn\", \"Fe\" with a green oval callout reading \"(More reactive)\", then continues downward with \"Cu\", \"Ag\", \"Hg\", \"Pt\", \"Au\" with an orange oval callout reading \"(Less reactive)\". Each step is marked by a dark upward-pointing triangular arrow, showing decreasing reactivity downward. In the central-right area, full body text as follows: \"Iron (Fe) is higher in the reactivity series than Copper (Cu). This makes Iron more reactive.\" Below this definition is a visual arrow sequence of overlapping circles: orange \"Fe\" overlaps blue \"Cu\", followed by a red arrow pointing toward the phrase \"→ More displacement ↓ less reactivity\". Under it, a prominent statement in dark handwriting reads \"More reactive element displaces less reactive element\", emphasized with a bright pink marker underline. On the right, a shield-like badge with a navy outline and light interior contains the bold contrasting font label \"DISPLACEMENT REACTION\". Below the badge, full body text as follows: \"A more reactive element displaces a less reactive element from its compound.\" The badge includes an internal miniature illustration of circular electron shells and colored particles, reinforcing the chemistry theme. Directly below the reactivity concept box, a smaller rounded rectangular table titled \"PROPERTY COMPARISON\" compares Iron and Copper. The table has three columns: \"IRON (Fe)\", \"COPPER (Cu)\", and a central property column. Row one reads \"Reactivity series position\" with Iron shown as \"Higher (more reactive)\" and Copper shown as \"Lower (less reactive)\". Row two reads \"Displaces hydrogen from acids\" with Iron marked \"Yes\" and Copper marked \"No\". Row three reads \"Displaced by other metals\" with Iron shown as \"Displaced by Zn, Mg, Al, etc.\" and Copper shown as \"Displaced by Fe, Zn, Mg, etc.\". Row four reads \"Oxidation tendency\" with Iron shown as \"Gets oxidized easily\" and Copper shown as \"Does not get oxidized easily\". Row five reads \"Useful property\" with Iron described as \"Used where strength & corrosion resistance needed\" and Copper described as \"Used where conductivity & corrosion resistance needed\". The table uses thin navy grid lines, orange tinting for the iron column, pale blue tinting for the copper column, black condensed handwriting, and green checkmarks next to positive traits and red crosses next to limitations. The lower half introduces a large illustrated experiment section with a cream highlight behind the title \"BEFORE/AFTER IRON NAIL EXPERIMENT\" in bold dark navy uppercase letters. The section is split visually into a left \"Before\" state and a right \"After\" state. On the left, a beaker filled with bright blue solution contains a shiny silver iron nail standing diagonally. The beaker label reads \"CuSO₄(aq)\" in blue, and the bottom label near the nail reads \"Fe(s)\". A rounded annotation box beside the beaker says \"Initial State: Blue Solution & Silver Nail\". Two glass test tubes stand to the right of this beaker: the upper test tube is filled with blue solution and labeled \"CuSO₄(aq)\", while the lower one contains a pale green liquid. Red and blue directional arrows connect these visual elements to explanations: one red arrow points toward the nail with the text \"Copper gets deposited\", and one blue arrow points toward the liquid with the text \"Solution turns pale green\". On the right side of the experiment section, another beaker shows the after state with the iron nail now coated in brown copper deposits. Its solution is faded to a pale greenish-blue, and the beaker label reads \"FeSO₄(aq)\" in green. A nearby rounded annotation box says \"Final State: Pale Green Solution & Brown Coated Nail\". To the far right are additional test tubes and ion symbols: a test tube containing blue liquid labeled \"CuSO₄(aq)\" with the note \"Blue colour due to Cu²⁺ ions\", and a lower test tube containing pale green liquid labeled \"FeSO₄(aq)\" with the note \"Pale green due to Fe²⁺ ions\". Beside them are ion diagrams labeled \"Cu²⁺(aq)\" and \"Fe²⁺(aq)\", shown as colored charged particles encircled by simple electron-shell rings; the copper ion uses blue particles and the iron ion uses green particles. Small sparkles, arrows, and dashed guide lines emphasize the transformation from blue copper sulfate solution to pale green iron sulfate solution. Near the bottom, a horizontal summary strip has a blue star icon followed by the heading \"SUMMARY\". Full body text as follows: \"In this reaction, Iron (Fe) displaces Copper (Cu) from Copper Sulphate (CuSO₄) solution to form Iron(II) Sulphate (FeSO₄) solution and Copper (Cu).\" To the lower left, a bordered key-points box titled \"KEY POINTS\" lists three starred bullet statements: \"Iron is above copper in the reactivity series.\", \"Fe displaces Cu from CuSO₄ solution.\", and \"Result: Blue solution turns pale green; copper metal deposits on iron nail.\" At the very bottom, inside the footer border, spaced text reads \"CHEMISTRY • CHANGE IS EVERYWHERE • TOPPER’S NOTES\", flanked by small leaf-like ornaments and thin horizontal divider lines. The entire page uses dark navy borders and headings, bright highlighter strokes, watercolor shading, realistic glassware illustrations, and playful scientific doodles to present a chemistry lesson clearly and attractively."width, height = 1680, 2512pipe.transformer.to("cpu")pipe.vae.to("cpu")torch.cuda.empty_cache()torch.cuda.reset_peak_memory_stats()pipe.text_encoder.to(DEVICE)with torch.inference_mode():prompt_embeds, prompt_embeds_mask, _ = pipe.encode_prompt(prompt, device=DEVICE)pipe.text_encoder.to("cpu")torch.cuda.empty_cache()torch.cuda.reset_peak_memory_stats()pipe.transformer.to(DEVICE)pipe.vae.to(DEVICE)image = pipe(prompt_embeds=prompt_embeds,prompt_embeds_mask=prompt_embeds_mask,width=1680,height=2512,use_kv_cache=True,generator=torch.Generator("cpu").manual_seed(42),).images[0]display(image)
+```
+
+<p></p>
+
+![铁置换铜教学海报生成结果](<../../assets/qwen-image-20261016/iron-displacement-result.jpg>)
+
+<p></p>
+
+<a id="c28-s3"></a>
+
+## 更多尝试
+
+跑通铁钉与硫酸铜溶液的例子之后，我们还可以换几个实验主题。操作方法基本一致：先整理已经核对过的知识内容，再把需要出现的器材、现象、方程式和版面顺序写进提示词，最后检查生成图。
+
+下面选取三个例子，分别关注<strong>装置连接、颜色变化和沉淀现象</strong>。为了便于中文课堂使用，提示词用英文描述画面组织，并用引号明确指定需要呈现的中文文字。英文并不是必需条件，这样写只是把画面描述和需要逐字呈现的标签区分开；读者也可以把整段提示词改成中文再比较效果。
+
+<a id="c28-s4"></a>
+
+### 在 ModelScope 上生成示例：操作步骤与截图
+
+如果暂时不想配置本地推理环境，可以先使用魔搭社区提供的在线生图服务。本节三张案例图均在 <strong>ModelScope AIGC 专区的“专业生图”工作台</strong>实际生成，模型统一选择 <strong>`Qwen/Qwen-Image-2.1-Turbo`</strong>。下面以二氧化碳海报为例，说明操作流程。
+
+<a id="c28-s5"></a>
+
+#### 第一步：打开模型页面，确认模型版本
+
+登录魔搭社区，打开 [Qwen-Image-2.1-Turbo 模型页](<https://www.modelscope.cn/models/Qwen/Qwen-Image-2.1-Turbo/summary>)，确认模型名称中含有 `2.1-Turbo`。模型页提供模型介绍、文件和在线推理入口。
+
+![步骤一：打开 ModelScope 上的 Qwen-Image-2.1-Turbo 模型页面](<../../assets/qwen-image-20261016/01-model-page.jpg>)
+
+<em>图 1　确认模型名称与作者。页面参数标签和视觉生成组件的参数口径不同，部署时仍应按完整管线计算资源需求。</em>
+
+<a id="c28-s6"></a>
+
+#### 第二步：从“在线体验”进入 AIGC 工作台
+
+在模型页的推理区域点击“在线体验”，再点击弹出面板中的“前往 AIGC 专区，体验高阶生图能力”。本次通过这条路径进入“专业生图”，以便统一设置种子和尺寸。也可以直接打开 [本次使用的专业生图入口](<https://www.modelscope.cn/aigc/image-generation?tab=advanced&versionId=1138360&modelType=Checkpoint&sdVersion=QWEN_IMAGE_2_1_TURBO&modelUrl=modelscope://Qwen/Qwen-Image-2.1-Turbo?revision=master>)。
+
+![步骤二：模型页在线体验面板及前往 AIGC 专区的入口](<../../assets/qwen-image-20261016/02-online-experience.jpg>)
+
+<em>图 2　“在线体验”面板右下方提供 AIGC 专区入口。</em>
+
+<a id="c28-s7"></a>
+
+#### 第三步：粘贴完整提示词
+
+将下文案例中的完整 prompt 粘贴到“正向提示词 Prompt”输入框。需要出现在图中的中文标题、标签和方程式，都已包含在提示词里。本次不使用“提示词增强”“提示词反推”或翻译，负向提示词留空。
+
+![步骤三：在正向提示词输入框中填写完整 prompt](<../../assets/qwen-image-20261016/03a-prompt-entry.jpg>)
+
+<em>图 3　提示词输入区。完整内容较长，可在输入框内滚动查看。</em>
+
+<a id="c28-s8"></a>
+
+#### 第四步：统一参数，并关闭图片编辑
+
+向下滚动到“模型管理”和“基本参数”，确认 Checkpoint 为 `Qwen/Qwen-Image-2.1-Turbo`，不添加 LoRA，VAE 保持默认。接着设置：
+
+<table><thead><tr><th><p>参数</p></th><th><p>本次设置</p></th></tr></thead><tbody><tr><td><p>采样方法</p></td><td><p>Euler</p></td></tr><tr><td><p>随机种子</p></td><td><p>二氧化碳案例 42；酸碱中和案例 46；蓝色沉淀案例 45</p></td></tr><tr><td><p>差异种子</p></td><td><p>关闭</p></td></tr><tr><td><p>生成图片数量</p></td><td><p>1</p></td></tr><tr><td><p>生成图片尺寸</p></td><td><p>自定义尺寸，宽度 1024，高度 1536</p></td></tr><tr><td><p>图片编辑 / 图生图 / 图片融合</p></td><td><p>关闭</p></td></tr><tr><td><p>超清增强</p></td><td><p>不使用</p></td></tr></tbody></table>
+
+![步骤四：设置随机种子、图片数量和 1024×1536 自定义尺寸](<../../assets/qwen-image-20261016/03-prompt-and-settings.jpg>)
+
+<em>图 4　二氧化碳案例的实际参数：seed=42、1 张、1024×1536。图片编辑开关保持关闭，执行文生图。</em>
+
+这里使用的是 2:3 竖版原生输出。页面中的“超清尺寸”会调用额外的超分辨率增强模型，本次未选择该选项。结果区显示本次采样步数为 8；它与 Turbo 检查点的推荐采样方式相符。
+
+<a id="c28-s9"></a>
+
+#### 第五步：提交生成
+
+点击“开始生图”。如果出现内容生成方式选择框，按需要选择；本次选择“无水印生成”。生成服务仍可能保留 AI 生成相关元数据，本文也明确注明图片由 AI 生成。
+
+![步骤五：提交时选择内容生成方式](<../../assets/qwen-image-20261016/04a-generation-option.jpg>)
+
+<em>图 5　本次操作出现的生成方式选择框。页面显示的魔粒消耗与账号权益可能变化，使用时以当时界面为准。</em>
+
+提交后，页面会显示生成中的状态；本次操作时界面提示“预计需要 10–30 秒”，实际耗时以任务完成为准。
+
+<a id="c28-s10"></a>
+
+#### 第六步：查看、核对并下载原图
+
+生成完成后，在右侧结果区查看图片。点击“下载图片”可以保存生成结果；结果区同时提供本次 prompt、采样步数、采样方法、随机种子、尺寸与模型名称，建议一起记录。
+
+![步骤六：ModelScope 生成结果](<../../assets/qwen-image-20261016/11-final-result.jpg>)
+
+<em>图 6　酸碱中和案例的实际生成结果页面。</em>
+
+![步骤六补充：下载图片按钮与生成参数](<../../assets/qwen-image-20261016/13-download-result.jpg>)
+
+<em>图 7　点击“下载图片”保存原图；左侧可以核对该案例的 seed=46 与 1024×1536 设置。保存图片后，再核对标题、方程式、器材连接和试剂颜色。</em>
+
+<a id="c28-s11"></a>
+
+### 示例生成记录
+
+下文配图全部来自上述 ModelScope 服务，生成日期为 <strong>2026 年 10 月 16 日</strong>。统一输出尺寸为 <strong>1024×1536</strong>；结果区记录为 <strong>8 步、Euler</strong>。三张图的最终种子依次为 <strong>42、46、45</strong>，均未上传参考图，未添加 LoRA，也未进行图片文字、器材或颜色的后期修补。每个案例给出的完整 prompt，与其最终生成图对应。
+
+在线服务与本地 Notebook 是两种运行环境。本节配图用于展示 ModelScope 在线生成流程，原章 24 GiB 本地部署的显存与运行情况仍需在对应环境核对。相同提示词和种子也不保证在不同后端、设备或版本间得到逐像素一致的结果。
+
+模型作者为千问团队，在线生成服务由魔搭社区提供。操作截图为本次实际页面截图。
+
+<a id="c28-s12"></a>
+
+### 1\. 二氧化碳的制取与检验：先讲清楚装置怎么连
+
+这个例子需要把“产生气体”和“检验气体”放在同一条信息路径上：左侧锥形瓶中发生反应，气体经过导管，到右侧石灰水中产生可见变化。
+
+画图前，可以先固定两条方程式：
+
+```text
+CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑
+CO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O
+```
+
+碳酸钙与稀盐酸反应产生二氧化碳；二氧化碳通入澄清石灰水时，可形成碳酸钙沉淀，使液体变浑浊。[英国皇家化学学会教学资源](<https://edu.rsc.org/states-of-matter/particles-in-motion-classic-chemistry-experiments-11-14-years/421.article>)、[印第安纳大学化学演示](<https://www.chem.indiana.edu/faculty-research/faculty-resources/chemistry-demos/demo/limewater-as-indicator-of-carbon-dioxide-gas/>)
+
+这张图只表现通入少量二氧化碳、石灰水变浑浊的阶段。提示词还要说明两个容易画错的细节：发生装置中的导气管管口在液面上方，检验装置中的导管末端伸入石灰水液面下方；接收试管保持敞口。
+
+<strong>可直接复制的 prompt：</strong>
+
+```text
+Create a portrait educational chemistry poster for Chinese middle-school students, aspect ratio 2:3. Use a clean white paper background, dark navy handwritten headings and outlines, restrained yellow highlighter marks, teal section labels, and carefully drawn transparent laboratory glassware with light watercolor shading. Leave generous white space. All printed text must be exactly the short Chinese labels and formulas provided below, with legible characters, correct subscripts, and no additional invented text. At the top write the large title "二氧化碳的制取与检验" and a small subtitle "从产生气泡到石灰水变浑浊". In the middle draw ONE continuous, physically correct gas-generation and gas-testing apparatus. On the left, draw an upright conical flask containing several white calcium carbonate chips and a small amount of colorless dilute hydrochloric acid, with small colorless gas bubbles rising from the chips. Fit the flask with a one-hole stopper and a single delivery tube. The inlet end of the delivery tube must terminate in the headspace ABOVE the liquid level inside the generating flask. The tube passes through the stopper, arches across the page, and its other end dips BELOW the liquid surface in an OPEN test tube on the right, held upright in a simple support. The receiving test tube contains limewater with a cloudy white suspension and a few small gas bubbles emerging from the immersed tube tip. The receiving test tube must be open to the air, not sealed. Label the generating flask "碳酸钙 + 稀盐酸", the delivery tube "无色 CO₂ 气体", and the receiving test tube "澄清石灰水变浑浊". Use thin leader lines that actually point to the relevant objects. In the lower third, put two spacious equation panels. Panel one is headed "制取" and contains exactly "CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂↑". Panel two is headed "检验" and contains exactly "CO₂ + Ca(OH)₂ → CaCO₃↓ + H₂O". Beneath the second equation, write "白色浑浊来自碳酸钙沉淀". At the bottom put a small outlined note reading "图示为通入少量二氧化碳的阶段". Do not draw colored gas, flames, extra vessels, a sealed receiving vessel, or any tube disconnected from the actual gas path. Render this as a coherent, attractive classroom notes page with accurate apparatus geometry and easily readable formulas.
+```
+
+<strong>本次生成结果（seed=42）：</strong>
+
+![二氧化碳的制取与检验：Qwen-Image-2.1-Turbo 实际生成结果](<../../assets/qwen-image-20261016/01-carbon-dioxide.png>)
+
+<strong>看图校核：</strong> 本次结果中的制取与检验方程式可读；发生装置的导气管末端位于液面上方，检验端伸入液面下方，接收试管保持敞口。生成图省略了支撑架，可将它作为装置关系示意图，教学时补充说明器材的固定方式。
+
+<a id="c28-s13"></a>
+
+### 2\. 酸碱中和与酚酞变色：画出变化，也保留判断边界
+
+颜色变化适合用前后对照表达。我们让左侧烧杯表现加入酚酞的稀氢氧化钠溶液，右侧表现逐滴加入稀盐酸后，粉红色逐渐褪去的状态。海报中需要呈现的反应为：
+
+```text
+HCl + NaOH → NaCl + H₂O
+H⁺ + OH⁻ → H₂O
+```
+
+向含酚酞的氢氧化钠溶液中逐滴加入盐酸，可以观察到粉红色消失。[牛津大学化学演示](<https://vrchemistry.chem.ox.ac.uk/filmstudio/phenolphthalein/HTML/page01.htm>)
+
+这里要特别保留一句说明：<strong>酚酞褪色不能单独证明溶液恰好完全中和，也不能仅凭无色判断 pH=7。</strong> 指示剂变色反映的是自身随溶液条件变化的状态；大学教学演示中也会继续加入酸，使体系在酸性与碱性之间切换。[科罗拉多大学教学演示](<https://www.colorado.edu/lab/lecture-demo-manual/e775-acid-base-titration>) 因此，我们把这句话直接写入海报，而不让模型自行补出“变无色即中性”的结论。
+
+<strong>可直接复制的 prompt：</strong>
+
+```text
+Chemical accuracy requirement: the pipette contains ONLY clear, COLORLESS dilute hydrochloric acid, indistinguishable from water. The pipette liquid and every falling drop must have NO PINK TINT. Use thin gray outlines on white for the pipette liquid and drops. Pink is allowed ONLY inside the LEFT beaker containing NaOH and phenolphthalein. Create a portrait Chinese chemistry teaching poster with a 2:3 aspect ratio. White paper background, dark navy borders and clear handwritten-style Chinese labels, yellow highlighting, soft pink and teal accents, and precise watercolor illustrations of transparent laboratory beakers. The page must be clean and spacious, like an illustrated classroom notebook. Print only the exact short labels and formulas specified here. At the top write the large title "酸碱中和与酚酞变色" and the small subtitle "颜色提示变化，结论还需分析". In the central section draw two large beakers SIDE BY SIDE representing two moments of the same experiment. Each beaker has the same shape and similar liquid volume. Above the left beaker write "加入稀盐酸前". Show a dilute sodium hydroxide solution with a few drops of phenolphthalein as a transparent, pale pink liquid. Below it write exactly "稀 NaOH 溶液 + 酚酞". Above the right beaker write "逐滴加入稀盐酸后". Draw a glass dropping pipette above this beaker, with two transparent drops descending from its tip, labeled "稀 HCl". The liquid in the right beaker must be clear and COLORLESS, not milky white. Below it write "粉红色逐渐褪去". Put a simple horizontal arrow between the beakers to indicate the color change from pink to colorless. Below the beakers place a rounded equation box headed "中和反应". Write exactly "HCl + NaOH → NaCl + H₂O" in large readable characters. Under it write the smaller ionic equation exactly "H⁺ + OH⁻ → H₂O". In the bottom quarter place a wide highlighted teaching note headed "注意" with exactly two separate short lines: "酚酞褪色不等于恰好完全中和" and "不能仅凭无色判断 pH = 7". Add a small legend with a pale pink swatch labeled "本例初始碱性溶液" and a transparent swatch labeled "褪色后". No bubbles, no precipitate, no heat source, no extra reaction, no universal pH color scale. Do not label the colorless liquid as proof of neutrality. Keep all wording, charges, chemical symbols, and subscripts accurate. The beakers should be the main visual focus, with aligned panels and generous spacing.
+```
+
+<strong>本次生成结果（seed=46）：</strong>
+
+![酸碱中和与酚酞变色：Qwen-Image-2.1-Turbo 实际生成结果](<../../assets/qwen-image-20261016/02-neutralisation.png>)
+
+<strong>看图校核：</strong> 本次结果呈现了粉红色溶液到无色溶液的对照，滴管中的稀盐酸与下落液滴保持无色。中和方程式、离子方程式以及“不能仅凭无色判断 pH=7”的说明可读。
+
+<a id="c28-s14"></a>
+
+### 3\. 蓝色沉淀是怎样出现的：把“溶液”和“固体”画出区别
+
+这个实验的重点，是让学生区分均匀透明的蓝色溶液与不溶性的蓝色沉淀。向硫酸铜溶液中加入氢氧化钠溶液，会形成蓝色氢氧化铜沉淀。[卢旺达教育局化学实验手册](<https://elearning.reb.rw/pluginfile.php/77412/mod_resource/content/1/CHEMISTRY S6 EXP USER GUIDE (1).pdf>)
+
+```text
+CuSO₄ + 2NaOH → Cu(OH)₂↓ + Na₂SO₄
+Cu²⁺ + 2OH⁻ → Cu(OH)₂↓
+```
+
+我们把画面拆成“反应前—加入试剂—静置后”三个状态，并明确要求画出蓝色絮状固体。图中的最终状态设定为已加入足够的 NaOH，使大部分铜离子沉淀；实际实验中，上层液体的颜色还与试剂用量等条件有关。本例不加热，也不需要画气泡或火焰。
+
+<strong>可直接复制的 prompt：</strong>
+
+```text
+Important chemical accuracy requirement: the sodium hydroxide in the pipette is COLORLESS and CLEAR, like pure water. Its falling drops have only thin gray outlines and a completely uncolored white interior. Blue must appear ONLY in the test tubes containing copper compounds, NEVER in the pipette or falling drops. Create a portrait 2:3 chemistry education poster in Chinese, on clean white paper, with dark navy handwritten-style headings, thin navy section frames, yellow marker highlights, and sky-blue and teal accents. Use scientific watercolor drawings with clearly transparent glassware. Prioritize visual distinction between a transparent blue solution and an opaque blue solid precipitate. At the top write the large title "蓝色沉淀是怎样出现的" and below it the subtitle "硫酸铜溶液与氢氧化钠溶液的反应". The central illustration is a left-to-right sequence of three separate, upright, open glass test tubes in a simple rack. Over the first write "反应前" and show a transparent pale blue solution with no particles, labeled "CuSO₄ 溶液". Over the second write "加入 NaOH 溶液" and show a completely colorless glass dropping pipette with clear, colorless NaOH solution, delivering completely colorless droplets with only thin gray outlines and NO blue tint into a pale blue test tube; draw soft, fluffy, opaque light-blue flocs forming within the liquid, labeled "出现蓝色絮状沉淀". Over the third write "静置后" and show a clearly visible fluffy light-blue solid accumulated near the bottom with a largely clear, almost colorless supernatant above it, labeled "Cu(OH)₂ 沉淀". The final state depicts sufficient NaOH addition to precipitate most of the copper ions. Put thin horizontal arrows between the three states, not tubes connecting the vessels. In the lower third place a spacious equation box headed "反应方程式" with exactly "CuSO₄ + 2NaOH → Cu(OH)₂↓ + Na₂SO₄". Under it add the smaller line exactly "Cu²⁺ + 2OH⁻ → Cu(OH)₂↓". At the bottom put a highlighted key-point box titled "观察重点" with two short lines: "蓝色溶液：均匀透明" and "蓝色沉淀：出现不溶性固体". Include a small crossed-out flame icon and the short label "本例不加热". No gas bubbles, no steam, no black solid, no flames or heating apparatus, no copper metal particles, and no invented decorative molecules. Make each stage visibly different and keep formulas, subscripts, parentheses, ionic charges, and labels accurate and comfortably readable.
+```
+
+<strong>本次生成结果（seed=45）：</strong>
+
+![蓝色氢氧化铜沉淀：Qwen-Image-2.1-Turbo 实际生成结果](<../../assets/qwen-image-20261016/03-copper-hydroxide.png>)
+
+<strong>看图校核：</strong> 本次结果将蓝色透明溶液、生成蓝色絮状沉淀和静置后沉淀聚集的状态分开呈现，NaOH 滴管与下落液滴保持无色，两条方程式可读。静置后的上层液体被画为接近无色，对应本例“加入足够 NaOH”的设定。
+
+<a id="c28-s15"></a>
+
+### 换成自己的实验，提示词可以怎么写
+
+这三个例子都采用了类似的组织方式：先说清楚主题与读者，再指定必须出现的知识内容，然后安排画面顺序，最后补上容易画错的限制。读者可以先填写下面这份简短提纲，再将它扩展成完整提示词：
+
+```text
+教学主题：这张海报要讲清楚哪个实验或知识点？
+目标读者：面向哪个年级，需要保留多少信息？
+必要文字：标题、方程式、器材标签和结论分别是什么？
+画面顺序：采用前后对比、分步流程，还是装置连接图？
+关键现象：需要看见什么变化，如何在图上体现？
+易错限制：哪些颜色、连接方式或结论不能画错？
+```
+
+修改时可以先保持随机种子不变，每次集中调整一个问题，例如减少正文、放大方程式，或重新说明导管末端的位置。固定随机种子有助于比较修改前后的变化，但不保证跨设备和跨版本逐像素一致。
+
+在原章 Notebook 中，可把任意一个完整 prompt 赋给第二个 Cell 的 `prompt` 变量，再运行原有的分阶段推理流程。保持原章已经跑通的尺寸和显存设置即可，不需要重新下载模型；如果需要比较多张图片，记得每次另存文件，避免覆盖之前的结果。
+
+这些例子也提醒我们：提示词写出要求，仍要在生成后逐项核对。用于课堂前，可以按三个问题检查：<strong>方程式和文字是否正确，器材与标注是否对应，画面是否支持正文中的结论。</strong> 当一张图塞不下全部内容时，可以减少文字，或者拆成“实验现象图”和“原理解释图”两张，再进行比较。
 
 <p></p>

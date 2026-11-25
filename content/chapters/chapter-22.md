@@ -1,685 +1,346 @@
 <!-- Generated from ../source-html/chapter-22.html; do not edit independently. -->
 
-# 我们每天都在做决策，AI 能帮我们做吗？
+# 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录
 
-你是否有被这几张图刷过屏，
+配套实践包：[MiniCPM&#95;魔搭紫皮书&#95;章节与实践包&#95;v0.1.zip](<../../assets/minicpm-20261015/minicpm-practice-v0.1.zip>)
 
-![正文配图](<../../assets/jev-20261124/01-8ed3334906a645.png>)
+做物业巡检时，发现问题后会拍下一张照片，并且把事情记清楚。比如，走廊里的灯罩破损了，照片可以留下现场的样子，但具体在哪一层、哪个位置、发现了什么问题，都要人工补录很多文字信息，才能方便后续人员查看和处理。
 
-![正文配图](<../../assets/jev-20261124/02-4b2b80a3beda16.png>)
+如果这些信息能在现场整理好，就不用再回头一张张对着照片补写；遇到网络不好的地方，也希望先把记录保存在手机上，等有网络时再提交。对于巡检人员来说，拍照、填写和保存直接一次性完成，不用在几个界面之间来回切换。
 
-<p></p>
+围绕这个场景，我们尝试用 MiniCPM-V 搭建一个手机巡检助手。
 
-这种图很容易让人产生一个想法，要是聊天时真有个模型，能先判断对方在说什么，再提醒我们下一步怎么做，好像还挺有用。
-
-<p></p>
-
-每一次回答之前，你都有一个做决策的过程。
-
-<p></p>
-
-这一章先从一次最简单的调用开始，我们把一条工作消息、一个问题和几个选项交给开源决策模型，看看模型怎样给选项打分，程序又怎样取到对应的答案。调用过程看明白以后，再把问题和上下文换成自己的内容。
-
-<p></p>
+先在魔搭 Notebook 中验证图片理解效果，再接入 Android 手机，让模型在手机上生成观察草稿。工作人员确认后，记录保存在本地，有网络时再同步到台账，供后续查看和处理。我们希望把拍照之后的记录工作做得更方便，同时保留工作人员检查和修改的机会。
 
 <a id="c22-s1"></a>
 
-## Jev 为什么会引起这么多讨论？
+## 1\. 把巡检需求变成明确的模型任务
 
-2026年9月15日，TypeSafe AI 发布了 Jev，把它称为 System One Model。用官方的说法，它面向的是软件里的快速、结构化判断。这个名字借用了“快思考”的类比，可以先把它理解成一种任务定位。
+首个版本只处理公共区域中可以拍到的表面现象，例如灯罩破损、地面散落物和墙面可见污迹。它不从照片确定电路是否损坏，也不决定是否需要停机、维修或更换设备。
 
-<p></p>
+假设照片中可见破损灯罩，用户输入位置“二层东侧走廊”，模型草稿的目标结构是：
 
-![正文配图](<../../assets/jev-20261124/03-1606bac2e732cb.png>)
+```json
+{
+  "object": "灯罩",
+  "visible_issue": "灯罩表面可见破损",
+  "needs_retake": false,
+  "missing_fields": []
+}
+```
 
-<p></p>
+这是期望输出示例，不是模型实测回答。若图片暗到无法确认，契约允许返回：
 
-假设我们在做一个办公助手，里面已经接好了统计数据、撰写文案等工具。收到新消息以后，先要选对工具，才谈得上完成任务。如果只是判断该走哪条流程，程序最需要的是一个明确的选项。
+```json
+{
+  "object": null,
+  "visible_issue": null,
+  "needs_retake": true,
+  "missing_fields": ["object", "visible_issue"]
+}
+```
 
-<p></p>
-
-当然，普通大模型也能完成这件事。我们可以让它返回简短答案，或者按规定的JSON结构输出。Jev则把这类判断单独做成了接口，输入背景、问题和候选项，返回程序能直接使用的结果及相应概率。
-
-![正文配图](<../../assets/jev-20261124/04-dd2fb590c3b5e2.png>)
-
-这也解释了为什么做Agent的人会关心它。一个任务里，除了写内容，还可能反复遇到选工具、筛资料、判断是否需要人工处理等步骤。把这些问题问清楚，再把结果交给代码，整个流程就更容易检查。
-
-<p></p>
-
-至于快了多少、便宜多少，得放到具体任务里比较。把哪款模型作为参照、一次问多少问题、是否包含网络耗时，都会影响结果。发布页里的性能数字属于厂商自己的演示和测试条件，不能直接当作我们接入业务后的效果。
-
-<p></p>
+`needs_retake` 只是一条模型建议，没有校准概率的含义。即使它为 false，也仍然需要人员查看照片与字段。清晰的正常场景可以描述“未见明显表面异常”，这表示照片范围内的观察，不等于设备整体正常。
 
 <a id="c22-s2"></a>
 
-## 把决策权交给模型之前，先说明白想判断什么
+### 字段来自哪里
 
-“请把本周销售额按城市汇总，做成一张表，周五开会用。”
+<table><thead><tr><th><p>字段</p></th><th><p>产生者</p></th><th><p>约束</p></th></tr></thead><tbody><tr><td><p>对象 object、可见现象 visible_issue</p></td><td><p>模型提出、人员修改确认</p></td><td><p>只写有图像依据的信息；无法确认时留空</p></td></tr><tr><td><p>是否建议重拍、缺失字段</p></td><td><p>模型与应用校验</p></td><td><p>提醒用户补拍或补录；不作为诊断结论</p></td></tr><tr><td><p>拍摄时间 captured_at</p></td><td><p>应用</p></td><td><p>保存带时区的时间；说明是否来自现场相机或相册导入</p></td></tr><tr><td><p>位置 location</p></td><td><p>用户选择或输入</p></td><td><p>第一版不用模型猜测楼层，不把未经授权定位当成默认输入</p></td></tr><tr><td><p>记录 ID</p></td><td><p>应用</p></td><td><p>创建后固定，重试同步仍使用同一 ID</p></td></tr><tr><td><p>图片 SHA256、模型版本</p></td><td><p>应用</p></td><td><p>用于关联原始输入与推理产物</p></td></tr><tr><td><p>确认人、确认时间</p></td><td><p>人员操作与应用</p></td><td><p>只有点击确认后生成正式记录</p></td></tr><tr><td><p>处理状态、服务端版本</p></td><td><p>台账</p></td><td><p>待处理、处理中、已关闭，独立于模型草稿</p></td></tr></tbody></table>
 
-如果只问模型“你怎么看”，回答可以有很多种。它可能分析任务，也可能开始教我们做表。要让程序继续往下走，就得把这次要判断的事情写清楚。
-
-我们需要准备三部分信息。
-
-<table><tbody><tr><td><p>要交给模型的内容</p></td><td><p>在这条工作消息里怎么填</p></td></tr><tr><td><p>上下文</p></td><td><p>放入收到的消息，需要时加上项目背景和已确认的约定</p></td></tr><tr><td><p>问题</p></td><td><p>这条工作请求主要要求做什么？</p></td></tr><tr><td><p>候选项</p></td><td><p>整理销售数据、撰写宣传文案、现有信息不足</p></td></tr></tbody></table>
-
-Jev把判断依据称为`state`，后面的开源实验使用`context`这个变量名。
-
-问题也可以换一种问法。例如，我们关心的可能是“有没有明确截止时间”，或者“需求有没有超出已确认范围”。这时就要相应地更换问题和判断标准，不能指望同一组笼统选项处理所有情况。
-
-文本题型主要有下面三种，
-
-<table><tbody><tr><td><p>名称</p></td><td><p>我们会怎样问</p></td><td><p>它返回什么</p></td></tr><tr><td><p>Choice</p></td><td><p>这条消息属于哪类任务？</p></td><td><p>选中的候选项及各项概率等</p></td></tr><tr><td><p>Noul</p></td><td><p>这条消息是否明确提出了新增功能？</p></td><td><p>命题为真的概率</p></td></tr><tr><td><p>Score</p></td><td><p>按我们写好的等级标准，这个请求有多紧急？</p></td><td><p>等级概率及相应分值等</p></td></tr></tbody></table>
-
-Score里的等级标准需要提前定义。例如，明确写了今天交付，和完全没提时间，应怎样区分，要由我们告诉它。这里得到的分数表达的是按这套标准作出的判断，不能直接拿来推断对方心里有多着急。
-
-<p></p>
+位置先由用户输入，不把它交给模型生成，能避免照片里没有楼层信息却产生一个貌似完整的位置。拍摄时间也应来自业务应用，不依赖模型对“现在”的判断。
 
 <a id="c22-s3"></a>
 
-## 所谓的“零幻觉”，真的能保证每次都选对吗？
+## 2\. 先在 Notebook 中验证单图理解
 
-<p></p>
+模型入口为 [魔搭 MiniCPM-V 4.6](<https://modelscope.cn/models/OpenBMB/MiniCPM-V-4.6>)。它支持图像、视频与文本输入。本章只使用单张图片，不同时引入语音、视频流和工具调用。
 
-看完输入输出，你可能会问，既然只能从已有选项里选，是不是就不会出错了？
+在魔搭 Notebook 中打开配套 `notebooks/02_minicpmv_inspection_baseline.ipynb`，下载固定模型版本，上传一张自己拥有使用权限的图片。模型代码采用官方的 Transformers 路线：
 
-<p></p>
+```bash
+python -m pip install 'transformers==5.7.0' 'modelscope==1.33.0' \
+  accelerate Pillow torchvision av
+```
 
-先把两种情况分开。让模型写一段答案时，它可能补出资料里没有的信息；限定候选项以后，程序可以约束答案的范围。例如只允许选择数据汇总、文案撰写、信息不足，就不会多出一个陌生的任务名称。
+保留与 Notebook CUDA 相匹配的 PyTorch / torchvision 组合，避免为了一个单图实验升级整个 CUDA 软件栈。本章初稿未记录 GPU 峰值显存，应在正式验证中填写。官方仓库根目录的旧 requirements 包含早期模型依赖，不应直接替代 4.6 对应的推理说明。
 
-<p></p>
+运行下载单元格后，使用配套脚本：
 
-但它仍然可能选错。明明是在要销售报表，却被分到了文案撰写，结果的格式完全合法，后面的工作还是会做偏。
+```bash
+python examples/vision_baseline.py \
+  --model models/minicpm-v-4.6 \
+  --image 自己的现场照片.jpg \
+  --downsample 16x \
+  --out results/inspection-one.json
+```
 
-<p></p>
+脚本的核心调用如下：
 
-“零幻觉”图里的零来自预定输出结构的保证，不能把它理解成事实和语义判断的零错误率。
+```python
+inputs = processor.apply_chat_template(
+    messages, tokenize=True, add_generation_prompt=True,
+    enable_thinking=False, return_dict=True, return_tensors="pt",
+    downsample_mode="16x", max_slice_nums=1
+).to(model.device)
 
-<p></p>
+generated_ids = model.generate(
+    **inputs, downsample_mode="16x",
+    do_sample=False, max_new_tokens=384
+)
+```
 
-比如，商家只卖升降桌、椅子和显示器支架，用户却来问台灯坏了。如果只让模型在这三种商品里选，台灯也会被归到一个最接近的选项，即便这个选项根本不适用。
+使用与当前模型匹配的 `AutoProcessor`、`AutoModelForImageTextToText` 和系统提示。`downsample_mode` 必须在预处理和生成两处保持一致，否则图像占位与视觉特征可能不匹配。
 
-<p></p>
+16x 与 4x 是精度和计算开销的取舍，不能用一般性的“更快”承诺替代具体巡检图片测试。初始设置 `max_slice_nums=1` 是为了限制资源；细小文字、远处裂痕或大场景可能需要增加切片、改用 4x 或重新近距离拍摄。手机工程使用自己的视觉处理接口，不应把 Notebook 的参数名直接假定为手机中同名设置。
 
-所以，给模型出题时，要为“这些选项都不合适”留出处理办法。换成业务系统，也可以安排补充信息、追问或人工核对。
-
-<p></p>
-
-概率同样得这样看。一个候选项分数最高，表示模型在当前这些选项里更偏向它，不能据此认定它在业务中就有同样高的正确率。官方还区分了候选概率和`confidence`，后者反映分布的集中程度，两者不要混用。
-
-<p></p>
+脚本同时保存原始回答和结构校验结果。合法 JSON 只证明结构满足要求，是否看对图片需要人工标注与核对。如果原始输出不合法，保留错误，允许重新生成或手工填写，不将非法输出“修一下”后计为识别成功。
 
 <a id="c22-s4"></a>
 
-## 这件事，BERT以前是不是也做过？
+## 3\. 组织现场图片与标准记录
 
-<p></p>
+首轮至少覆盖清晰、暗光、模糊、遮挡、正常场景和缺少位置的输入。样本使用自己拍摄且可公开的照片，或已有明确授权的图片；配套包未附带真实巡检照片，不能把 JSON 示例当成视觉测试集。数据集链接：https://modelscope.cn/datasets/pzc163/minicpm-v-inspection-part5
 
-如果你做过意图识别，看到这里大概会觉得熟悉。用户说“帮我订明天去上海的机票”，先判断是在订机票，再把“明天”“上海”等信息提取出来，接着进入订票流程。早在2019年，就已有使用BERT联合完成意图分类和槽位填充的工作。
+为每张图片建立标注记录：
 
-<p></p>
+```json
+{
+  "sample_id": "inspection-001",
+  "image": "images/inspection-001.jpg",
+  "location_input": "二层东侧走廊",
+  "acceptable_objects": ["灯罩"],
+  "required_observations": ["可见破损"],
+  "unsupported_claims": ["电路故障", "必须更换整灯"],
+  "quality_group": "clear",
+  "source": "自有拍摄并获授权",
+  "license": "由图片作者填写实际许可"
+}
+```
 
-这个联想有道理，都是在把自然语言转换成程序能用的结果。不过，具体到一次调用，还得分清想得到什么。
+同一处对象连拍的照片应属于同一划分，不能一张调试、一张最终测试，以免把相近图片重复算成泛化能力。标准答案允许必要的同义表述，语义准确率由人工或明确规则判定；只有固定字段和类型适合完全自动校验。
 
-<table><tbody><tr><td><p>想完成的事</p></td><td><p>对应的任务</p></td></tr><tr><td><p>判断是在订机票，还是查订单</p></td><td><p>意图分类</p></td></tr><tr><td><p>取出目的地和出发日期</p></td><td><p>信息抽取或槽位填充</p></td></tr><tr><td><p>根据已提供的行程信息，选择下一步处理方式</p></td><td><p>有限候选项下的决策</p></td></tr></tbody></table>
-
-<p></p>
-
-另一个容易混淆的地方是，选项在什么时候确定。常见的传统分类器在训练时就定好了标签；Jev这类接口允许我们调用时给出问题、选项及文字解释。换个任务时，可以换一组描述再试。
-
-但能否理解新选项，仍取决于模型能力和实际测试。
-
-<p></p>
-
-至于原版Jev内部具体怎么实现，未知。完整架构和训练数据没有公开，社区选择BERT或Qwen做出类似功能，也不能据此倒推原版的结构。
-
-<p></p>
+将可公开的图片、标注、许可与划分说明上传魔搭数据集仓库，Notebook 先从这个数据版本下载。真实业务照片可继续保留在设备上，不需要为了托管教学资产公开客户现场资料。
 
 <a id="c22-s5"></a>
 
-## 想自己跑一个，有哪些开源项目可以看？
+## 4\. 让真实手机完成图像推理
 
-<table><tbody><tr><td><p>主要做法</p></td><td><p>可以从哪些项目看起</p></td><td><p>先确认什么</p></td></tr><tr><td><p>用编码器理解输入，再接评分模块</p></td><td><p>Laya、Verdict、Von、Jevlet</p></td><td><p>是否发布权重，支持哪些语言和任务</p></td></tr><tr><td><p>专门训练Qwen等模型，读取候选分数</p></td><td><p>Chinese Decision、Nimble、Intern-Decision、Tev1</p></td><td><p>训练模板、权重版本和许可</p></td></tr><tr><td><p>在模型上增加决策头或候选分支</p></td><td><p>NanoJev、Kev、MoJev</p></td><td><p>是否还需要基座和额外模块</p></td></tr><tr><td><p>直接读取现成大模型的候选分数</p></td><td><p>SemIf、LLM2Jev、LitJev、simple-jev</p></td><td><p>前向计算次数、选项顺序和分数校准</p></td></tr><tr><td><p>使用扩散模型或内部循环来组织判断</p></td><td><p>openjev、open-jev、SanSi</p></td><td><p>所需基座、额外适配和运行成本</p></td></tr></tbody></table>
+主路线复用 [MiniCPM-V Apps 的 Android 工程](<https://github.com/OpenBMB/MiniCPM-V-Apps/tree/d1aac05eecaac64b7fc35f1cc93a06b726ce10e3>)。先安装官方 Demo，选择 MiniCPM-V 4.6，下载相匹配的语言模型 GGUF 与视觉投影文件 `mmproj-model-f16.gguf`。视觉组件缺失、版本不匹配或加载失败时，文本模型能回答问题不代表图像推理已经工作。
 
-<p></p>
+本章在移动端优先复用官方发布且被该工程支持的模型包，不自行重做视觉转换。把下载来源、固定版本、两个文件的哈希与应用提交记录到部署清单。若要重新转换视觉模型，须使用模型团队确认的转换器与投影配置，再重新做实机验收，不能沿用文本模型的单文件转换脚本。
+
+进行业务界面开发时，克隆并固定工程：
+
+```bash
+git clone https://github.com/OpenBMB/MiniCPM-V-Apps.git vendor/MiniCPM-V-Apps
+git -C vendor/MiniCPM-V-Apps checkout d1aac05eecaac64b7fc35f1cc93a06b726ce10e3
+git -C vendor/MiniCPM-V-Apps submodule update --init --recursive
+```
+
+将 `android/InspectionRunner.kt` 和 `android/InspectionRecordStore.kt` 复制到工程同包名的 Kotlin 源码目录。它们分别封装模型草稿生成、严格字段解析、本地确认记录和显式同步。组件用于接入已有 Android 界面，本初稿没有提供完整巡检 APK。
+
+官方引擎提供的调用链是：
+
+```kotlin
+engine.setEnableThinking(false)
+engine.clearContext()
+engine.setSystemPrompt(InspectionContract.PROMPT)
+engine.prefillImage(jpegBytes)
+engine.sendUserPrompt("请提取图中可见的对象和现象。", predictLength = 384)
+```
+
+实际代码由 `InspectionRunner.generate` 收集流式结果后进行解析。它要求模型和视觉组件已经加载，并用互斥锁保证同一引擎不会同时处理两张图片。每条巡检先清除历史上下文，避免上一处设备的观察混入下一条记录。
+
+`isVisionSupported` 必须为 true 才能进入业务推理。当前工程在视觉组件加载失败时可能继续文本模式，因此业务层要明确拦截这一状态。
 
 <a id="c22-s6"></a>
 
-## 先用一个0.8B的中文模型跑起来
+## 5\. 从 Demo 变成现场工作界面
 
-接下来选用[Chinese Decision 0.8B](<https://modelscope.cn/models/quincyqiang/chinese-decision-0.8b>)。它基于Qwen3.5-0.8B做过中文决策训练，发布了合并后的权重，魔搭上也有下载入口。
+第一版界面可以由“采集、草稿确认、记录列表”三个页面组成。按照顺序实现以下行为：
 
-<p></p>
+1. 调用相机或选择相册图片，立刻复制到应用私有文件目录并建立草稿 ID。保留原图，推理使用校正 EXIF 方向后的 JPEG 副本；显示预览并提供重拍。
+2. 用户选择位置。现场拍照记录应用采集时间；相册导入保留导入来源，照片时间未知时提示人员核对，不能把导入时间伪装成原始拍摄时间。
+3. 点击生成后，显示模型加载、图片预处理和生成状态。先保证照片与输入已保存，再运行模型；失败或中断不能丢掉已拍照片。
+4. 把模型对象与可见现象放进可编辑表单。JSON 非法、字段缺失或建议重拍时，展示相应提示，允许重拍或手工填写。
+5. 用户核对图片、位置与观察后点击确认，生成冻结的正式记录，在一个本地数据库事务中保存记录与待同步状态。
+6. 在记录列表明确区分“仅保存在手机”“同步成功”“同步失败”，点击同步按钮才发送确认过的记录。
 
-![正文配图](<../../assets/jev-20261124/05-78b1ffb08e9981.png>)
+照片处理时可先使用长边 1280 像素作为候选，而不是把大图不加限制地交给手机。应记录实际压缩参数，并用细小缺陷与暗光样例检查信息是否被压缩丢失。为防止重复推理和修改时错配，按钮状态、图片哈希与草稿 ID 应一起管理。
 
-<p></p>
+下面展示已加载引擎上的生成入口。`jpegBytes` 是上一步准备好的图片，`scope` 为页面生命周期作用域：
 
-把选项映射成A、B、C等字母，按训练模板放入上下文和问题。推理时做一次前向计算，读取候选字母的分数，再转换为概率分布，最后映射回对应的业务选项。
+```kotlin
+val runner = InspectionRunner(engine) // 页面保留同一个实例
+scope.launch {
+    try {
+        val draft = runner.generate(jpegBytes)
+        // 将字段绑定到可编辑表单；不在这里自动确认或同步。
+        showEditableDraft(draft)
+    } catch (e: Exception) {
+        // 保存照片与位置，显示重新生成、重拍或手工填写入口。
+        showGenerationFailure()
+    }
+}
+```
 
-![正文配图](<../../assets/jev-20261124/06-d4a08ec7251dea.png>)
+`showEditableDraft`、`showGenerationFailure` 是界面事件示意，需要按所用 Activity 或 Fragment 实现。完整应用定稿时，应连同相机权限、相册选择、旋转恢复、图片预处理和按钮事件一起构建验证。
 
-<p></p>
-
-实验代码：
-
-https://www.modelscope.cn/gallery/liucong/d44f2950-e9f4-4d40-89a1-3804efcad982
-
-<p></p>
+保存正式记录时，应用生成 UUID、图片哈希、确认人和确认时间，将人员核对后的观察写入 `InspectionRecordStore.saveConfirmed`。两项观察字段仍为空时，不进入同步队列；若人员选择手工填写，记录其实际确认动作。正式记录一旦确认不再原地改写，后续更正以新记录关联原记录，避免同步重试提交不同内容。
 
 <a id="c22-s7"></a>
 
-## 先安装依赖
+## 6\. 实现离线保存和联网同步
 
-<p></p>
+手机本地数据库保存确认记录和待同步队列，图片仍在设备私有目录。本示例同步结构化观察、位置和图片哈希，不上传原图。哈希只能用于关联与校验，后台不能凭哈希查看照片；若业务需要查看照片，应另做由用户选择的附件上传并记录同步范围。
 
-在魔搭 GPU Notebook 中选择 Python 3.11 或 3.12 内核。下面安装模型加载和下载所需的库，保留实例原来与 CUDA 配套的 PyTorch。这里没有安装项目源码，后面能直接看到推理代码。
+配套提供标准库实现的模拟台账：
 
-<p></p>
-
-第一次安装后，如果提示重启内核，先重启，再从下一单元开始。依赖已经安装时会显示 `Requirement already satisfied`。
-
-<p></p>
-
-```text
-%pip install --upgrade pip
-%pip install -q transformers==5.3.0 modelscope==1.34.0 huggingface-hub==1.3.0 safetensors==0.7.0 pandas==2.3.3
+```bash
+python examples/ledger.py --bind 127.0.0.1 --port 8787 --db ledger.sqlite3
 ```
 
-<p></p>
+为了先学习业务链路，不依赖 GPU，在第二个终端用示例确认记录运行：
 
-![正文配图](<../../assets/jev-20261124/07-38d212c64c0a53.png>)
+```bash
+python examples/offline_queue.py add data/inspection_confirmed_example.json
+python examples/offline_queue.py pending
+python examples/offline_queue.py sync --url http://127.0.0.1:8787
+```
+
+这个 JSON 是教学夹具：图片哈希为占位值，模型版本标注 `teaching-fixture-no-inference`。这些命令验证保存、同步和接口，不验证视觉模型，也不证明手机部署。
+
+手机连接时可使用 USB 调试的端口反向映射，让手机上的回环地址转发到电脑台账：
+
+```bash
+adb reverse tcp:8787 tcp:8787
+```
+
+为本地教学的 HTTP 连接在 Debug 构建配置相应的网络策略；正式服务使用 TLS 和业务账号鉴权。本地服务默认只监听电脑回环地址。应用中的同步操作需要在 IO 线程运行：
+
+```kotlin
+scope.launch {
+    val result = withContext(Dispatchers.IO) {
+        recordStore.syncPending("http://127.0.0.1:8787")
+    }
+    showSyncResults(result)
+}
+```
 
 <a id="c22-s8"></a>
 
-## 看看这次用的是什么环境
+### 用记录 ID 防止重复提交
 
-<p></p>
+手机同步时不能假定“请求超时就意味着后台没有保存”。一种常见情况是后台已经写入，回复在传输中丢失。如果手机重新生成 ID 再提交，会出现两条相同记录。
 
-这一步还没有下载模型。先确认 Python、PyTorch 和 GPU，避免模型加载失败时分不清问题出在哪里。本模型要求 PyTorch 2.8 及以上；不满足时先更换兼容镜像。
+本示例采用以下约定：同一正式记录始终使用同一 UUID；相同 ID、相同内容的重复 POST 返回已经存在的记录；相同 ID、不同内容返回 409 冲突。手机只有收到 200 或 201 且确认回复中的记录内容相同，才把队列项标为同步成功。超时、鉴权失败和冲突都保留待同步项。
 
-```python
-import os
-os.environ["USE_TF"] = "0"
-os.environ["USE_FLAX"] = "0"
+<table><thead><tr><th><p>接口</p></th><th><p>输入</p></th><th><p>行为</p></th></tr></thead><tbody><tr><td><p><code>POST /records</code></p></td><td><p>人工确认过的完整记录</p></td><td><p>新记录返回 201；相同内容重试返回 200；内容冲突返回 409</p></td></tr><tr><td><p><code>GET /records</code></p></td><td><p>无</p></td><td><p>返回台账列表与处理状态</p></td></tr><tr><td><p><code>GET /records/{record_id}</code></p></td><td><p>记录 ID</p></td><td><p>返回该记录和当前服务端版本</p></td></tr><tr><td><p><code>PATCH /records/{record_id}/status</code></p></td><td><p><code>status</code>、<code>expected_version</code></p></td><td><p>更新状态并增加版本；旧版本更新返回 409</p></td></tr></tbody></table>
 
-import sys
-import json
-from pathlib import Path
-import torch
-from packaging.version import Version
-from IPython.display import display
-import pandas as pd
+台账将处理状态保存在观察内容之外。后台从 `pending` 改为 `in_progress` 或 `closed` 时，不覆盖模型观察或人员确认字段。手机通过 `refreshStatus` 显式刷新处理结果。
 
-print("Python", sys.version.split()[0])
-print("PyTorch", torch.version)
-print("GPU", torch.cuda.get_device_name() if torch.cuda.is_available() else "没有 GPU，使用 CPU")
-assert (3, 11) <= sys.version_info[:2] <= (3, 12), "请使用 Python 3.11 或 3.12"
-assert Version(torch.version.split("+")[0]) >= Version("2.8"), "请使用 torch>=2.8 的镜像"
+可以先用 `GET /records` 找到实际 ID 和当前版本，再更新状态：
+
+```bash
+curl http://127.0.0.1:8787/records
+curl -X PATCH \
+  http://127.0.0.1:8787/records/e30ac04c-56d6-4c8e-b005-1d62c567e247/status \
+  -H 'Content-Type: application/json' \
+  -d '{"status":"closed","expected_version":1}'
 ```
 
-![正文配图](<../../assets/jev-20261124/08-f726e985b190b5.png>)
+上面的 UUID 只对应配套教学夹具，现场记录应使用手机生成的实际 ID。再读取台账或刷新手机状态，即可观察已关闭状态。模拟服务没有完整的人员组织、工单权限和生产审计功能，不能直接作为生产台账部署。
 
 <a id="c22-s9"></a>
 
-## 从魔搭下载模型
+## 7\. 分别验证识别效果、手机表现和业务闭环
 
-<p></p>
-
-`snapshot_download()` 返回模型保存在实例中的目录。第一次会下载约 1.5 GB 的权重，后续会使用缓存。下载不等于推理，此时模型还没有回答任何问题。
-
-<p></p>
-
-这里用魔搭 SDK 支持的 `master` 下载。为了让这份教材的内容可以复核，单独核对预先记录的 8 个核心文件哈希；这只是文件版本检查，没有任何题目答案。若发布文件更新导致校验失败，先核对新版本，不要直接忽略错误。
-
-```python
-from modelscope import snapshot_download
-import hashlib
-
-MODEL_ID = "quincyqiang/chinese-decision-0.8b"
-model_dir = Path(snapshot_download(MODEL_ID, revision="master"))
-print("模型下载目录", model_dir)
-```
-
-![正文配图](<../../assets/jev-20261124/09-ba13fecd3e45bb.png>)
+三类验证回答不同问题：模型有没有看对、手机能不能稳定运行、记录有没有可靠地流转。任何一项成功都不能替代其余两项。
 
 <a id="c22-s10"></a>
 
-## 把权重加载到设备上
+### 7.1 模型输出与人工修改
 
-<p></p>
+<table><thead><tr><th><p>指标</p></th><th><p>统计口径</p></th></tr></thead><tbody><tr><td><p>结构合法率</p></td><td><p>原始输出直接通过字段与类型校验的样本比例</p></td></tr><tr><td><p>对象准确率</p></td><td><p>与人工标注的可接受对象一致的比例，允许事先定义的同义词</p></td></tr><tr><td><p>可见现象准确率</p></td><td><p>描述符合照片可见证据的比例，由标注规则与人工审阅判断</p></td></tr><tr><td><p>无依据补充率</p></td><td><p>出现照片和输入不支持的物体、成因或处置断言的比例</p></td></tr><tr><td><p>人工修改率</p></td><td><p>需要修改对象或现象的草稿占比，保留修改前后内容</p></td></tr><tr><td><p>补拍与失败率</p></td><td><p>因模糊、暗光、字段缺失、推理中断等无法直接确认的比例</p></td></tr></tbody></table>
 
-分词器负责把文字转成 token，模型负责计算这些 token 的表示和分数。`decision_config.json` 记录本模型的提示版本、输入长度上限和温度。温度稍后用于把候选分数转成概率，不在这次示例上重新拟合。
-
-<p></p>
-
-支持 BF16 的 GPU 使用 BF16；CPU 或不支持 BF16 的设备使用 FP32。这一步完成后，应该看到设备、计算精度和决策配置。首次加载和首次前向可能比较慢。
-
-```python
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
-tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=False)
-decision_config = json.loads((model_dir / "decision_config.json").read_text())
-assert decision_config["prompt_version"] == "hmm-zh-v1"
-temperature = float(decision_config["temperature"])
-assert temperature > 0
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-dtype = torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported() else torch.float32
-model = AutoModelForCausalLM.from_pretrained(
-    model_dir, dtype=dtype, attn_implementation="sdpa", trust_remote_code=False
-).to(device).eval()
-
-print("设备", device, "精度", dtype)
-print("决策配置", decision_config)
-```
-
-<p></p>
-
-![正文配图](<../../assets/jev-20261124/10-78dbc25f75f093.png>)
+同一图片在 Notebook、手机原精度或量化版本中分别测试，确认差异来自哪一环。EvalScope 可组织自定义视觉问答数据与报告，业务字段和无依据补充仍需独立规则或人工评审；本初稿没有宣称已完成 EvalScope 视觉评测。
 
 <a id="c22-s11"></a>
 
-## 这一次要问什么，就在这里填写
+### 7.2 手机实际体验
+
+<table><thead><tr><th><p>项目</p></th><th><p>需记录的信息</p></th><th><p>本稿结果</p></th></tr></thead><tbody><tr><td><p>设备与部署</p></td><td><p>机型、系统、应用提交、模型与 mmproj 哈希</p></td><td><p>荣耀 Magic9 Pro Max，型号 <b>WKL-AN80</b>；Android <b>17 / API 37</b>，arm64，4 KiB 内存页。当前发布版本为 <b>MiniCPM-V 巡检实践版 v23 / 2.5</b>，包名 <code>com.example.minicpm_v_demo.practice</code>。原首页、聊天及模型下载入口保留；首次安装后通过 App 下载语言与视觉权重，并通过 SHA256 校验。固定提交与哈希见下文。</p></td></tr><tr><td><p>加载时间</p></td><td><p>冷加载到可处理图片的时间</p></td><td><p><b>v20：连续测试加载 3.916 秒，另一次实际 UI 加载 2.220 秒</b>。两次均未清除系统文件缓存，不能视为清缓存后的存储冷启动。v23 加载功能通过，尚无同口径加载耗时统计。</p></td></tr><tr><td><p>首字延迟</p></td><td><p>包含图片预处理、视觉编码和提示处理的延迟</p></td><td><p><b>v23：成功生成的一次实测为 7.986 秒</b>，包含生成阶段的图片预处理与读取。<b>v20：20 图平均 13.1668 秒，中位数 13.0675 秒</b>；该批次使用预先准备的 JPEG，不含相机／相册预处理。</p></td></tr><tr><td><p>单条记录耗时</p></td><td><p>从生成按钮到完整草稿可编辑</p></td><td><p><b>v23：成功生成并解析完成为 19.927 秒</b>；此前一次生成耗时 <b>15.236 秒</b>，因非法 JSON 被拦截，未闪退，照片和字段保留。<b>v20：20 图平均 21.571 秒，中位数 21.765 秒，P95 为 27.185 秒</b>。这些数值不含人工核对、填写时间；按钮点击到编辑界面完成绘制的严格端到端耗时未单独测量。</p></td></tr><tr><td><p>资源</p></td><td><p>进程峰值内存、图片尺寸、切片与上下文配置</p></td><td><p><b>v20：每秒采样的峰值 PSS 为 2,393,000 KiB，约 2.28 GiB；RSS 高水位为 2,513,636 KiB，约 2.40 GiB</b>。输入为 <b>227×227 JPEG</b>；切片上限 <b>1</b>、上下文 <b>8192</b>、CPU 线程 <b>4</b>、最多生成 <b>384 token</b>、温度 <b>0.7</b>、关闭思考。v23 相机预处理支持最长边缩至 <b>1280</b>，已通过 8 种 EXIF 方向与 48MP 图片测试；整改后的多进程总内存峰值尚未重测。</p></td></tr><tr><td><p>连续使用</p></td><td><p>连续 20 张，延迟变化、失败、发热与电量变化</p></td><td><p><b>v20：单次加载后连续处理 20 张不同公开裁剪图，20/20 返回原始回答，无闪退；19/20 通过严格结构校验</b>，1 次非法 JSON 被拒绝。前 5 张平均 <b>22.862 秒</b>，后 5 张平均 <b>16.966 秒</b>；输入内容与输出长度不同，不能据此判断热降频。电池温度 <b>40→42°C</b>，全程充电，电量 <b>100%→100%</b>，不据此估算耗电。v23 尚未重跑此批次。</p></td></tr><tr><td><p>飞行模式</p></td><td><p>新图片在断网状态生成草稿并保存</p></td><td><p>已通过。早期真机新拍照片在断网状态生成耗时 <b>17.575 秒</b>，确认后进入本地队列；恢复网络后显式同步，台账仅保留一条。<b>v23 另在飞行模式开启、Wi-Fi 关闭、无 ADB 反向网络映射时</b>导入公开图片，完成本地生成、人工确认和保存；同步失败时记录保留，恢复网络后主动同步成功，并完成状态刷新。</p></td></tr></tbody></table>
+
+<strong>部署校验信息</strong>：<br>
+MiniCPM-V-Apps 上游提交
+
+`d1aac05eecaac64b7fc35f1cc93a06b726ce10e3`
+
+原生子模块提交
+
+`13401aa8480d68a725e131cc4dbe5eda1f996a7f`
+
+语言模型
+
+`MiniCPM-V-4_6-Q4_K_M.gguf`，529,101,504 字节
+
+语言模型 SHA256
+
+`6b0c74962c44bc6bf4b655b9b02c13eda9d5a0491543ae976d1ac18e4b7892e2`
+
+视觉组件
+
+`mmproj-model-f16.gguf`，1,108,746,944 字节
+
+视觉组件 SHA256
+
+`ca931d861d0801d9003e50697cd764721a334107c0e0415a51168ee1938462de`
+
+v23 发布 APK SHA256
+
+`6615b7de73245a2dde9f45dae12da46298fe46bc97022a24329213afedba1283`
 
 <p></p>
 
-模型的一次输入分为三部分。
-
-<p></p>
-
-<table><tbody><tr><td><p>变量</p></td><td><p>填什么</p></td><td><p>本例的作用</p></td></tr><tr><td><p><code>context</code></p></td><td><p>模型判断时能看到的文字或背景</p></td><td><p>一条工作请求</p></td></tr><tr><td><p><code>question</code></p></td><td><p>这次具体想判断的问题</p></td><td><p>判断这条请求主要要求做什么</p></td></tr><tr><td><p><code>options</code></p></td><td><p>可选答案的键和含义</p></td><td><p>数据汇总、文案撰写、信息不足</p></td></tr></tbody></table>
-
-<p></p>
-
-`options` 的键方便程序取值，描述告诉模型每个选项是什么意思。比如 `data_summary` 只是本次自定义的键，不是模型中写死的类别。换一项任务时，可以一起修改问题、选项和上下文，不需要为此重新训练模型。
-
-<p></p>
-
-这个教学例子没有 `correct_answer` 或参考标签。下面给出的只是待判断的输入，真正的选择要等模型计算后才能得到。
-
-```python
-context = "老板发来消息：请把本周销售额按城市汇总，做成一张表，周五开会用。"
-question = "这条工作请求主要要求做什么？"
-options = {
-    "data_summary": "整理销售数据并制作汇总表",
-    "write_copy": "撰写商品宣传文案",
-    "unknown": "现有信息不足以判断主要任务",
-}
-
-print("上下文", context)
-print("问题", question)
-print("候选项", json.dumps(options, ensure_ascii=False, indent=2))
-```
-
-![正文配图](<../../assets/jev-20261124/11-7af6cdfd3c0c54.png>)
+所有数字应来自真实手机、具体模型包和相同测试口径。云端 Notebook 只负责算法基线；手机浏览器访问云端页面也不能作为本地推理证明。
 
 <a id="c22-s12"></a>
 
-## 为什么还要把选项映射成 A、B、C？
+### 7.3 失败场景与流转可靠性
 
-<p></p>
+<table><thead><tr><th><p>场景</p></th><th><p>正确行为</p></th></tr></thead><tbody><tr><td><p>视觉组件加载失败</p></td><td><p>停止图像生成，显示组件错误，不继续伪装图像理解</p></td></tr><tr><td><p>模糊或暗光图片</p></td><td><p>提示补拍或手工填写，保留原图与位置</p></td></tr><tr><td><p>输出不是合法 JSON</p></td><td><p>保留原始输出用于排查，表单不自动确认</p></td></tr><tr><td><p>生成期间应用中断</p></td><td><p>已采集照片与位置可以恢复</p></td></tr><tr><td><p>飞行模式确认记录</p></td><td><p>保存到本地队列，不等待网络请求</p></td></tr><tr><td><p>台账已写入但 ACK 丢失</p></td><td><p>用同一 ID 与内容重试，台账仍只有一条</p></td></tr><tr><td><p>同一 ID 内容发生变化</p></td><td><p>返回冲突，不覆盖已保存观察</p></td></tr><tr><td><p>两次后台状态更新冲突</p></td><td><p>用版本号发现冲突，刷新后再决定</p></td></tr></tbody></table>
 
-这个模型训练时用候选字母读出答案。本次先把选项依次映射为 A、B、C，模型计算的也是这些字母的分数。随后再把字母映射回 `data_summary` 这样的业务键。
-
-<p></p>
-
-例如，本次 A 对应第一个键、B 对应第二个键。这个表只记录位置关系，没有指定哪个选项应该得分最高。候选数量可以换，本实现单题支持 2～26 项。
-
-```python
-import string
-assert isinstance(options, dict) and 2 <= len(options) <= int(decision_config["max_options"])
-assert all(isinstance(k, str) and isinstance(v, str) for k, v in options.items())
-
-option_items = list(options.items())
-letters = list(string.ascii_uppercase[:len(option_items)])
-letter_to_key = dict(zip(letters, options))
-
-for letter, (key, description) in zip(letters, option_items):
-    print(f"{letter} -> {key} -> {description}")
-```
-
-![正文配图](<../../assets/jev-20261124/12-5eb451b0b1fced.png>)
-
-<p></p>
+配套 `examples/verify_local.py` 已验证 Python 校验与模拟业务链路，包括离线队列恢复、HTTP 同步、重复提交和版本冲突。Android 生命周期恢复、相机与 native 引擎不在这组本地检查的覆盖范围，应在应用实机验收中补测。
 
 <a id="c22-s13"></a>
 
-## 把三部分输入拼成模型使用的提示
+## 8\. 魔搭平台怎样承接这些实践资产
 
-<p></p>
+<table><thead><tr><th><p>平台能力</p></th><th><p>本章用途</p></th><th><p>应发布的资产</p></th></tr></thead><tbody><tr><td><p>模型库</p></td><td><p>提供固定基座、手机模型包与视觉组件</p></td><td><p>版本、文件哈希、部署说明</p></td></tr><tr><td><p>数据集</p></td><td><p>托管公开授权图片与人工标注</p></td><td><p>图片、标准记录、划分与许可</p></td></tr><tr><td><p>Notebook</p></td><td><p>验证单图理解与输出契约</p></td><td><p>可执行 Notebook、原始输出及配置</p></td></tr><tr><td><p>EvalScope</p></td><td><p>组织效果比较和报告</p></td><td><p>数据适配、评测配置与失败分析</p></td></tr><tr><td><p>创空间 Studio</p></td><td><p>展示台账与教学样例</p></td><td><p>示例记录、接口说明、APK 下载与手机验收材料</p></td></tr></tbody></table>
 
-下面沿用 `hmm-zh-v1` 的训练提示格式，包含上下文、问题和候选项。`apply_chat_template()` 再加上 Qwen 的聊天标记，`enable_thinking=False` 使用本模型的决策读出方式。
-
-<p></p>
-
-这里虽然写着“只返回字母”，下一步实际上不会调用文本生成。我们只读取答案位置上候选字母的分数。先打印完整提示，检查有没有漏掉信息，或者意外塞入预期答案。
-
-```python
-
-import string
-assert isinstance(options, dict) and 2 <= len(options) <= int(decision_config["max_options"])
-assert all(isinstance(k, str) and isinstance(v, str) for k, v in options.items())
-
-option_items = list(options.items())
-letters = list(string.ascii_uppercase[:len(option_items)])
-letter_to_key = dict(zip(letters, options))
-
-for letter, (key, description) in zip(letters, option_items):
-    print(f"{letter} -> {key} -> {description}")
-```
-
-![正文配图](<../../assets/jev-20261124/13-cb715771a2cf14.png>)
+创空间中的网页台账可以帮助读者理解流程。网页如果调用服务器模型，应明确标注云端体验；核心验收仍然是在手机断网状态下拍摄新图片并生成记录。第一版台账可以由开发者在本地运行，Studio 发布入口由双方实际创建后补入。
 
 <a id="c22-s14"></a>
 
-## 做一次前向计算，取出候选字母的分数
+## 9\. 升级到 MiniCPM-V 4.7 时保持任务契约
 
-<p></p>
+4.7 是后续可选的模型升级方向。升级前固定具体型号、正式模型页、语言权重、视觉组件、转换工具与手机引擎，不仅更换模型名称。相同巡检图片、相同标注与相同手机用于重新测量效果和资源成本。
 
-先检查 A、B、C 等字母各自是否对应一个 token，再把提示转成模型输入。超过模型允许长度时直接报错，不悄悄截断。
+可以按以下顺序迁移：先通过 Notebook 单图和结构输出，再通过手机单图理解与飞行模式推理，最后接回人工确认、离线队列与台账。是否采用 1B 或 35B-A3B 路线，由目标设备资源和端侧实测决定。不能将其他版本、其他机型或其他提示条件下的内存与速度数字直接写入本章。
 
-<p></p>
-
-`model(...)` 完成一次前向计算。`logits_to_keep=1` 只保留最后位置的输出，`candidate_logits` 只提取本次候选字母对应的分数。logit 是原始分数，可以是任意实数，还不是概率。下面的代码没有调用 `generate()`，也没有生成一段解释再解析。
-
-```python
-
-letter_tokens = [tokenizer.encode(letter, add_special_tokens=False) for letter in letters]
-assert all(len(ids) == 1 for ids in letter_tokens), "候选字母必须各对应一个 token"
-letter_ids = [ids[0] for ids in letter_tokens]
-
-inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=False).to(device)
-assert inputs.input_ids.shape[1] <= int(decision_config["max_length"]), "输入过长，请先整理上下文"
-with torch.inference_mode():
-    output = model(**inputs, logits_to_keep=1, use_cache=False)
-    candidate_logits = output.logits[0, -1, letter_ids].float()
-
-print("输入 token 数", inputs.input_ids.shape[1])
-for letter, value in zip(letters, candidate_logits.tolist()):
-    print(letter, "原始 logit", value)
-```
-
-![正文配图](<../../assets/jev-20261124/14-dd34bde0d87084.png>)
+最终完成标志是：另一位开发者能在受支持手机上拍摄一张新图片，断网生成草稿、人工确认并离线保存；联网后点击同步，在台账中看到唯一记录，再查看后续处理状态。模型文件、应用版本与实际手机指标应可以追溯。
 
 <a id="c22-s15"></a>
 
-## 把分数变成概率，再对应回选项
+## 参考资料
+
+- [MiniCPM-V 官方图像推理说明](<https://github.com/OpenBMB/MiniCPM-V#minicpm-v-46>)
+- [MiniCPM-V 4.6 模型页](<https://modelscope.cn/models/OpenBMB/MiniCPM-V-4.6>)
+- [MiniCPM-V Apps 固定手机工程](<https://github.com/OpenBMB/MiniCPM-V-Apps/tree/d1aac05eecaac64b7fc35f1cc93a06b726ce10e3>)
+- [Android LlamaEngine 图像预填充与推理接口](<https://github.com/OpenBMB/MiniCPM-V-Apps/blob/d1aac05eecaac64b7fc35f1cc93a06b726ce10e3/MiniCPM-V-demo-Android/app/src/main/java/com/example/minicpm_v_demo/LlamaEngine.kt>)
+- [业务背景参考：PilotDeck 开发在线智能数据系统](<https://modelbest.feishu.cn/wiki/Up4Owx87uiZLx0kFs3PcqjLYnch>)，仅沿用合作方案列出的业务方向，不据此认定已有手机巡检实现。
+
+[MiniCPM&#95;魔搭紫皮书&#95;章节与实践包&#95;v0.1.zip](<../../assets/minicpm-20261015/minicpm-practice-v0.1.zip>)
 
 <p></p>
-
-先用发布温度调整分数，再做 softmax。得到的是<strong>本次提供的候选之间</strong>的概率分布，所有候选概率加起来约等于 1。它不是对所有可能答案的穷举，也不代表该选项在真实业务中有同样高的正确率。
-
-<p></p>
-
-模型首选取概率最大的那一项。`best_index` 是位置，`letters[best_index]` 是候选字母，`option_items[best_index]` 才是对应的业务键和描述。表格保留全部候选，便于看清模型是否在两个选项之间犹豫。
-
-```python
-
-probabilities = torch.softmax(candidate_logits / temperature, dim=-1).tolist()
-best_index = max(range(len(probabilities)), key=probabilities.getitem)
-
-score_rows = [
-    {"letter": letter, "key": key, "description": description,
-     "logit": logit, "probability": probability}
-    for letter, (key, description), logit, probability
-    in zip(letters, option_items, candidate_logits.tolist(), probabilities)
-]
-display(pd.DataFrame(score_rows))
-
-result = {
-    "choice_letter": letters[best_index],
-    "choice": option_items[best_index][0],
-    "description": option_items[best_index][1],
-    "probabilities": {key: p for (key, _), p in zip(option_items, probabilities)},
-}
-print(json.dumps(result, ensure_ascii=False, indent=2))
-print("概率之和", sum(probabilities))
-```
-
-![正文配图](<../../assets/jev-20261124/15-c10e918496c32d.png>)
-
-<a id="c22-s16"></a>
-
-## 程序拿到的到底是哪一个答案？
-
-<p></p>
-
-程序可以直接使用 `result["choice"]` 取出选项键，再用这个键查回选项描述。这个映射不需要第二个语言模型，也不用从长段回答中寻找关键词。
-
-<p></p>
-
-下面只打印选择，不执行真实业务动作。前面的代码没有为 `data_summary` 加分，也没有用关键词规则改写模型结果；即使模型选错，也会原样显示。
-
-```text
-
-chosen_key = result["choice"]
-print("模型选择的键", chosen_key)
-print("对应的选项含义", options[chosen_key])
-```
-
-![正文配图](<../../assets/jev-20261124/16-f234aa89b2f659.png>)
-
-<a id="c22-s17"></a>
-
-## 保存自己的这次输入与模型输出
-
-<p></p>
-
-最后这个单元把本次问题、候选、完整提示、原始分数和模型选择保存在当前 Notebook 目录，文件名带时间，避免覆盖上一轮。保存的概率使用完整数值，展示时再按需要四舍五入。
-
-<p></p>
-
-```python
-from datetime import datetime
-record = {
-    "model": MODEL_ID, "device": device, "dtype": str(dtype),
-    "temperature": temperature, "prompt_version": decision_config["prompt_version"],
-    "context": context, "question": question, "options": options,
-    "prompt": prompt, "scores": score_rows, "result": result,
-}
-output_path = Path("decision_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f") + ".json")
-output_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
-print("已保存", output_path.resolve())
-```
-
-![正文配图](<../../assets/jev-20261124/17-93e902bd2a8fab.png>)
-
-<p></p>
-
-<p></p>
-
-<a id="c22-s18"></a>
-
-## 换成情感分析，需要改哪里？
-
-<p></p>
-
-前面让模型判断工作请求，现在换成判断商品评论的情感倾向。模型和分词器继续使用内存中已经加载的对象，推理仍是“候选字母分数 → softmax 概率 → 取最大项 → 映射回选项”。
-
-<p></p>
-
-需要替换的是本次输入的三部分。
-
-<table><tbody><tr><td><p>输入</p></td><td><p>前面的请求判断</p></td><td><p>现在的情感分析</p></td></tr><tr><td><p>上下文</p></td><td><p>一条老板的工作消息</p></td><td><p>一条用户评论</p></td></tr><tr><td><p>问题</p></td><td><p>这条请求主要要求做什么</p></td><td><p>这条评论整体表达什么情感</p></td></tr><tr><td><p>选项</p></td><td><p>数据汇总、宣传文案、信息不足</p></td><td><p>正向、负向、中性</p></td></tr></tbody></table>
-
-<p></p>
-
-选项键与描述都是文字输入，可以随任务一起改变，不必重新训练分类头。这里用 `sentiment_` 前缀保存新变量，方便和前面的请求判断结果对照。下面从当前内核继续运行，不再执行模型加载单元。
-
-<p></p>
-
-<a id="c22-s19"></a>
-
-### 先换上下文、问题和选项
-
-<p></p>
-
-下面三个变量对应前面的 `context`、`question`、`options`。正向表示明确的满意或赞扬，负向表示不满或批评，中性表示主要陈述事实、没有明显褒贬。中性与“看不懂”不同，后续如果需要处理无法判断的输入，可以另外增加候选项。
-
-<p></p>
-
-这条评论和三个选项是可修改的示例输入；代码没有填写正确答案或预写概率。
-
-```python
-sentiment_context = "这款耳机音质清晰，戴着也舒服，这次买得很满意。"
-sentiment_question = "这条用户评论整体表达了哪一种情感倾向？"
-sentiment_options = {
-    "positive": "正向情感：评论整体表达满意、喜爱或赞扬",
-    "negative": "负向情感：评论整体表达不满、失望或批评",
-    "neutral": "中性情感：评论主要陈述事实，没有明显褒贬态度",
-}
-
-sentiment_items = list(sentiment_options.items())
-sentiment_letters = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"[:len(sentiment_items)])
-sentiment_mapping = [
-    {"字母": letter, "选项键": key, "选项含义": description}
-    for letter, (key, description) in zip(sentiment_letters, sentiment_items)
-]
-print("待分析评论", sentiment_context)
-print("本次问题", sentiment_question)
-display(pd.DataFrame(sentiment_mapping))
-```
-
-![正文配图](<../../assets/jev-20261124/18-2ef513a5bc94e1.png>)
-
-<a id="c22-s20"></a>
-
-### 提示格式和字母映射继续沿用
-
-<p></p>
-
-本次 A、B、C 分别对应 `positive`、`negative`、`neutral`。A 只是第一个选项的位置，并不意味着模型必须选正向。使用相同的 `hmm-zh-v1` 模板，把新的评论、问题和选项放进去即可。
-
-<p></p>
-
-保留提示的前后两段，稍后替换评论时继续复用。完整提示也打印出来，便于核对模型实际看到了什么。
-
-```python
-sentiment_candidate_text = "\n".join(
-    f"{letter}: {key} — {description}"
-    for letter, (key, description) in zip(sentiment_letters, sentiment_items)
-)
-sentiment_prefix = "待判断的上下文：\n"
-sentiment_suffix = (
-    "\n\n问题：\n" + sentiment_question
-    + "\n\n候选项：\n" + sentiment_candidate_text
-    + "\n只返回候选项对应的字母。"
-)
-sentiment_content = sentiment_prefix + sentiment_context + sentiment_suffix
-sentiment_prompt = tokenizer.apply_chat_template(
-    [{"role": "user", "content": sentiment_content}],
-    tokenize=False, add_generation_prompt=True, enable_thinking=False,
-)
-sentiment_letter_tokens = [tokenizer.encode(x, add_special_tokens=False) for x in sentiment_letters]
-assert all(len(x) == 1 for x in sentiment_letter_tokens)
-sentiment_letter_ids = [x[0] for x in sentiment_letter_tokens]
-print(sentiment_prompt)
-```
-
-![正文配图](<../../assets/jev-20261124/19-b8c113746c3a68.png>)
-
-<a id="c22-s21"></a>
-
-### 用同一个模型计算概率，取出情感选项
-
-<p></p>
-
-这里与前面的推理步骤一致。模型只做一次前向计算，取出 A、B、C 在答案位置的 logits，再用发布温度做 softmax。概率最大的字母通过位置映射回情感键；结果保留全部候选分布。
-
-<p></p>
-
-这里不会调用 `from_pretrained()` 或 `generate()`。概率表示这三个候选之间的分布，不等于实际任务的准确率。
-
-```python
-sentiment_inputs = tokenizer(sentiment_prompt, return_tensors="pt", add_special_tokens=False).to(device)
-assert sentiment_inputs.input_ids.shape[1] <= int(decision_config["max_length"]), "输入过长，请先整理评论"
-with torch.inference_mode():
-    sentiment_output = model(**sentiment_inputs, logits_to_keep=1, use_cache=False)
-    sentiment_logits = sentiment_output.logits[0, -1, sentiment_letter_ids].float()
-sentiment_probabilities = torch.softmax(sentiment_logits / temperature, dim=-1).tolist()
-sentiment_best = max(range(len(sentiment_probabilities)), key=sentiment_probabilities.getitem)
-
-sentiment_scores = [
-    {"字母": letter, "选项键": key, "logit": logit, "概率": probability}
-    for letter, (key, _), logit, probability in zip(
-        sentiment_letters, sentiment_items, sentiment_logits.tolist(), sentiment_probabilities
-    )
-]
-sentiment_result = {
-    "choice_letter": sentiment_letters[sentiment_best],
-    "choice": sentiment_items[sentiment_best][0],
-    "description": sentiment_items[sentiment_best][1],
-    "probabilities": {key: p for (key, _), p in zip(sentiment_items, sentiment_probabilities)},
-}
-display(pd.DataFrame(sentiment_scores))
-print("模型判断", sentiment_result["choice"], "→", sentiment_result["description"])
-print(json.dumps(sentiment_result, ensure_ascii=False, indent=2))
-```
-
-![正文配图](<../../assets/jev-20261124/20-fa49a63d584758.png>)
-
-<a id="c22-s22"></a>
-
-### 再换两句评论，看看能否直接处理
-
-下面保留模型、问题、情感选项和提示模板，只更换评论文字，分别再做一次前向计算。第一条已经算过，直接使用上面的结果；后两条重新计算。
-
-<p></p>
-
-这三句话只是讲解调用方式的例子，不用于报告情感分析准确率。你可以替换列表中的文字，运行这一单元观察新结果，无须再次加载模型。
-
-```python
-sentiment_examples = [
-    sentiment_context,
-    "耳机用了两天就坏了，联系客服也一直没人处理，太失望了。",
-    "这款耳机有黑色和白色两种，包装内包含一根充电线。",
-]
-sentiment_rows = [{"评论": sentiment_context, "情感键": sentiment_result["choice"],
-                   **sentiment_result["probabilities"]}]
-for sentiment_batch_comment in sentiment_examples[1:]:
-    sentiment_batch_content = sentiment_prefix + sentiment_batch_comment + sentiment_suffix
-    sentiment_batch_prompt = tokenizer.apply_chat_template(
-        [{"role": "user", "content": sentiment_batch_content}],
-        tokenize=False, add_generation_prompt=True, enable_thinking=False,
-    )
-    sentiment_batch_inputs = tokenizer(sentiment_batch_prompt, return_tensors="pt", add_special_tokens=False).to(device)
-    assert sentiment_batch_inputs.input_ids.shape[1] <= int(decision_config["max_length"]), "输入过长"
-    with torch.inference_mode():
-        sentiment_batch_logits = model(**sentiment_batch_inputs, logits_to_keep=1, use_cache=False).logits[0, -1, sentiment_letter_ids].float()
-    sentiment_batch_probabilities = torch.softmax(sentiment_batch_logits / temperature, dim=-1).tolist()
-    sentiment_batch_best = max(range(len(sentiment_batch_probabilities)), key=sentiment_batch_probabilities.getitem)
-    sentiment_rows.append({"评论": sentiment_batch_comment, "情感键": sentiment_items[sentiment_batch_best][0],
-                           **{key: p for (key, _), p in zip(sentiment_items, sentiment_batch_probabilities)}})
-assert id(model) == sentiment_model_object_id, "模型对象发生变化，请检查是否执行了加载单元"
-display(pd.DataFrame(sentiment_rows))
-```
-
-![正文配图](<../../assets/jev-20261124/21-0462ca1e5bfc01.png>)
-
-<a id="c22-s23"></a>
-
-### 单独保存情感分析结果
-
-<p></p>
-
-本单元把本次评论、问题、情感选项、首条原始 logits 和三条结果存成 JSON，文件名带时间。保存步骤只依赖本节实际生成的变量，后续更换任务时也可以照此保存。
-
-<p></p>
-
-回看这个扩展，换任务主要改的是上下文、问题和选项描述。字母打分、温度变换、softmax 和取首选的代码都可以继续使用同一个流程。
-
-```python
-from datetime import datetime
-sentiment_record = {
-    "model": getattr(model.config, "_name_or_path", "chinese-decision-0.8b"),
-    "device": str(sentiment_device), "dtype": str(next(model.parameters()).dtype),
-    "temperature": float(temperature), "prompt_version": decision_config["prompt_version"],
-    "question": sentiment_question, "options": sentiment_options,
-    "first_context": sentiment_context, "first_prompt": sentiment_prompt,
-    "first_scores": sentiment_scores, "first_result": sentiment_result,
-    "examples": sentiment_rows, "reused_same_model": id(model) == sentiment_model_object_id,
-}
-sentiment_output_path = Path("sentiment_" + datetime.now().strftime("%Y%m%d_%H%M%S_%f") + ".json")
-sentiment_output_path.write_text(json.dumps(sentiment_record, ensure_ascii=False, indent=2), encoding="utf-8")
-print("情感分析结果已保存", sentiment_output_path.resolve())
-```

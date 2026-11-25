@@ -1,186 +1,374 @@
 <article>
-<h1>微调有没有用，测才知道？</h1>
-<p>模型微调完成后，还需要通过评测来判断模型是否真正达到了预期效果。由于不同任务的目标不同，使用的评测方法也会有所区别。</p>
-<p>例如，分类任务主要关注模型能否判断出正确的类别；信息抽取任务关注需要的信息是否被完整、准确地提取出来；生成任务除了判断答案是否正确，还需要关注内容的完整性和相关性；语音识别通常通过错误率评价识别结果；图像生成则需要结合自动指标和人工评价进行判断。</p>
-<p>具体如何测试见【先评再选：用 EvalScope 形成开源模型的第一份报告】，我们这一章告诉你不同任务有哪些评测指标～</p>
+<h1>模型已经会回答了，为什么还要做偏好对齐？</h1>
+<p>模型微调完，能按要求回答问题了，可把几条回复放在一起看，会有好有坏，并且有些人看起来会更舒服一些。</p>
 <p />
-<h2>分类任务评测指标</h2>
-<p>文本分类是模型微调中比较常见的一类任务，例如意图识别、情感分类、故障分类和风险分类等。</p>
-<p>通常可以将预测结果划分为四种情况：</p>
-<ul><li>TP（True Positive）：实际为正样本，模型预测为正样本；</li><li>TN（True Negative）：实际为负样本，模型预测为负样本；</li><li>FP（False Positive）：实际为负样本，但模型预测为正样本；</li><li>FN（False Negative）：实际为正样本，但模型预测为负样本。</li></ul>
-<h3>准确率（Accuracy）</h3>
-<p>准确率表示所有样本中预测正确的比例：</p>
-<p><span class="arithmatex display-math">\(\mathrm{Accuracy}=\frac{TP+TN}{TP+TN+FP+FN}  
+<p>拿退款咨询来说，同样是在告诉用户去哪里申请，一个回答只给了操作入口，另一个还说明需要审核、能否退款要看订单情况。两条回复都谈到了退款，后者把用户接下来可能遇到的情况交代得更清楚，也少了一些误解。</p>
+<p />
+<p>前面做 SFT 时，我们会把这样的回答整理成示例，让模型照着学习。现在还可以把同一个问题的不同回答放在一起，告诉模型我们更认可哪一个，以及评价的标准是什么。</p>
+<p>这就是偏好对齐，我们从这里开始。</p>
+<p />
+<h2><b>先梳理一下，后训练有哪些做法？</b></h2>
+<p>大模型后训练的主要目的是，帮助已经具备文本续写能力的基础模型，逐步变成能够更好地直接对话、遵循指令并完成等具体任务。后训练并不是某一种固定算法，而是一组训练方法的统称，常见方法包括 SFT、偏好优化、奖励模型训练以及强化学习等，不同模型会根据训练目标、数据条件和成本选择不同的组合方式。</p>
+<p>其中，SFT 主要使用“指令、输入和期望回答”形式的数据，让模型学习如何理解任务、遵循指令以及按照期望的格式和方式回答。在此基础上，还可以进一步利用偏好数据进行对齐，例如为同一个问题构造优选回答和非优选回答，让模型学习人类或业务评价标准。偏好数据既可以用于训练奖励模型，把人工偏好转化为可计算的奖励分数，再结合 PPO、GRPO 等强化学习方法持续优化模型的生成策略；也可以直接采用 DPO 等方法，将优选与非优选回答之间的偏好关系直接写入训练目标，而不单独训练奖励模型。</p>
+<p>因此，大模型的后训练并不存在一套固定流程，SFT、奖励模型、PPO、GRPO 和 DPO 也承担着不同职责。SFT 主要用于建立基础的指令跟随能力，奖励模型负责提供可量化的评价信号，PPO 和 GRPO 根据奖励信号进一步优化生成策略，而 DPO 则直接利用偏好数据完成模型对齐。实际训练过程中，这些方法不一定全部使用，也不一定按照完全相同的顺序组合，而是根据模型能力、任务目标和训练资源灵活选择。</p>
+<img src="../../assets/manuscript-20260914/c14-b34d9903ffac90.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<h2><b>给模型看示范，SFT 能教会它什么？</b></h2>
+<p>SFT 即监督微调，它使用已经整理好的输入和期望输出继续训练模型，让模型在看到类似输入时，提高生成期望答案的概率。</p>
+<p>一条 SFT 数据可以写成下面的形式：</p>
+<pre data-language="JSON"><code>{
+  "instruction": "根据用户的问题生成客服回复",
+  "input": "会员昨天自动续费，我想申请退款。",
+  "output": "请先进入订单页面确认续费订单状态。符合退款条件时，可以在订单详情中提交申请；如果页面没有退款入口，请联系人工客服核验。"
+}</code></pre>
+<p>训练时，分词器（Tokenizer）会把指令、输入和回答转换为词元（Token）。模型根据前面的 Token 预测下一个 Token，再用预测结果与期望答案之间的差异计算损失。大模型 SFT 通常采用交叉熵损失和教师强制训练：训练每个位置时，模型看到的是数据中已经给出的正确前文，而不是自己刚刚生成的错误内容。很多指令微调实现只对回答部分计算损失，指令和用户输入用于提供上下文，但不要求模型把它们重新生成出来。</p>
+<p>SFT 首先改变的是任务格式。模型会逐渐理解，输入是一条用户咨询，输出应是一段客服回复，而不是继续补写用户问题。用于信息抽取时，它可以学习输出固定 JSON 字段；用于会议纪要时，它可以学习按照会议信息、关键结论和行动项组织内容。其次，SFT 会改变模型的回答方式。训练数据中的语气、篇幅、段落结构、解释程度和拒答方式，都会成为模型模仿的对象。如果期望回答普遍简洁，模型会更倾向直接给出结论；如果示例要求先说明依据再给出步骤，模型也会学习这种组织方式。SFT 还可以让模型接触领域示例。客服数据中的订单状态、退款条件和升级人工服务，法律数据中的条款结构，代码数据中的接口用法，都会影响模型在相应任务中的输出。不过，这并不意味着模型自动掌握了该领域的全部知识。SFT 数据覆盖到什么任务、包含什么术语和处理方式，模型才有机会在参数更新中学习这些模式。</p>
+<p>SFT 的训练目标本质上仍是模仿期望输出。它能让模型知道这类问题通常怎样回答，却不能保证回答中的事实已经经过核验，也不能仅凭一条示范学会比较所有可能答案。同一个退款问题可能得到下面两条回复：</p>
+<pre data-language="Plain Text"><code>回答A：请在订单详情中申请退款，如无法操作，请联系人工客服。
+
+回答B：您可以先查看订单状态。符合退款条件时，可在订单详情中提交申请；如果没有退款入口，请联系人工客服核验。退款结果和到账时间以实际审核为准。</code></pre>
+<p>两条回答都与退款相关，但回答 B 补充了审核条件，也避免承诺确定的退款结果。如果业务更重视信息完整和合规边界，回答 B 更合适。SFT 可以把回答 B 作为示范交给模型，偏好数据则可以同时给出 A 和 B，并明确告诉模型为什么更倾向 B。这就是从监督学习进入偏好对齐的原因。</p>
+<p />
+<h2>同一个问题，怎样的回答更合适？</h2>
+<p>偏好对齐关注的重点，不是模型“能不能回答”，而是面对多个可能都能成立的回答时，应该更倾向于生成哪一种。它通常通过比较同一输入下不同回答的优劣，将准确性、相关性、帮助性、表达方式、安全性等要求转化为训练信号。与 SFT 相比，SFT 更像是在教模型“怎么答”，通常使用一个输入对应一个期望输出的数据，让模型学习任务格式、内容结构、领域表达和基本回答方式；偏好对齐则是在模型已经具备一定回答能力之后，进一步教模型“怎样答得更好”。</p>
+<p>以退款客服场景为例，如果一个回答遗漏审核条件、承诺固定到账时间，或者把不确定事项表述成确定结果，就可以被标记为较差回答；如果另一个回答能够明确说明办理路径、保留必要的审核边界，同时没有虚构政策，则可以被标记为更优回答。通过大量这样的比较训练，模型会逐渐提高优选回答的生成概率，从而在相似问题中更倾向于输出符合业务要求的结果。需要注意的是，偏好对齐学习的并不是一套抽象且统一的“人类价值”，而是结合奖励函数，针对具体任务定义的评价标准。不同的任务需要构造与任务匹配的偏好数据模式。因此，在构造偏好数据之前，需要先明确“什么叫更好”，否则不同标注人员可能因为理解不同而给出相互矛盾的选择。</p>
+<p>此外，偏好对齐也不能替代事实验证。一个回答可能表达流畅、语气友好，却引用了错误政策；另一个回答也可能事实正确，却没有遵循要求的输出格式。因此，实际评价体系通常需要分别定义事实正确性、任务完成度、表达风格和安全合规等标准。对于能够自动验证的内容，还可以结合代码测试、答案校验、格式检查和业务规则等方式进行评价，以减少完全依赖人工主观判断带来的偏差。</p>
+<p />
+<h2><b>偏好数据应该怎样构造</b></h2>
+<p>偏好数据（Preference Data）是用来告诉模型“多个回答中哪个更好”的训练数据。它与 SFT 数据最大的区别在于：SFT 通常提供一个输入和一个期望答案，而偏好数据通常会针对同一个 Prompt 准备多个候选回答，并标注它们之间的优劣关系。最常见的偏好数据由一个输入、一个优选回答和一个非优选回答组成：</p>
+<pre data-language="JSON"><code>{
+  "prompt": "会员昨天自动续费，我想申请退款。",
+  "chosen": "请先查看订单状态。符合退款条件时，可以在订单详情中提交申请；如果没有退款入口，请联系人工客服核验。",
+  "rejected": "可以，退款会在三个工作日内到账。"
+}</code></pre>
+<p>其中，<code>chosen</code>表示在当前评价标准下更合适的回答，<code>rejected</code>表示相对不合适的回答。非优选回答不一定完全错误，也可能只是遗漏必要条件、表达过于冗长、语气不符合要求，或者包含没有依据的承诺。偏好数据表达的是相对关系，而不是给每个回答贴上永久的正确或错误标签。</p>
+<p>偏好数据通常按照下面的过程构造：</p>
+<ol><li>从真实业务或测试集中准备能够代表任务分布的 Prompt；</li><li>使用当前模型、不同版本模型或不同采样参数，为同一个 Prompt 生成多个候选回答；</li><li>按照统一的评价标准，让标注人员对回答进行两两比较或完整排序；</li><li>把排序结果转换为优选回答和非优选回答组成的数据对；</li><li>抽查标注一致性，并把无法判断、事实依据不足和意见冲突的样本交给复核人员处理。</li></ol>
+<p>如果同一个输入生成了 A、B、C 和 D 四个回答，标注结果为 B 优于 A、A 优于 D、D 优于 C，就可以转换成多组偏好对。实际构造时不一定要穷举所有组合。差异过小的回答很难稳定标注，差异过大的回答又可能只让模型学会避开低级错误。更有价值的数据通常来自都能读通、但在关键条件、事实边界或任务完成度上存在明确差别的回答。</p>
+<p>偏好标注容易受到一些表面因素影响。较长的回答看起来更完整，措辞更自信的回答看起来更可靠，排在前面的候选也可能更容易被选择。为了降低这些偏差，可以随机调整候选顺序，隐藏模型名称，要求标注人员分别检查事实、任务完成度、风格和安全性，并在部分样本上安排多人重复标注。若同一批数据中标注者经常意见相反，通常说明评价标准还不够清楚，而不是简单地把少数意见删除。</p>
+<p />
+<h2>奖励模型怎样学会给回答打分？</h2>
+<p>偏好数据已经把“同一个 Prompt 下哪个回答更好”表示成了 <code>chosen</code> 和 <code>rejected</code> 之间的相对关系。奖励模型（Reward Model，RM）的作用，就是利用这些偏好数据学习一个自动评分函数，把人工比较结果转换成可以被后续强化学习算法使用的奖励信号。常见奖励模型会以语言模型为基础，在最后增加一个输出标量的评分层。训练时，Prompt 和回答会被拼接成一段序列，经过模型得到隐藏状态，再由评分层输出一个数值。</p>
+<p>奖励模型并不需要知道两个回答分别应该得到多少分，它只需要学习一个相对关系：在这个 Prompt 下，<code>chosen</code> 的得分应该高于 <code>rejected</code>。因此，训练时通常会分别把 Prompt 与两个候选回答拼接后输入奖励模型：</p>
+<pre data-language="Plain Text"><code>Prompt + chosen   → rchosen
+Prompt + rejected → rrejected</code></pre>
+<p>其中，<code>rchosen</code>和 <code>rrejected</code> 是奖励模型输出的两个标量分数。训练目标就是让优选回答的分数高于非优选回答。常见的成对排序损失可以写成：</p>
+<p><span class="arithmatex display-math">\(\mathcal{L} = -\log \sigma\left(r_{\text{chosen}} - r_{\text{rejected}}\right)
 \)</span></p>
-<p>例如，测试 1000 条数据，模型正确预测了 900 条，那么 Accuracy 就是 90%。Accuracy 可以比较直观地反映模型整体的分类效果。但是，当不同类别的数据数量相差较大时，只看 Accuracy 可能会产生误判。当 1000 条情感分类数据中只有 20 条负向数据，如果模型简单地将所有数据都预测为“正向”，Accuracy 仍然可以达到 98%，但实际上 20 条负向数据一条都没有识别出来。所以，在类别分布不均衡的情况下，通常还需要结合 Precision、Recall 和 F1 一起评价模型。</p>
-<h3>精确率（Precision）和召回率（Recall）、F1</h3>
-<p>精确率（Precision）表示模型预测为正样本的数据中，有多少真正属于正样本：</p>
-<p><span class="arithmatex">\(\mathrm{Precision}=\frac{TP}{TP+FP}  \)</span></p>
-<p>召回率（Recall）表示标注为正样本的数据中，有多少被模型成功识别：</p>
-<p><span class="arithmatex">\(\mathrm{Recall}=\frac{TP}{TP+FN}  \)</span></p>
-<p>F1 Score 综合考虑 Precision 和 Recall，F1 较高，通常说明模型在 Precision 和 Recall 之间取得了比较好的平衡。</p>
-<p><span class="arithmatex display-math">\(F1 = 2 \times \frac{\mathrm{Precision} \times \mathrm{Recall}}
-{\mathrm{Precision} + \mathrm{Recall}}
-\)</span></p>
-<h3>混淆矩阵（Confusion Matrix）</h3>
-<p>Accuracy、Precision、Recall 和 F1 可以用一个数值表示模型的整体效果，但如果想知道模型容易把哪些类别判断错，我们需要使用混淆矩阵进一步分析，混淆矩阵会把每条测试数据的真实类别和模型预测类别进行对照，然后统计不同类别之间的预测情况，并将结果排列成一个矩阵。</p>
-<p>例如，测试集中包含网络故障，硬件故障，软件故障三种类别，模型预测结果统计如下：</p>
-<table><tr><td>真实类别 \ 预测类别</td><td>网络故障</td><td>硬件故障</td><td>软件故障</td></tr><tr><td>网络故障</td><td>45</td><td>2</td><td>3</td></tr><tr><td>硬件故障</td><td>1</td><td>47</td><td>2</td></tr><tr><td>软件故障</td><td>6</td><td>2</td><td>42</td></tr></table>
-<p>每一行表示数据的真实类别，每一列表示模型预测的类别。矩阵对角线上的数字表示预测正确的数量，例如 50 条网络故障数据中，有 45 条被正确识别；非对角线上的数字表示预测错误的情况，例如有 6 条软件故障被错误预测成了网络故障。从混淆矩阵中不仅可以看到模型预测正确了多少数据，还可以进一步发现哪些类别之间容易发生混淆。在上面的结果中，软件故障被错误预测为网络故障的情况相对较多，说明模型对这两个类别的区分能力还有提升空间。通过分析这些容易混淆的类别，可以进一步发现模型存在的问题，为后续补充训练数据和优化模型提供参考。</p>
-<h2>信息抽取评测指标</h2>
-<p>对于命名实体识别、字段抽取、结构化信息提取等任务，常用的评测指标包括字段准确率、实体级 Precision、Recall 和 F1。不同指标关注的评测粒度不同，可以根据具体任务选择使用。</p>
-<h3>字段准确率</h3>
-<p>字段准确率主要用于衡量模型对指定字段的抽取是否正确，其计算方式为：</p>
-<p><span class="arithmatex display-math">\(\text{字段准确率} =
-\frac{\text{正确抽取的字段数量}}
-{\text{需要抽取的字段总数量}}
-\)</span></p>
-<p>对于包含多个字段的任务，可以分别统计不同字段的准确率。例如分别计算公司名、人名的准确率，从而进一步分析模型在哪些字段上的抽取能力较弱，但是这种方法也有缺陷，无法确定模型漏抽了哪些实体，因此对于包含多个实体的信息抽取任务，还需要使用实体级的 Precision、Recall 和 F1 进行更加细致的评测。</p>
-<h3>实体级 Precision、Recall 和 F1</h3>
-<p>对于命名实体识别（NER）任务，实体级 Precision、Recall 和 F1 进行评价，这个部分和上一节的分类人评价指标类似。</p>
-<p>其中：</p>
-<ul><li>TP（True Positive）：模型正确识别出的实体；</li><li>FP（False Positive）：模型识别出了实体，但识别结果错误；</li><li>FN（False Negative）：标准答案中存在实体，但模型没有识别出来。</li></ul>
-<p>Precision 用于衡量模型识别出的实体中，有多少是正确的：</p>
-<p><span class="arithmatex display-math">\(Precision = \frac{TP}{TP + FP}
-\)</span></p>
-<p>Recall 用于衡量标准答案中的实体，有多少被模型成功识别出来：</p>
-<p><span class="arithmatex display-math">\(Recall = \frac{TP}{TP + FN}
-\)</span></p>
-<p>F1 综合考虑 Precision 和 Recall：</p>
-<p><span class="arithmatex display-math">\(F1 =
-\frac{2 \times Precision \times Recall}
-{Precision + Recall}
-\)</span></p>
-<p>Precision 较高，说明模型识别出的实体整体比较准确；Recall 较高，说明模型漏掉的实体较少；F1 则用于综合衡量两方面的表现。</p>
-<h2>生成任务评测指标</h2>
-<p>与分类和信息抽取任务不同，大语言模型生成的内容通常具有较强的开放性，模型输出通常不存在唯一的标准答案，这类任务通常需要从正确性、完整性、相关性、格式遵循和幻觉等多个维度进行评价。</p>
-<h3>正确性</h3>
-<p>正确性主要判断模型生成的内容是否正确，包括事实、结论以及推理结果等是否存在错误。对于微调后的模型，即使回答语言流畅、格式完整，如果其中包含错误的事实或结论，也不能认为模型取得了较好的生成效果。正确性通常是评价生成结果时最基本的要求。</p>
-<h3>完整性</h3>
-<p>完整性主要判断模型是否充分回答了问题，是否遗漏了应该包含的重要信息。有些回答虽然内容本身没有明显错误，但只回答了问题的一部分，遗漏了关键内容。这种情况下，模型的回答具有一定正确性，但完整性仍然不足。完整性关注的不只是回答得对不对，还需要判断应该回答的内容是否都回答到了。</p>
-<h3>相关性</h3>
-<p>相关性主要判断模型生成的内容是否围绕用户的问题展开。大语言模型有时会生成大量看起来合理但与问题关系不大的内容。虽然这些内容本身可能没有错误，但会降低回答的有效性。相关性较好的回答应该直接回应用户的问题，并尽量减少无关、重复或者过度扩展的内容。</p>
-<h3>格式遵循</h3>
-<p>在实际应用中，除了回答内容本身，模型通常还需要按照指定的格式输出结果。例如，要求模型按照 JSON 格式返回结果，或者按照规定的字段、顺序和结构组织内容。格式遵循主要评价模型是否按照给定的输出要求生成内容。即使回答内容正确，如果没有按照规定格式输出，也可能导致后续程序无法正常解析和使用。对于经过指令微调或具有固定输出要求的模型，格式遵循也是一个重要的评价维度。</p>
-<h3>幻觉</h3>
-<p>幻觉（Hallucination）是指模型生成了缺少依据、与事实不符或者凭空编造的内容。当模型不知道某项信息时，没有说明信息不足，而是生成了一个看起来合理但实际上并不存在的事实，这就属于典型的幻觉问题。</p>
-<p>幻觉与正确性存在一定联系，但关注的重点有所不同。正确性关注回答内容是否正确，而幻觉更关注模型是否生成了没有可靠依据的信息。对于知识问答等对事实可靠性要求较高的场景，需要重点关注模型的幻觉情况。</p>
-<h2>语音识别指标</h2>
-<p>语音识别（ASR）任务，通常需要从识别准确性和处理效率两个方面进行评测。其中，CER 和 WER 用于衡量识别结果中的错误情况，RTF 用于衡量模型处理语音的速度。</p>
-<p>在介绍 CER 和 WER 之前，先说明语音识别错误率计算中常用的几个符号：</p>
-<ul><li>S（Substitution）：替换错误，将原本正确的字符或单词识别成其他内容； </li><li>D（Deletion）：删除错误，漏掉了原本应该识别的字符或单词； </li><li>I（Insertion）：插入错误，额外识别出了文本中不存在的字符或单词； </li><li>N：标准文本中的字符或单词总数。 </li></ul>
-<p>CER 和 WER 都基于这几类错误进行计算，主要区别在于两者采用的统计单位不同。</p>
-<h3>CER：字错率</h3>
-<p>CER（Character Error Rate，字错率）以字符为单位衡量语音识别结果与标准文本之间的差异，其计算公式为：</p>
-<p><span class="arithmatex display-math">\(CER = \frac{S + D + I}{N}
-\)</span></p>
-<p>CER 越低，通常表示语音识别结果越准确。对于中文语音识别任务，CER 是较为常用的评测指标。</p>
-<h3>WER：词错率</h3>
-<p>WER（Word Error Rate，词错率）与 CER 的计算方式基本相同：</p>
-<p><span class="arithmatex display-math">\(WER = \frac{S + D + I}{N}
-\)</span></p>
-<p>CER 以字符为基本单位，而 WER 以单词为基本单位，在英文等以单词为基本语言单位的语音识别任务中使用较多。</p>
-<h3>RTF：实时率</h3>
-<p>除了识别结果是否准确，语音识别模型在实际部署时还需要考虑处理速度。RTF（Real-Time Factor，实时率）是衡量语音识别处理效率的常用指标，其计算公式为：</p>
-<p><span class="arithmatex display-math">\(RTF =
-\frac{\text{模型处理时间}}
-{\text{语音时长}}
-\)</span></p>
-<p>例如，一段 10 秒的语音需要 5 秒完成识别，则：</p>
-<p><span class="arithmatex display-math">\(RTF = \frac{5}{10} = 0.5
-\)</span></p>
-<p>RTF 越小，说明模型处理速度越快。当 RTF 小于 1 时，表示模型的处理速度快于语音的实际播放速度，具备实时处理的基本条件。</p>
-<p>除了 CER、WER 和 RTF 等指标，还可以在不同测试环境下对模型进行评测。例如，在背景噪声、不同口音、远距离录音和多人说话等条件下分别计算 CER 或 WER，通过比较不同场景下的错误率，进一步评价模型在复杂环境中的识别能力和稳定性。</p>
-<h2>文本转语音评价指标</h2>
-<p>文本转语音（Text-to-Speech，TTS）的目标是将输入文本转换为自然、清晰的语音。与文本生成模型不同，TTS 模型不仅需要保证生成内容与输入文本一致，还需要关注语音的自然度、音色以及生成速度。TTS 模型通常从内容准确性、语音自然度、说话人相似度和推理性能等方面进行评测。</p>
-<h3>内容准确性</h3>
-<p>TTS 首先需要保证输入的文本能够被正确朗读，避免出现错读、漏读或重复等问题。评测时可以使用 ASR 模型将 TTS 生成的语音重新识别为文本，再将识别结果与原始输入文本进行比较。内容准确性的指标和上一章节 ASR 中的指标一致，计算字错率（CER）与词错率（WER）。</p>
-<h3>语音自然度</h3>
-<p>除了正确朗读文本，TTS 生成的语音还需要具有较好的自然度，例如语速是否合理、停顿是否自然、语调是否流畅，以及是否存在明显的机械感。通常采用平均意见得分（Mean Opinion Score，MOS）。评测时由多名测试人员试听生成语音，并按照一定的评分标准进行打分，通常采用 1～5 分制，其中 1 分表示语音质量较差，5 分表示语音自然、流畅，接近真人语音。</p>
-<p>最终 MOS 可以表示为：</p>
-<p><span class="arithmatex display-math">\(MOS = \frac{1}{M}\sum_{i=1}^{M}s_i
-\)</span></p>
-<p>其中，<span class="arithmatex">\(M\)</span> 表示参与评分的人数，<span class="arithmatex">\(s_i\)</span> 表示第 <span class="arithmatex">\(i\)</span> 位评测人员给出的分数。</p>
-<p>MOS 能够较直观地反映用户对生成语音的真实听感，但由于依赖人工试听，其评测成本较高，同时也具有一定的主观性。</p>
-<h3>说话人相似度</h3>
-<p>对于声音克隆、多说话人 TTS 或零样本 TTS 模型，仅保证语音自然还不够，还需要评价生成语音是否保持了目标说话人的音色特征。常见方法是使用说话人识别模型分别提取参考语音和生成语音的 Speaker Embedding，然后计算两个向量之间的余弦相似度：</p>
-<p><span class="arithmatex display-math">\(SIM =
-\frac{
-\mathbf{e}{ref} \cdot \mathbf{e}{gen}
-}{
-|\mathbf{e}{ref}| |\mathbf{e}{gen}|
-}
-\)</span></p>
-<p>其中，<span class="arithmatex">\(\mathbf{e}{ref}\)</span> 表示参考语音的说话人向量，<span class="arithmatex">\(\mathbf{e}{gen}\)</span> 表示生成语音的说话人向量。</p>
-<p>SIM 越高，说明生成语音与参考说话人在音色特征上越接近。该指标尤其适合用于声音克隆模型的效果评测。</p>
-<h3>实时率</h3>
-<p>在推理性能方面，TTS 与语音识别模型类似，也可以使用实时率（RTF）衡量模型的处理效率。不同之处在于，语音识别中的 RTF 通常表示识别耗时与输入语音时长的比值，而 TTS 中则表示语音生成耗时与生成语音时长的比值。RTF 越低，表示模型的语音生成效率越高。</p>
-<p>RTF 的计算公式为：</p>
-<p><span class="arithmatex display-math">\(RTF =
-\frac{T_{infer}}{T_{audio}}
-\)</span></p>
-<p>其中，<span class="arithmatex">\(T_{infer}\)</span> 表示生成语音所需要的推理时间，<span class="arithmatex">\(T_{audio}\)</span> 表示最终生成语音的时长。</p>
-<p>对于流式 TTS 模型，还可以进一步关注首包延迟（Time to First Audio），即从模型接收到文本请求到输出第一段可播放音频所经历的时间。首包延迟越低，用户越快能够听到生成语音，因此该指标对于实时语音交互场景尤为重要。</p>
-<h2>图像生成客观评价</h2>
-<p>对于文生图、图生图和图像编辑等任务，仅通过一个指标很难全面评价生成效果。例如，文生图需要判断生成图片是否符合文本描述，图像编辑还需要判断生成结果是否保留了原图中的主体和结构，而在评价一个图像生成模型的整体效果时，还需要考虑生成图片的质量和真实性。</p>
-<h3>图文一致性</h3>
-<p>对于文生图任务，首先需要判断生成图片是否符合输入的文本描述。例如，提示词中要求生成特定的主体、场景或者风格，模型生成的图片应当尽可能包含这些内容。</p>
-<p>一种常见的评价思路是使用 CLIP 等视觉语言模型，将文本和图片映射到同一个特征空间，再计算两者之间的相似程度。<a href="https://arxiv.org/abs/2103.00020" target="_blank" rel="noopener noreferrer">CLIP </a>由 Radford 等人在 2021 年提出，通过大规模“图像—文本”数据进行训练，使模型能够学习图像内容与自然语言之间的对应关系，图像与文本的余弦相似度可以表示为：</p>
-<p><span class="arithmatex display-math">\(Similarity =
-\frac{\mathbf{v}{image}\cdot\mathbf{v}{text}}
-{|\mathbf{v}{image}||\mathbf{v}{text}|}
+<p>其中，<code>r_chosen</code>和<code>r_rejected</code>分别表示奖励模型对优选回答和非优选回答的评分，<code>σ</code>表示把分数差映射到 0 至 1 之间。优选回答得分越高、非优选回答得分越低，损失越小。经过大量偏好对训练后，奖励模型可以对没有见过的回答作出相对评价。</p>
+<p>奖励模型通常以语言模型为基础，再增加一个输出标量分数的评分头。它输入的仍然是 Prompt 和回答文本，只是输出不再是下一个 Token，而是一个用于表示相对质量的奖励分数。这个分数没有统一的物理含义，也不能直接理解为“正确率”或“满分 10 分中的几分”。真正有意义的是同一个奖励模型下，不同回答之间的分数高低。例如，某个回答得到 6 分，另一个得到 4 分，只能说明前者在当前奖励模型看来更符合偏好标准，并不意味着它在客观意义上就是“6 分质量”。</p>
+<p>奖励模型能学到什么，很大程度上取决于前面构造的偏好数据。如果偏好数据中的标注者总是倾向于选择更长的回答，奖励模型可能把长度误认为质量；如果标注人员过度关注语言流畅性，它也可能给措辞漂亮但事实错误的回答较高分。因此，奖励模型并不会真正理解什么是正确的答案，而是在模仿偏好数据中体现出来的评价规律。这也是为什么奖励模型训练完成后不能只看训练损失，还需要单独进行评测。</p>
+<p>正是由于奖励模型本身只负责“评价”，不会直接修改语言模型。因而，后续在 PPO、GRPO 等强化学习阶段，语言模型会持续生成新的回答，奖励模型对这些回答进行打分，强化学习算法再根据奖励结果更新模型参数，使模型逐渐提高高奖励回答的生成概率。需要注意的是，如果策略模型发现某些表面模式能够稳定获得高分，就可能反复利用这些模式，而不是真正提升任务能力，这种现象通常称为<b>奖励投机（Reward Hacking）</b>。因此，奖励模型不仅需要能够区分训练数据中的优劣回答，还要尽量避免被简单的长度、固定措辞、格式模板等表面特征“欺骗”。</p>
+<p />
+<h2>RLHF，人类的反馈怎样参与训练？</h2>
+<p>RLHF（Reinforcement Learning from Human Feedback）通常称为基于人类反馈的强化学习。它描述人工反馈怎样进入强化学习训练，是一套训练框架，不是一种具体的优化算法，也不是某个固定的模型结构。</p>
+<p>经典 RLHF 通常包括三个阶段：</p>
+<ol><li>收集人工示范数据，通过 SFT 得到能够遵循指令的初始策略模型；</li><li>对同一 Prompt 下的多个回答进行人工排序，使用这些偏好数据训练奖励模型；</li><li>让策略模型生成新回答，由奖励模型评分，再使用 PPO 等强化学习算法更新策略模型。</li></ol>
+<p>经典 RLHF 路线分成三个连续阶段如下图所示。第一阶段由标注人员编写示范回答，用这些数据完成 SFT；第二阶段让模型针对同一个 Prompt 生成多个回答，再由标注人员排序，用比较数据训练奖励模型；第三阶段让策略模型生成新回答，由奖励模型计算分数，并使用 PPO 更新策略。三类数据承担的作用不同：示范数据教模型怎样回答，比较数据教奖励模型怎样评价，Prompt 和奖励信号则用于强化学习。</p>
+<img src="../../assets/manuscript-20260914/c14-ac423e555e46b5.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>把这个过程放到强化学习概念中，语言模型就是策略模型，Prompt 和已经生成的 Token 构成当前状态，模型选择下一个 Token 相当于采取动作，从开始回答到生成结束标记构成一次完整轨迹。</p>
+<p>在 RLHF 中，奖励模型通常在回答结束后给出一个总体分数，强化学习算法再判断应该提高哪些 Token 选择的概率。在 RLHF 的训练通常还会保留参考模型。参考模型一般是冻结的 SFT 模型，用于约束正在训练的策略模型不要偏离原有语言能力太远。</p>
+<p />
+<h2>PPO，让模型根据奖励逐步调整</h2>
+<p>近端策略优化（Proximal Policy Optimization， PPO）。它是一种策略梯度算法，核心目标是在提高奖励的同时，限制每次参数更新的幅度。大模型参数很多，如果仅因为一批回答获得高分就大幅改变策略，模型可能很快偏向少数奖励模式，甚至破坏原有的语言能力。PPO 中的近端，强调新策略要在旧策略附近逐步更新。在大模型后训练中，一轮 PPO 通常包含两个阶段。第一个阶段是采样：从 Prompt 数据集中抽取一批输入，让当前策略模型生成回答，同时保存每个 Token 在旧策略下的概率，再由奖励模型给出分数。第二个阶段是更新：根据奖励和价值估计计算优势，使用这些样本更新策略模型和价值模型。完成若干次小批量更新后，再用新的策略重新生成数据。</p>
+<p>PPO 需要比较新策略和旧策略对同一个 Token 给出的概率。概率比可以简化写成：</p>
+<p><span class="arithmatex display-math">\(
+r_t(\theta)
+=
+\frac{\text{新策略选择当前 Token 的概率}}
+{\text{旧策略选择当前 Token 的概率}}
 
 \)</span></p>
-<p>其中，<span class="arithmatex display-math">\(\mathbf{v}{image} 
-\)</span>表示图片特征向量，<em><span class="arithmatex display-math">\(\mathbf{v}{text} 
-\)</span></em>表示文本特征向量。通常情况下，相似度越高，说明图片与文本在整体语义上越接近。这类方法主要评价整体语义是否匹配，并不能保证文本中的所有细节都被准确生成。比如判断图片中的数量、位置和细节是否准确。</p>
-<h3>图像相似度</h3>
-<p>对于图生图和图像编辑任务，通常还会提供一张原始图片或者参考图片。这类任务不仅需要判断生成结果是否满足文本要求，还需要关注原图中的重要内容是否被正确保留下来。</p>
-<p>例如，在商品图片编辑中，可以修改背景、光照或者整体风格，但通常希望商品主体、外观结构和 Logo 等重要信息保持一致。此时，可以通过比较生成图片和参考图片之间的差异评价编辑效果。</p>
-<p>SSIM（Structural Similarity Index，结构相似性指数）是一种经典的全参考图像质量评价方法，由 Wang 等人在 2004 年提出。它主要从亮度、对比度和结构等方面比较两张图片，尤其关注图像结构信息是否发生变化。</p>
-<p>除了 SSIM，还可以使用 LPIPS（Learned Perceptual Image Patch Similarity）衡量两张图片之间的感知差异。LPIPS 利用深度神经网络提取图像特征，再根据特征之间的距离判断两张图片在视觉感知上的差异。相关研究表明，深度特征能够较好地反映人对图像相似程度的感知。SSIM 和 LPIPS 虽然都需要参考图片，但关注的角度并不完全相同：SSIM 更加关注图像结构的变化，而 LPIPS 更加关注视觉感知层面的差异。在实际任务中，可以根据图像编辑目标选择合适的指标。</p>
-<p>对于图像编辑、图生图等具有参考图片的任务，可以计算生成图片与参考图片之间的相似程度。</p>
-<h3>FID</h3>
-<p>前面的指标主要用于比较一张生成图片与文本或者参考图片之间的关系。如果希望评价一个图像生成模型的整体生成效果，通常需要对一批生成图片进行统计分析。</p>
-<p>FID（Fréchet Inception Distance）由 Heusel 等人在 2017 年提出，主要用于衡量生成图片与真实图片在特征分布上的差异，<a href="https://arxiv.org/abs/1706.08500" target="_blank" rel="noopener noreferrer">FID</a>。FID 首先使用图像模型提取真实图片和生成图片的特征，然后分别统计两组特征的分布，并计算两个分布之间的距离。其基本形式为：</p>
-<p><span class="arithmatex display-math">\(FID =
-|\mu_r-\mu_g|_2^2
-+
-Tr\left(
-\Sigma_r+\Sigma_g
--2(\Sigma_r\Sigma_g)^{1/2}
-\right)
-\)</span></p>
-<p>其中，<span class="arithmatex">\(\mu_r\)</span>和<span class="arithmatex">\(\Sigma_r\)</span>表示真实图片特征的均值和协方差矩阵，<span class="arithmatex">\(\mu_g\)</span>和<span class="arithmatex">\(\Sigma_g\)</span>表示生成图片特征的均值和协方差矩阵。FID 比较的不是两张具体图片，而是两批图片在特征分布上的差异。FID 越低，说明生成图片与真实图片的特征分布越接近，比较适合用于模型之间的整体效果比较。</p>
-<h3>美学评分</h3>
-<p>除了评价图片是否符合文本描述，还可以从视觉效果的角度对生成图片进行自动评价。美学评分（Aesthetic Score）通常利用包含人类审美评分或偏好信息的数据训练评价模型，让模型学习人对图片视觉质量的偏好，再对生成图片进行自动打分。</p>
-<p>这类方法通常会综合反映图片的构图、色彩、光影、清晰度和整体视觉吸引力等特征。评分越高，一般表示图片在所使用的评价模型下具有更好的视觉表现。美学评价具有一定的主观性，不同评分模型的训练数据和审美偏好可能存在差异，因此美学评分更适合作为辅助指标，而不能单独代表图像生成质量。</p>
-<h2>图像生成主观评价</h2>
-<p>客观指标可以从图文一致性、图像相似度和特征分布等方面评价生成结果，但这些指标并不能完全反映图片的实际视觉效果。因此，在图像生成任务中，通常还需要结合人工评价，从人的视觉感受和实际使用需求出发判断生成图片的质量。</p>
-<p>人工评价可以重点关注以下几个方面：</p>
-<ul><li>内容一致性：生成图片是否符合输入的文本描述或编辑要求； </li><li>视觉质量：图片是否清晰、自然，是否存在明显的变形、模糊或结构错误； </li><li>主体一致性：对于图生图和图像编辑任务，人物、商品等主要对象是否与参考图片保持一致； </li><li>细节质量：人物手部、文字、Logo、边缘等容易出现错误的位置是否正常； </li><li>实际可用性：生成结果是否能够直接用于海报、商品展示等实际业务场景。 </li></ul>
-<p>为了减少个人主观判断带来的差异，可以提前制定统一的评分标准，并由多名评测人员分别进行评价，主观评价能够发现自动化指标难以反映的视觉问题，因此在实际图像生成评测中，通常需要将客观指标与主观评价结合使用，从而更加全面地判断模型的生成效果。</p>
-<h2>视频生成模型评测</h2>
-<p>视频生成模型需要根据文本、图像等输入生成连续的视频内容。与图像生成相比，视频不仅需要保证单帧画面的质量，还需要关注不同帧之间的连续性、运动合理性以及生成内容与输入条件的一致性。因此，视频生成模型通常需要从文本与视频一致性、整体视频质量、时序一致性、运动质量以及主观观看效果等多个方面进行综合评测。</p>
-<h4>文本与视频一致性</h4>
-<p>与文生图任务类似，文生视频任务也需要评价生成内容与输入文本之间的语义一致性。不同之处在于，视频由连续的视频帧组成，需要进一步考虑整个视频内容与文本描述的匹配程度。主要方法是从生成视频中抽取若干视频帧，使用 CLIP 等视觉语言模型分别计算各视频帧与输入文本之间的语义相似度，再对多个视频帧的结果进行平均（常称为 Frame-average CLIP Score）： </p>
-<p><span class="arithmatex">\(\text{CLIP-Score} = \frac{1}{N} \sum_{i=1}^{N} \operatorname{Similarity}(\mathbf{v}_{\text{frame}_i}, \mathbf{v}_{\text{text}})\)</span> </p>
-<p>其中，<span class="arithmatex">\(N\)</span> 表示参与评测的视频帧数量，<span class="arithmatex">\(\mathbf{v}_{\text{frame}_i}\)</span> 表示第 <span class="arithmatex">\(i\)</span> 个视频帧的特征向量，<span class="arithmatex">\(\mathbf{v}_{\text{text}}\)</span> 表示输入文本的特征向量，<span class="arithmatex">\(\operatorname{Similarity}(\cdot, \cdot)\)</span> 采用余弦相似度，得分越高，表示视频画面内容与输入文本的语义匹配程度越高。该指标主要关注空间静态内容与文本的匹配，无法充分反映视频中的动作连贯性与物理时序逻辑，因此仍需结合时序一致性、运动质量等指标综合衡量。  </p>
-<h4>弗雷歇视频距离</h4>
-<p>弗雷歇视频距离（Fréchet Video Distance，FVD）是视频生成任务中衡量生成分布质量的核心指标，用于度量生成视频集与真实视频集在深层特征分布上的差异。计算 FVD 时，首先提取真实视频和生成视频的深层特征，统计两组特征的高斯分布参数（均值与协方差矩阵），并计算其 Fréchet 距离： <span class="arithmatex">\(\mathrm{FVD} = \|\mu_r - \mu_g\|_2^2 + \operatorname{Tr}\left(\Sigma_r + \Sigma_g - 2\left(\Sigma_r^{1/2} \Sigma_g \Sigma_r^{1/2}\right)^{1/2}\right)\)</span> </p>
-<p>其中，<span class="arithmatex">\(\mu_r\)</span> 和 <span class="arithmatex">\(\Sigma_r\)</span> 分别表示真实视频特征的均值向量和协方差矩阵，<span class="arithmatex">\(\mu_g\)</span> 和 <span class="arithmatex">\(\Sigma_g\)</span> 分别表示生成视频特征的均值向量和协方差矩阵，<span class="arithmatex">\(\operatorname{Tr}(\cdot)\)</span> 表示矩阵的迹。FVD 数值越低，表示生成视频的特征分布与真实视频越接近，说明模型在视觉保真度、时序合理性及样本多样性上的综合表现越好。</p>
-<h4>时序一致性  </h4>
-<p>时序一致性（Temporal Consistency）主要用于评价生成视频在时间维度上的稳定性。视频由连续帧组成，不仅要求每一帧具有良好的画质，还要求主体外观、背景纹理、色彩与风格在连续帧之间平稳过渡。例如，在人物生成场景中，如果面部特征或服装纹理在帧间频繁闪烁、变形，即使单帧质量再高，观感也会大打折扣。 在实际评测中，一种常见的方法是使用图像特征提取网络获取连续帧的表征，并计算相邻帧特征的余弦相似度均值。对于包含 <span class="arithmatex">\(N\)</span> 个视频帧的视频，其时序一致性 <span class="arithmatex">\(TC\)</span> 可以表示为：</p>
-<p> <span class="arithmatex">\(TC = \frac{1}{N-1} \sum_{i=1}^{N-1} \frac{\mathbf{f}_i^{\top} \mathbf{f}_{i+1}}{\|\mathbf{f}_i\|_2 \|\mathbf{f}_{i+1}\|_2}\)</span> </p>
-<p>其中，<span class="arithmatex">\(\mathbf{f}_i\)</span> 与 <span class="arithmatex">\(\mathbf{f}_{i+1}\)</span> 分别表示第 <span class="arithmatex">\(i\)</span> 帧与第 <span class="arithmatex">\(i+1\)</span> 帧的视觉特征向量，<span class="arithmatex">\(N\)</span> 为采样帧总数。通常情况下，<span class="arithmatex">\(TC\)</span> 得分越高，说明相邻帧的视觉跳变越小、画面越稳定。时序一致性并非绝对越高越好：当模型退化并生成几乎完全静止的画面时，<span class="arithmatex">\(TC\)</span> 也会异常偏高。时序一致性必须配合动态程度（Dynamic Degree）、运动幅度等指标联合判断。  </p>
-<h4>运动平滑度</h4>
-<p>视频生成模型不仅要避免画面闪烁，还需要保证主体运动轨迹连贯自然，避免出现局部肢体突变、瞬间位移等不符合物理常识的现象。 运动平滑度（Motion Smoothness）主要用于衡量运动速度与加速度在时间序列上的变化平稳性。在具体计算时，通常借助预训练光流估计模型（如 RAFT）提取相邻帧之间的稠密光流场或运动矢量。 设第 <span class="arithmatex">\(t\)</span> 帧到第 <span class="arithmatex">\(t+1\)</span> 帧的运动矢量（或平均光流）为 <span class="arithmatex">\(\mathbf{v}_t\)</span>，可以通过相邻时段运动矢量的差异来定义运动变化误差 <span class="arithmatex">\(E_{\text{motion}}\)</span>： </p>
-<p><span class="arithmatex">\(E_{\text{motion}} = \frac{1}{N-2} \sum_{t=1}^{N-2} \|\mathbf{v}_{t+1} - \mathbf{v}_t\|_2\)</span> </p>
-<p>其中，<span class="arithmatex">\(\mathbf{v}_t\)</span> 反映第 <span class="arithmatex">\(t\)</span>阶段的运动状态，<span class="arithmatex">\(E_{\text{motion}}\)</span> 越小，说明运动加速度突变越少，动作过渡越平缓平滑。</p>
-<h4>VBench</h4>
-<p>由于单一指标很难全面反映视频生成模型的能力，目前也可以使用 VBench 等综合评测框架对视频生成模型进行多维度评价。VBench 将视频生成质量划分为多个评价维度，例如主体一致性（Subject Consistency）、背景一致性（Background Consistency）、运动平滑度（Motion Smoothness）、动态程度（Dynamic Degree）、美学质量（Aesthetic Quality）以及成像质量（Imaging Quality）等。与 CLIP Score、FVD 等单一指标相比，VBench 的优势在于能够从画面质量、时序稳定性、运动表现和条件一致性等多个角度分析视频生成效果，更加适合用于不同视频生成模型之间的综合能力比较。</p>
-<h2>人工评测</h2>
-<p>大语言模型的输出具有较强的开放性，同一个问题往往可以有多种合理的回答方式。仅依靠自动化指标，很难完整判断回答是否正确并符合用户需求，因此，在评价微调后的大语言模型时，人工评测仍然是重要的评测方式。对于难以通过自动指标准确评价的开放式内容，可以采用盲测或多人评分的方式进行评测。评测人员可以从正确性、完整性、相关性、指令遵循、表达质量和安全性等方面，对模型输出进行综合判断。</p>
-<p>实际评测时，可以提前制定统一的评分标准，例如按照 1～5 分对不同评价维度进行评分。为了减少评测人员对模型的先入为主，可以隐藏模型名称和版本，让评测人员只根据回答内容进行盲测。如果需要比较微调前后的模型，还可以将两个模型对同一问题的回答匿名展示，由评测人员选择表现更好的回答。</p>
-<p>由于人工评价具有一定的主观性，对于重要的评测还可以采用多人评分。同一批内容由多名评测人员独立评价，再对评分结果进行汇总。当不同评测人员的评分差异较大时，还需要进一步检查评价标准是否清晰，从而提高评测结果的一致性和可靠性。人工评测虽然需要投入更多时间和人力，但能够发现自动化指标难以反映的问题。在评价大语言模型的微调效果时，可以将自动化评测与人工评测结合起来，从而更加全面地判断模型是否真正得到提升。</p>
+<p>其中，<code>rₜ</code>表示计算的得分，</p>
+<p><code>θ</code> 表示待优化的模型。</p>
+<p>当<code>rₜ</code>接近 1，表示新旧策略差别不大；当<code>rₜ</code>明显大于 1，表示新策略更倾向当前 Token；当<code>rₜ</code>明显小于 1，则表示新策略降低了它的概率。只有概率变化还不够，还需要优势<code>Aₜ</code>判断这个 Token 选择比当前平均水平好还是差。优势为正时，应适当提高该选择的概率；优势为负时，应降低它的概率。</p>
+<img src="../../assets/manuscript-20260914/c14-f79b0ff3c8860e.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>上图左侧表示优势为正的情况。概率比从 1 向右增加时，目标先随之提高；超过<code>1+ε</code>后曲线变平，继续提高该 Token 的概率不再增加目标。右侧表示优势为负的情况。当概率比下降到<code>1-ε</code>以下后，目标同样停止继续改善。两条曲线共同说明，PPO 允许策略朝正确方向调整，但会削弱过大更新带来的额外收益。</p>
+<p>一套典型的大模型 PPO 训练需要同时维护几个组件：策略模型负责生成并接受更新；旧策略是采样时策略参数的快照，用于计算概率比；参考模型是冻结的 SFT 模型，用于计算 KL 约束；奖励模型负责评价完整回答；价值模型负责估计每个生成位置后续可能获得的收益。价值模型的估计与实际奖励之间存在差异，PPO 通常使用 GAE 等方法把这些差异整理为每个 Token 的优势。PPO 的整体流程如下图所示。策略模型根据输入<code>q</code>生成回答<code>o</code>，奖励模型和参考模型共同形成奖励<code>r</code>，价值模型给出价值估计<code>v</code>，随后通过 GAE 计算得到优势<code>A</code>。策略模型根据优势和裁剪目标更新，价值模型则通过价值损失学习更准确的收益估计。</p>
+<img src="../../assets/manuscript-20260914/c14-096fa24e49d187.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<h2>GRPO，同一道题多答几次，再比较得分</h2>
+<p>组相对策略优化（Group Relative Policy Optimization， GRPO）。它是 PPO 的一种变体，保留了策略采样、概率比裁剪和 KL 约束等思路，主要变化是不再单独训练价值模型，而是使用同一个 Prompt 下多条回答的相对得分估计优势。GRPO 的整体框架如下图所示。对于同一个输入<code>q</code>，策略模型一次生成一组回答<code>o₁</code>到<code>oG</code>，奖励模型或规则系统分别给出<code>r₁</code>到<code>rG</code>。</p>
+<img src="../../assets/manuscript-20260914/c14-f21e88aba9da8c.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>系统先计算这一组奖励的平均值和标准差，再把每条回答的得分转换为组内相对优势，得分高于组内平均水平的回答获得正优势，低于平均水平的回答获得负优势。对于只在回答结束时给一次总体奖励的任务，同一回答中的 Token 通常共享由该回答得到的相对优势；如果还提供过程奖励，也可以进一步形成更细的 Token 级反馈。随后，GRPO 像 PPO 一样比较新旧策略概率，并通过裁剪目标和 KL 约束更新策略模型。</p>
+<p>相较于 PPO，GRPO 减少了价值模型带来的参数、显存和训练开销，但并不意味着训练成本一定很低。每个 Prompt 需要生成多条回答，推理采样本身会消耗大量计算资源。如果同一组回答得分完全相同，标准差接近 0，组内比较就很难提供有效方向，实际实现需要跳过、平滑或重新采样这类数据。组大小、采样温度、奖励尺度和 KL 系数也会影响训练稳定性。例如，一个数学问题生成四个解答，其中两个答案正确，一个计算错误，一个没有完成。系统可以使用答案校验规则给它们评分，再在四个结果内部比较。正确且过程完整的回答得到较高优势，错误或未完成的回答得到较低优势，模型据此提高较好解法出现的概率。代码任务也可以使用编译结果和单元测试作为奖励，不一定先训练一个专门的奖励模型。</p>
+<p />
+<h2><b>DPO，直接从回答的优劣中学习</b></h2>
+<p>直接偏好优化（Direct Preference Optimization，DPO）。在其论文标题中，作者就明确指出，偏好模型可能并不需要，我们构建的大语言模型本身也许就是潜在的偏好模型。这种想法直接放弃了偏好模型的单独建模，而是直接从原有模型出发，增加单独为偏好模型专项设计的损失函数，使其在优化模型生成结果得到进一步提高。DPO 通过使用已经收集好的优选回答和非优选回答直接训练语言模型，不需要显式训练奖励模型，也不需要运行 PPO 或 GRPO 那样的在线强化学习循环。</p>
+<img src="../../assets/manuscript-20260914/c14-cad0c241b4b6b6.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>上图对比了经典 RLHF 路线和 DPO。偏好数据先用于训练奖励模型，策略模型再生成新回答，根据奖励模型的分数进行强化学习。DPO 路线，偏好数据直接进入语言模型训练。两条路线都从回答之间的优劣关系出发，但训练环节和资源需求不同。DPO 的整体流程仅需两个阶段：</p>
+<p>第一阶段，构造生成偏好正负例样本。这步相较于之前微调阶段的样本构造方式，将原有的“输入（Input）-输出（Output）”数据集改为“输入（Input）-正反馈（Accept Response）-负反馈（Negative Response）”。这种样本训练学习方法并不是首创，其实就是从图像领域兴起的对比学习。对比学习的研究者发现，模型在同时学习正负例时，模型可以快速收敛，整体表现可以进一步提升。</p>
+<p>第二阶段，基于设计好的损失函数，利用对比学习相关方法，通过极大似然函数，对原始生成模型进行参数优化。这样的设计省去了原有偏好奖励模型与强化学习过程训练全过程，在效率提高的同时，精度与稳定性相比于 PPO 也有显著提升。通过第二阶段的优化调整，模型参数朝着靠近正例远离负例的方向不断优化，最终实现模型生成向正例内容的偏好对齐。</p>
+<p>DPO 的训练形式接近普通 SFT。训练数据已经包含 Prompt、优选回答和非优选回答，模型不需要在每一步重新生成候选，也不需要同时运行奖励模型和价值模型。因此，它属于离线偏好优化，组件少，显存和工程复杂度通常低于 PPO。这种简化并没有消除对数据质量的要求。DPO 只能学习偏好数据中已经出现的差异。如果优选回答本身存在事实错误，非优选回答过于低劣，或者数据主要来自与当前模型差异很大的生成分布，模型可能学到表面风格而不是目标能力。DPO 也不会像在线强化学习那样不断探索新回答，再针对新出现的问题获取反馈。</p>
+<p />
+<h2><b>RLHF、PPO、GRPO 和 DPO，到底怎么区分和选择？</b></h2>
+<p>前文已经分别介绍了 RLHF、PPO、GRPO 和 DPO 的基本原理与训练方式。为了更清楚地理解它们之间的关系，可以进一步从方法定位、训练过程中是否需要在线生成回答、是否依赖奖励模型和价值模型等几个维度进行对比。通过这种横向比较，可以更直观地看出不同后训练方法在实现路径、训练成本和适用方式上的主要差异。下表是相关模型对比。</p>
+<table><colgroup><col /><col /><col /><col /><col /><col /></colgroup><tbody><tr><td><p>概念</p></td><td><p>属于什么</p></td><td><p>训练时是否生成新回答</p></td><td><p>是否需要显式奖励模型</p></td><td><p>是否需要价值模型</p></td><td><p>主要特点</p></td></tr><tr><td><p>RLHF</p></td><td><p>反馈与强化学习框架</p></td><td><p>通常需要</p></td><td><p>经典路线需要</p></td><td><p>取决于所用优化算法</p></td><td><p>规定人工反馈、奖励和策略更新怎样衔接</p></td></tr><tr><td><p>PPO</p></td><td><p>在线强化学习算法</p></td><td><p>需要</p></td><td><p>经典 RLHF 中通常需要</p></td><td><p>需要</p></td><td><p>通过价值估计和概率比裁剪稳定更新策略</p></td></tr><tr><td><p>GRPO</p></td><td><p>在线强化学习算法</p></td><td><p>需要，同一 Prompt 通常生成一组回答</p></td><td><p>可以使用奖励模型或规则奖励</p></td><td><p>不需要</p></td><td><p>用组内相对奖励估计优势</p></td></tr><tr><td><p>DPO</p></td><td><p>离线偏好优化方法</p></td><td><p>通常不需要在线生成</p></td><td><p>不需要单独训练</p></td><td><p>不需要</p></td><td><p>直接提高优选回答相对于非优选回答的概率</p></td></tr></tbody></table>
+<p>综合来看，RLHF、PPO、GRPO 和 DPO 虽然都与大模型偏好对齐有关，但它们解决的问题并不完全相同。RLHF 更偏向一套完整的反馈与强化学习框架，PPO 和 GRPO 则是在这一类框架中用于更新策略模型的在线强化学习算法，而 DPO 则直接利用已有偏好数据完成离线优化。从训练机制上看，PPO 依赖奖励模型和价值模型，整体工程链路更完整，但训练成本和实现复杂度也更高；GRPO 通过组内相对奖励估计优势，省去了价值模型，更适合具有规则奖励、答案校验等明确反馈的任务；DPO 不需要在线生成回答，也不需要单独训练奖励模型和价值模型，因此实现相对简单，适合作为偏好数据较充分时的低成本对齐方案。</p>
+<p>在实际应用中，方法选择应从模型当前缺少的能力出发，而不是简单追随某一种训练算法。模型还不能稳定完成任务时，应优先通过 SFT 建立基础能力；模型已经能够完成任务，但回答质量和偏好选择不稳定时，可以进一步采用 DPO、PPO 或 GRPO。已有高质量偏好数据、希望快速完成第一轮对齐时，可以优先考虑 DPO；任务具有可验证奖励并希望模型主动探索更优解时，可以考虑 GRPO；具备成熟奖励模型、价值模型和强化学习基础设施，并需要精细控制在线策略更新时，则可以采用 PPO。无论最终选择哪种方法，都不能只用训练损失、奖励分数或偏好胜率判断效果，而应回到真实任务中持续评估模型的准确性、任务完成度、安全性、业务边界和通用能力。后训练的最终目标不是获得更高的奖励，而是让模型在真实使用环境中更稳定、更可靠地完成目标任务。</p>
+<h2><b>用 ms-swift，试试 DPO 和 GRPO</b></h2>
+<p>前面介绍了偏好对齐和强化学习的基本原理，下面使用 ms-swift 完成两个具体实验。第一个实验使用中文偏好数据进行 DPO 训练，观察模型对优选回答和非优选回答的偏好怎样变化；第二个实验使用数学题进行 GRPO 训练，让模型生成候选回答，再根据答案和格式得到奖励。两个实验都使用已经具备指令跟随能力的 Qwen2.5-0.5B-Instruct 作为初始模型，分别训练一个独立的 LoRA 适配器。</p>
+<h3><b>实验准备</b></h3>
+<p>本次实验在魔搭 Notebook 的单卡 GPU 环境中完成，模型和原始数据文件均从魔搭社区下载。两个实验的配置如下：</p>
+<table><colgroup><col /><col /><col /></colgroup><tbody><tr><td><p>项目</p></td><td><p>DPO 中文偏好对齐</p></td><td><p>GRPO 数学答案优化</p></td></tr><tr><td><p>初始模型</p></td><td><p>Qwen/Qwen2.5-0.5B-Instruct</p></td><td><p>同一份 Qwen2.5-0.5B-Instruct 权重</p></td></tr><tr><td><p>数据集</p></td><td><p>AI-ModelScope/hh_rlhf_cn</p></td><td><p>AI-ModelScope/gsm8k</p></td></tr><tr><td><p>使用子集</p></td><td><p>helpful_base_cn</p></td><td><p>main</p></td></tr><tr><td><p>训练集</p></td><td><p>256 条偏好对</p></td><td><p>128 道题</p></td></tr><tr><td><p>验证集</p></td><td><p>32 条偏好对</p></td><td><p>16 道题</p></td></tr><tr><td><p>测试集</p></td><td><p>32 条偏好对</p></td><td><p>官方测试文件全部 1319 道题</p></td></tr><tr><td><p>训练方式</p></td><td><p>LoRA，20 个优化器更新步骤</p></td><td><p>LoRA，10 个优化器更新步骤</p></td></tr><tr><td><p>训练时反馈</p></td><td><p>数据中给定的优选回答和非优选回答</p></td><td><p>模型生成回答后，由规则计算奖励</p></td></tr></tbody></table>
+<p>这里的训练规模较小，主要用于演示完整流程。训练步骤表示优化器更新参数的次数，不等于训练轮数，也不表示训练数据已经全部使用一遍。本次实操部分仅使用了较小部分的数据，并采用了较少次数的迭代步骤，实验仅作参考。</p>
+<p>1）检查运行环境。</p>
+<p>打开配套 Notebook 后，先检查 GPU 是否可用，以及当前内核实际使用的软件版本。</p>
+<img src="../../assets/manuscript-20260914/c14-6743e9815165e1.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p />
+<p>2）准备模型和运行目录。</p>
+<p>公共准备部分会建立缓存目录和本次实验目录。模型配置的核心代码如下：</p>
+<pre data-language="Python"><code>MODEL_ID = "Qwen/Qwen2.5-0.5B-Instruct"
+MODEL_REVISION = "master"
+DPO_DATA_ID = "AI-ModelScope/hh_rlhf_cn"
+GRPO_DATA_ID = "AI-ModelScope/gsm8k"
+SEED = 42
+
+MODEL_DIR = Path(snapshot_download(
+    MODEL_ID,
+    revision=MODEL_REVISION,
+    cache_dir=str(CACHE_DIR / "models"),
+    allow_file_pattern=[
+        "*.json", "*.safetensors", "*.txt", "*.model", "*.tiktoken"
+    ],
+)).resolve()</code></pre>
+<p />
+<p>其中，<code>snapshot_download</code>来自 ModelScope，<code>CACHE_DIR</code>由公共准备代码建立。下载完成后，训练和推理都使用<code>MODEL_DIR</code>指向的本地模型快照。本次实操内容将保存在<code>ms_swift_dpo_grpo_runs/</code>目录下。读者重新运行时，程序会生成新的实验编号，后面的<code>RUN_DIR</code>应使用自己的运行目录。DPO</p>
+<p />
+<h3><b>准备 DPO 偏好数据</b></h3>
+<p>DPO 需要同一个上下文下的两个候选回答。实验使用中文 HH-RLHF 数据集的<code>helpful_base_cn</code>子集，其中<code>context</code>保存对话历史，<code>chosen</code>保存优选回答，<code>rejected</code>保存非优选回答。这里的优选和非优选来自数据集标签，不表示回答中的事实已经逐条核验。</p>
+<p>1）转换为 ms-swift 使用的数据格式。</p>
+<p>ms-swift 使用的偏好样本结构如下。下面只展示字段关系，实际内容从数据集读取：</p>
+<pre data-language="JSON"><code>{
+  "messages": [
+    {"role": "user", "content": "同一个问题"},
+    {"role": "assistant", "content": "优选回答"}
+  ],
+  "rejected_response": "非优选回答"
+}</code></pre>
+<p>与【快速用 ms-swift，完成开源模型的轻量微调】的 SFT 样本相比，这里增加了<code>rejected_response</code>。<code>messages</code>最后一条 assistant 消息保存优选回答，非优选回答放在单独字段中。多轮对话里的历史 assistant 消息仍然属于上下文，不能把它们误当成本次比较的回答。Notebook 中的转换函数如下：</p>
+<pre data-language="Python"><code>def convert_dpo(row):
+    role_map = {
+        "human": "user", "user": "user",
+        "assistant": "assistant", "system": "system"
+    }
+    context = [
+        {"role": role_map[m["role"]], "content": m["text"].strip()}
+        for m in row["context"]
+    ]
+    chosen = row["chosen"]["text"].strip()
+    rejected = row["rejected"]["text"].strip()
+
+    assert context and context[-1]["role"] == "user"
+    assert chosen and rejected and chosen != rejected
+    assert all(m["content"] for m in context)
+    if context[0]["role"] != "system":
+        context.insert(0, {"role": "system", "content": GENERAL_SYSTEM})
+
+    return {
+        "messages": context + [{"role": "assistant", "content": chosen}],
+        "rejected_response": rejected,
+    }</code></pre>
+<p>2）清洗并划分数据。</p>
+<p>本次分别计算优选回答和非优选回答与上下文拼接后的长度，只保留两者均不超过 1024 Token 的样本。超长时丢弃整对数据，避免截断后恰好删掉决定回答优劣的关键内容。随后按上下文去重，从原始训练来源中划分 256 条训练数据和 32 条验证数据。处理后的文件分别为<code>dpo_train.jsonl</code>、<code>dpo_val.jsonl</code>和<code>dpo_test.jsonl</code>，保存在本次运行目录的<code>data</code>文件夹中。三个文件承担的作用不同：训练集用于更新参数，验证集用于观察训练过程，测试集用于训练后的独立比较。相关执行结果如下图所示。</p>
+<img src="../../assets/manuscript-20260914/c14-e356f75edc9e63.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<h3><b>启动 DPO 训练</b></h3>
+<p>训练前，先用初始模型记录测试集上的表现。Notebook 中的<code>dpo_evaluate()</code>会计算 32 条固定候选对的回答对数概率，并对其中 4 个上下文生成回答，供训练后比较：</p>
+<pre data-language="Python"><code>def dpo_evaluate(adapter=None):
+    def action(model):
+        rows = []
+        for index, row in enumerate(dpo_test):
+            context = row["messages"][:-1]
+            lp_chosen = response_logp(model, context, row["messages"][-1]["content"])
+            lp_rejected = response_logp(model, context, row["rejected_response"])
+            rows.append({"sample_id": index, "chosen_logp": lp_chosen,
+                         "rejected_logp": lp_rejected, "gap": lp_chosen - lp_rejected})
+        # 只生成 4 条供精读，其余候选对仍参与概率诊断。
+        generations = [{"sample_id": i, "context": dpo_test[i]["messages"][:-1],
+                        "response": generate_one(model, dpo_test[i]["messages"][:-1])}
+                       for i in range(min(4, len(dpo_test)))]
+        return rows, generations
+    return with_local_model(action, adapter)
+
+dpo_before, dpo_before_text = dpo_evaluate()</code></pre>
+<p />
+<p>启动 DPO 训练的相关步骤，如下：</p>
+<p>1）设置训练参数。</p>
+<p>两个实验通过<code>common_options()</code>复用公共配置，包括本地模型路径、Qwen 对话模板、随机种子、bfloat16 精度和 LoRA 设置。其中 LoRA rank 为 8、alpha 为 16，目标模块为<code>all-linear</code>。下面保留 DPO 的完整实验配置；公共函数需要先在配套 Notebook 中运行。<code>common_options() </code> 函数把公共参数与本实验参数合并。<code>train_swift</code>将这些参数转换为命令行形式，并通过当前内核的 Python 调用<code>swift.cli.rlhf</code>实现模型训练。</p>
+<pre data-language="Python"><code>DPO_OUTPUT = RUN_DIR / "dpo"
+DPO_BETA = 0.1
+dpo_options = common_options() | {
+    "rlhf_type": "dpo", "loss_type": "sigmoid", "beta": DPO_BETA,
+    "dataset": str(DPO_PATHS["train"]),
+    "val_dataset": str(DPO_PATHS["val"]),
+    "output_dir": str(DPO_OUTPUT), "max_length": 1024,
+    "truncation_strategy": "delete", "max_steps": 20,
+    "learning_rate": 5e-5, "lr_scheduler_type": "cosine",
+    "warmup_ratio": 0.1,
+    "per_device_train_batch_size": 1,
+    "per_device_eval_batch_size": 1,
+    "gradient_accumulation_steps": 8,
+    "eval_strategy": "steps", "eval_steps": 10,
+    "save_strategy": "steps", "save_steps": 10,
+}
+train_swift(dpo_options, RUN_DIR / "dpo_train.log")
+DPO_ADAPTER = latest_adapter(DPO_OUTPUT)</code></pre>
+<p>主要参数的含义如下：</p>
+<table><colgroup><col /><col /><col /></colgroup><tbody><tr><td><p>参数</p></td><td><p>本实验值</p></td><td><p>作用</p></td></tr><tr><td><p>rlhf_type / loss_type</p></td><td><p>dpo / sigmoid</p></td><td><p>使用标准 sigmoid 形式的 DPO 目标</p></td></tr><tr><td><p>beta</p></td><td><p>0.1</p></td><td><p>控制 DPO 目标中相对参考策略的尺度</p></td></tr><tr><td><p>learning_rate</p></td><td><p>5e-5</p></td><td><p>控制每次参数更新的幅度</p></td></tr><tr><td><p>max_length</p></td><td><p>1024</p></td><td><p>限制上下文与候选回答的总长度</p></td></tr><tr><td><p>per_device_train_batch_size</p></td><td><p>1</p></td><td><p>单卡每个训练微批次处理 1 条偏好对</p></td></tr><tr><td><p>gradient_accumulation_steps</p></td><td><p>8</p></td><td><p>累计 8 个微批次后更新一次参数</p></td></tr><tr><td><p>max_steps</p></td><td><p>20</p></td><td><p>完成 20 次优化器更新后结束训练</p></td></tr><tr><td><p>eval_steps / save_steps</p></td><td><p>10 / 10</p></td><td><p>每 10 步进行验证并保存检查点</p></td></tr></tbody></table>
+<p>2）查看训练输出。</p>
+<p>训练开始后，ms-swift 会输出损失、隐式奖励、验证指标和检查点保存位置。本次训练完成后，模型将保存于<code>dpo/checkpoint</code> 目录中。模型训练及保存的结果如下图所示。</p>
+<img src="../../assets/manuscript-20260914/c14-6abfc0d35b28ba.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>日志中的<code>rewards/chosen</code>和<code>rewards/rejected</code>是根据策略与参考策略的对数概率差计算的隐式奖励，不是某个外部奖励模型对回答质量打出的分数。<code>rewards/accuracies</code>表示隐式奖励排序符合偏好标签的比例，不能直接理解为模型生成回答的正确率。相关日志执行结果如下图所示。</p>
+<img src="../../assets/manuscript-20260914/c14-827cd776fec13b.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<h3><b>比较 DPO 训练前后的结果</b></h3>
+<p>加载 DPO 适配器后，再次使用相同测试数据进行评测。比较时保持系统提示、对话模板和生成参数一致，避免把提示词变化或解码方式变化当成训练效果。</p>
+<pre data-language="Python"><code>dpo_after, dpo_after_text = dpo_evaluate(DPO_ADAPTER)
+before_df = pd.DataFrame(dpo_before).set_index("sample_id")
+after_df = pd.DataFrame(dpo_after).set_index("sample_id")
+
+comparison = pd.DataFrame({
+    "before_gap": before_df["gap"],
+    "after_gap": after_df["gap"],
+    "relative_dpo_margin": DPO_BETA * (
+        after_df["gap"] - before_df["gap"]
+    ),
+})</code></pre>
+<p />
+<p>其中，<code>gap</code>等于优选回答的序列对数概率减去非优选回答的序列对数概率。<code>gap</code>大于 0，表示当前模型对给定优选回答的序列概率更高。对测试样本统计这一条件成立的比例，就得到<code>pair_preference_rate</code>。</p>
+<p>本次测试结果如下图所示：</p>
+<img src="../../assets/manuscript-20260914/c14-aae994e220ecb7.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>由于训练轮数较少，部分样本的差值可以变大，但仍然没有从负数变成正数，有些样本改善，有些样本退步。因此，平均相对 margin 为正，不一定会让优选回答占优的样本比例提高。本次实验中，这个比例在训练前后都为 43.75%。以测试集中的一个用户询问家庭网络信号的问题为例：</p>
+<pre data-language="Plain Text"><code>用户：我能用什么方法强化我的家庭网络信号?我的笔记本电脑很难连接到网络路由器!</code></pre>
+<p>初始模型的回答包含下面的内容，摘录保留原文：</p>
+<pre data-language="Plain Text"><code>1. **使用无线路由器**：如果你的家中有多个设备需要上网，可以考虑安装一个无线路由器。这将允许你通过Wi-Fi连接到互联网。</code></pre>
+<p>DPO 训练后的回答则包含：</p>
+<pre data-language="Plain Text"><code>3. **重启路由器**：有时，简单的重启可以解决一些网络连接的问题。请按照路由器的指示进行操作。</code></pre>
+<p>从完整输出看，初始回答较多地建议更换或增加设备，训练后更多地围绕网络设置、驱动和重启等操作组织回答，说明训练改变了生成内容。本次 DPO 的训练改变了部分固定候选的相对概率和部分生成回答，但受限于训练论述和数据，读者可以使用更大规模的数据和训练轮数镜像实验。</p>
+<p />
+<h3><b>准备 GRPO 数据与奖励函数</b></h3>
+<p>DPO 使用数据中已经给定的两个回答，GRPO 则需要模型在训练时生成候选回答，再由奖励函数评价。本实验使用 GSM8K 数学应用题，以最终数字和输出格式作为可自动检查的反馈，不单独训练奖励模型。</p>
+<p>1）把题目和标准答案分开。</p>
+<p>原始 GSM8K 数据包含<code>question</code>和<code>answer</code>两个字段。<code>answer</code>中既有解题过程，也有位于<code>####</code>之后的最终数字。数据转换时，只把题目交给模型，把最终数字提取到<code>solution</code>字段中，相关代码如下：</p>
+<pre data-language="Python"><code>def convert_grpo(row):
+    question = row["question"].strip()
+    original_answer = row["answer"].strip()
+    assert question and "####" in original_answer
+    answer = parse_numeric(original_answer.rsplit("####", 1)[-1])
+    assert answer is not None
+    return {
+        "messages": [
+            {"role": "system", "content": MATH_SYSTEM},
+            {"role": "user", "content": question},
+        ],
+        "solution": str(answer),
+    }</code></pre>
+<p>转换后的<code>messages</code>没有标准解题过程，也没有供模型模仿的 assistant 回答。<code>solution</code>作为附加数据列交给奖励函数，不拼接到 Prompt 中。这样训练时，模型需要自己生成答案，评分程序再把它与标准答案比较。本次从原始训练来源中清洗、去重并划分 128 道训练题和 16 道验证题。训练和验证 Prompt 的长度限制为 512 Token。测试使用官方测试文件的全部 1319 道题，保留原始顺序，不按训练长度阈值删题，并检查它们与训练、验证数据是否重叠。相关执行结果如下：</p>
+<img src="../../assets/manuscript-20260914/c14-e21bc5b02dad13.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>2）定义正确性奖励和格式奖励。</p>
+<p>本实验的总奖励为：</p>
+<pre data-language="Plain Text"><code>总奖励 = 正确性奖励 + 0.1 × 格式奖励</code></pre>
+<p>正确性奖励要求模型输出符合指定标签格式，并且标签中的数字与<code>solution</code>相等，满足时为 1，否则为 0。格式奖励只检查标签是否唯一、是否位于回答末尾，以及内容能否解析为数字，满足时为 1，否则为 0。相关代码如下：</p>
+<pre data-language="Python"><code>def extract_answer(completion):
+    if not isinstance(completion, str):
+        return None
+    if completion.count("&lt;answer&gt;") != 1 or completion.count("&lt;/answer&gt;") != 1:
+        return None
+    match = re.search(r"&lt;answer&gt;\s*([^&lt;&gt;]+?)\s*&lt;/answer&gt;\s*\Z", completion)
+    return parse_numeric(match.group(1)) if match else None
+
+
+class Chapter10Accuracy(ORM):
+    def __call__(self, completions, solution, **kwargs):
+        if len(completions) != len(solution):
+            raise ValueError("候选回答与 solution 数量不匹配。")
+        rewards = []
+        for text, gold in zip(completions, solution):
+            expected = parse_numeric(gold)
+            if expected is None:
+                raise ValueError(f"标准答案格式无效：{gold!r}")
+            predicted = extract_answer(text)
+            rewards.append(float(predicted is not None and predicted == expected))
+        return rewards
+
+
+class Chapter10Format(ORM):
+    def __call__(self, completions, **kwargs):
+        return [float(extract_answer(text) is not None) for text in completions]</code></pre>
+<p>其中，<code>completions</code>是一组模型生成的回答，<code>solution</code>是训练器传入的对应标准答案。<code>extract_answer</code>先检查标签数量，再确认标签位于回答末尾，最后提取其中的数字。这种奖励只检查最终结果，不验证解题过程。模型即使没有给出解释，只要输出正确的答案标签，也可以得到全部奖励。系统提示中的“简要解释”并没有被写入评分条件，因此不能把获得高分理解为模型已经学会完整、可靠的推理。</p>
+<p>奖励类还需要注册，本次训练器使用的奖励插件为：</p>
+<pre data-language="Python"><code>orms["chapter10_accuracy"] = Chapter10Accuracy
+orms["chapter10_format"] = Chapter10Format</code></pre>
+<p>Notebook 把完整插件保存为<code>plugins/chapter10_rewards.py</code>，后面通过<code>external_plugins</code>指定文件路径，并通过<code>reward_funcs</code>指定上述注册名称。插件应包含自己的导入和辅助函数，因为它会在训练子进程中独立加载。注册方法可参照 <a href="https://github.com/modelscope/ms-swift/blob/v4.4.2/examples/train/grpo/plugin/plugin.py" target="_blank" rel="noopener noreferrer">ms-swift 4.4.2 官方奖励插件示例</a>。</p>
+<p>3）先检查奖励函数，再开始训练。</p>
+<p>以下是部分结果的奖励计算结果：</p>
+<table><colgroup><col /><col /><col /><col /><col /></colgroup><tbody><tr><td><p>模型输出</p></td><td><p>标准答案</p></td><td><p>正确性奖励</p></td><td><p>格式奖励</p></td><td><p>总奖励</p></td></tr><tr><td><p><code>We obtain twelve. &lt;answer&gt;12&lt;/answer&gt;</code></p></td><td><p>12</p></td><td><p>1</p></td><td><p>1</p></td><td><p>1.1</p></td></tr><tr><td><p><code>&lt;answer&gt;12.0&lt;/answer&gt;</code></p></td><td><p>12</p></td><td><p>1</p></td><td><p>1</p></td><td><p>1.1</p></td></tr><tr><td><p><code>&lt;answer&gt;13&lt;/answer&gt;</code></p></td><td><p>12</p></td><td><p>0</p></td><td><p>1</p></td><td><p>0.1</p></td></tr><tr><td><p><code>The answer is 12.</code></p></td><td><p>12</p></td><td><p>0</p></td><td><p>0</p></td><td><p>0</p></td></tr><tr><td><p><code>&lt;answer&gt;11&lt;/answer&gt;&lt;answer&gt;12&lt;/answer&gt;</code></p></td><td><p>12</p></td><td><p>0</p></td><td><p>0</p></td><td><p>0</p></td></tr><tr><td><p><code>&lt;answer&gt;12&lt;/answer&gt; or maybe 13</code></p></td><td><p>12</p></td><td><p>0</p></td><td><p>0</p></td><td><p>0</p></td></tr></tbody></table>
+<p>根据本次所采用的奖励函数计算方法，普通文本<code>The answer is 12.</code>虽然包含正确数字，但没有满足格式要求，所以严格正确性奖励仍然为 0。多个答案标签也不会通过检查，避免模型靠枚举答案获得奖励。</p>
+<h3><b>启动 GRPO 训练并观察日志</b></h3>
+<p>完成数据和奖励函数准备后，完成相关实验的设置和训练任务。</p>
+<p>1）设置生成组和训练参数。</p>
+<p>本实验对同一道题生成 4 个候选回答，生成批量也设置为 4，因此一个生成批次对应 1 道题的 4 个候选。随后每个训练微批次处理 1 个候选，累计 4 个微批次更新一次参数。</p>
+<p>下面是本次 GRPO 的实验配置。<code>GRPO_PATHS</code>、<code>PLUGIN_PATH</code>等相关配置及内容。</p>
+<pre data-language="Python"><code>GRPO_OUTPUT = RUN_DIR / "grpo"
+grpo_options = common_options() | {
+    "rlhf_type": "grpo", "loss_type": "grpo",
+    "dataset": str(GRPO_PATHS["train"]),
+    "val_dataset": str(GRPO_PATHS["val"]),
+    "output_dir": str(GRPO_OUTPUT),
+    "external_plugins": str(PLUGIN_PATH),
+    "reward_funcs": ["chapter10_accuracy", "chapter10_format"],
+    "reward_weights": [1.0, 0.1], "remove_unused_columns": False,
+    "num_generations": 4, "generation_batch_size": 4,
+    "per_device_train_batch_size": 1,
+    "gradient_accumulation_steps": 4,
+    "per_device_eval_batch_size": 4, "num_generations_eval": 4,
+    "max_length": 512, "max_completion_length": 256,
+    "truncation_strategy": "left",
+    "max_steps": 10, "learning_rate": 1e-5,
+    "lr_scheduler_type": "constant", "warmup_ratio": 0.0,
+    "beta": 0.04, "num_iterations": 1,
+    "temperature": 0.9, "top_p": 0.95,
+    "use_vllm": False, "log_completions": True,
+    "eval_strategy": "steps", "eval_steps": 5,
+    "save_strategy": "steps", "save_steps": 5,
+}
+train_swift(grpo_options, RUN_DIR / "grpo_train.log")
+GRPO_ADAPTER = latest_adapter(GRPO_OUTPUT)</code></pre>
+<p>组大小与生成批量需要配合设置。生成批量必须能被组大小整除，也必须能被单卡训练微批量乘以 GPU 进程数的结果整除。本次是单卡单进程，生成批量 4、组大小 4、训练微批量 1 满足这些条件；验证时批量和组大小也都为 4。如果调整组大小，应同时核对生成批量、训练梯度累积和验证配置。本次训练完成 10 步，保存了<code>grpo/checkpoint-10</code>。</p>
+<p />
+<img src="../../assets/manuscript-20260914/c14-891621009514f8.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p />
+<p>2）读取训练日志。</p>
+<p>GRPO 训练损失不是数学题正确率。观察训练时，应把总奖励、奖励分项和组内差异放在一起看。日志中的<code>reward</code>表示当前汇总的奖励，<code>reward_std</code>用于观察组内奖励差异，<code>frac_reward_zero_std</code>表示组内奖励标准差为零的组所占比例。相关训练统计结果可视化结果如下图所示：</p>
+<img src="../../assets/manuscript-20260914/c14-b2c4047eb8d6c9.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<img src="../../assets/manuscript-20260914/c14-602fc1cb962711.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>从图中可以看到，训练从第 2 步开始出现非零的组内奖励差异，同分组比例降为 0，说明奖励函数已经能够区分不同候选回答，为 GRPO 提供有效的优化信号。本次仅进行了 10 个训练步骤，正确性奖励较为稀疏，数学答案正确率尚未提高；后续可以增加训练轮数，让模型接触更多题目和候选回答，并结合验证集观察训练效果可能更为明显。</p>
+<h3><b>全量评测与结果分析</b></h3>
+<p>训练日志反映的是训练过程中采样到的候选，最终还需要用独立测试集比较模型表现。每道题只生成一个回答，不属于多次随机采样后选择最好答案的评测。</p>
+<p>初始结果由训练前的<code>grpo_evaluate()</code>保存。训练结束后传入 GRPO 适配器，再汇总相同题目上的结果。下面摘录评测与汇总代码；Notebook 还会检查样本编号、题目和标准答案是否一一对应。</p>
+<pre data-language="Python"><code>grpo_after = grpo_evaluate(GRPO_ADAPTER)
+grpo_summary = pd.DataFrame([
+    {
+        "模型": name,
+        "严格答案正确率": np.mean([r["correct"] for r in rows]),
+        "答对题数": int(sum(r["correct"] for r in rows)),
+        "格式有效比例": np.mean([r["format_ok"] for r in rows]),
+        "格式合格题数": int(sum(r["format_ok"] for r in rows)),
+        "平均总奖励": np.mean([r["total_reward"] for r in rows]),
+        "测试题数": len(rows),
+    }
+    for name, rows in [
+        ("初始 Instruct", grpo_before), ("GRPO LoRA", grpo_after)
+    ]
+])
+display(grpo_summary)</code></pre>
+<p>本次全量评测结果如下：</p>
+<img src="../../assets/manuscript-20260914/c14-e759ab0f69155f.webp" alt="正文配图" class="article-image" loading="lazy" decoding="async" />
+<p>结合上述全量评测结果，模型的格式有效比例由 89.16% 提高到 94.24%，体现了本次训练在规范输出格式方面的作用。后续的实验和训练，可以进一步调整题目难度或奖励设计，使后续结果能够获得更充分的答案正确性反馈。</p>
+<p />
+<p>本章节所有实验数据和代码，可参考：https://modelscope.cn/gallery/liucong/8a5fefc5-6f90-42df-9a09-bc9781ed3da8</p>
 </article>

@@ -34,7 +34,7 @@ A useful model application starts with practical decisions: which model fits the
 
 The goal is to help developers move from a first successful inference to applications they can reproduce, evaluate, and improve. Examples cover enterprise knowledge Q&A, speech assistants, customer-service quality analysis, fitness coaching, product-image creation, production-line inspection, and AI-driven scientific discovery.
 
-> **8 parts · 40 chapters · 39 available to read**
+> **8 parts · 41 chapters · 40 available to read**
 
 ## Start reading
 
@@ -59,9 +59,9 @@ Reading locally requires Python 3 and a modern browser; it requires no project d
 | Your goal | Recommended chapters | What you will practice |
 | --- | --- | --- |
 | **Get started** | [01](content/chapters/chapter-01.md) → [05](content/chapters/chapter-05.md) → [07](content/chapters/chapter-07.md) | Understand models, define a task, and run a first inference |
-| **Adapt a model** | [13](content/chapters/chapter-13.md) → [14](content/chapters/chapter-14.md) → [16](content/chapters/chapter-16.md) | Prepare training data, fine-tune, and evaluate against a baseline |
-| **Build an application** | [20](content/chapters/chapter-20.md) → [31](content/chapters/chapter-31.md) → [32](content/chapters/chapter-32.md) | Combine knowledge retrieval, external tools, and reusable skills |
-| **Create with generative AI** | [24](content/chapters/chapter-24.md) → [25](content/chapters/chapter-25.md) → [26](content/chapters/chapter-26.md) → [27](content/chapters/chapter-27.md) → [29](content/chapters/chapter-29.md) | Explore examples, customize image LoRA, create product visuals, and study the foundations |
+| **Adapt a model** | [14](content/chapters/chapter-14.md) → [15](content/chapters/chapter-15.md) → [17](content/chapters/chapter-17.md) | Prepare training data, fine-tune, and evaluate against a baseline |
+| **Build an application** | [21](content/chapters/chapter-21.md) → [32](content/chapters/chapter-32.md) → [33](content/chapters/chapter-33.md) | Combine knowledge retrieval, external tools, and reusable skills |
+| **Create with generative AI** | [25](content/chapters/chapter-25.md) → [26](content/chapters/chapter-26.md) → [27](content/chapters/chapter-27.md) → [28](content/chapters/chapter-28.md) → [30](content/chapters/chapter-30.md) | Explore examples, customize image LoRA, create product visuals, and study the foundations |
 
 ### Who is this for?
 
@@ -90,54 +90,55 @@ Read each chapter on GitHub, or use the [online reading website](https://modelsc
 | [08 · 多大模型，选择什么样的服务器配置](content/chapters/chapter-08.md) | Model size, memory, and server selection |
 | [09 · 笔记本也能跑开源模型，先从 Ollama 开始](content/chapters/chapter-09.md) | Local inference with Ollama |
 | [10 · 把模型放到云端跑，用 Notebook 试试 CPU 和 GPU](content/chapters/chapter-10.md) | CPU and GPU inference in cloud notebooks |
-| [11 · 把自己微调的 MiniCPM 装进手机：从训练拆解到魔搭实践](content/chapters/chapter-11.md) | LoRA fine-tuning, GGUF quantization, and Android deployment |
-| [12 · 模型需要资源太多，量化能帮上什么忙？](content/chapters/chapter-12.md) | Quantization and resource trade-offs |
+| [11 · 大量用户同时提问，如何让模型答得更快？基于 SGLang 的实践](content/chapters/chapter-11.md) | Serving models with SGLang and handling concurrent requests |
+| [12 · 把自己微调的 MiniCPM 装进手机：从训练拆解到魔搭实践](content/chapters/chapter-12.md) | LoRA fine-tuning, GGUF quantization, and Android deployment |
+| [13 · 模型需要资源太多，量化能帮上什么忙？](content/chapters/chapter-13.md) | Quantization and resource trade-offs |
 | **Part 4 · Fine-tuning and evaluation** | |
-| [13 · 业务素材这么多，怎么变成能训练的数据？](content/chapters/chapter-13.md) | Turning business materials into training data |
-| [14 · 快速用 ms-swift，完成开源模型的轻量微调](content/chapters/chapter-14.md) | Lightweight fine-tuning with ms-swift |
-| [15 · 模型已经会回答了，为什么还要做偏好对齐？](content/chapters/chapter-15.md) | Goals and methods of preference alignment |
-| [16 · 微调有没有用，测才知道？](content/chapters/chapter-16.md) | Comparing baseline and fine-tuned models |
+| [14 · 业务素材这么多，怎么变成能训练的数据？](content/chapters/chapter-14.md) | Turning business materials into training data |
+| [15 · 快速用 ms-swift，完成开源模型的轻量微调](content/chapters/chapter-15.md) | Lightweight fine-tuning with ms-swift |
+| [16 · 模型已经会回答了，为什么还要做偏好对齐？](content/chapters/chapter-16.md) | Goals and methods of preference alignment |
+| [17 · 微调有没有用，测才知道？](content/chapters/chapter-17.md) | Comparing baseline and fine-tuned models |
 | **Part 5 · Application systems** | |
-| [17 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-17.md) | Pose estimation and movement comparison |
-| [18 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-18.md) | Call transcription and quality analysis |
-| [19 · 搭建一个能听也能说的语音助手](content/chapters/chapter-19.md) | Speech recognition, Q&A, and synthesis |
-| [20 · 实现一个企业知识问答助手](content/chapters/chapter-20.md) | Knowledge retrieval and RAG |
-| [21 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-21.md) | On-device visual inspection, human confirmation, and offline synchronization |
-| [22 · 我们每天都在做决策，AI 能帮我们做吗？](content/chapters/chapter-22.md) | Use an open Chinese decision model for work-message decisions and sentiment analysis |
-| [23 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-23.md) | Invitation to contribute reproducible application tutorials |
+| [18 · AI 健身教练：跟着视频练，让 AI 指出动作不标准的地方](content/chapters/chapter-18.md) | Pose estimation and movement comparison |
+| [19 · 智能客服质检：AI 能从一通客服电话中分析出什么？](content/chapters/chapter-19.md) | Call transcription and quality analysis |
+| [20 · 搭建一个能听也能说的语音助手](content/chapters/chapter-20.md) | Speech recognition, Q&A, and synthesis |
+| [21 · 实现一个企业知识问答助手](content/chapters/chapter-21.md) | Knowledge retrieval and RAG |
+| [22 · 用 MiniCPM-V 搭建手机巡检助手：拍照生成现场记录](content/chapters/chapter-22.md) | On-device visual inspection, human confirmation, and offline synchronization |
+| [23 · 我们每天都在做决策，AI 能帮我们做吗？](content/chapters/chapter-23.md) | Use an open Chinese decision model for work-message decisions and sentiment analysis |
+| [24 · 场景有千千万，欢迎你来共建出你的场景](content/chapters/chapter-24.md) | Invitation to contribute reproducible application tutorials |
 | **Part 6 · Generative AI** | |
-| [24 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-24.md) | Open generative-model use cases |
-| [25 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-25.md) | Image LoRA customization with DiffSynth |
-| [26 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-26.md) | Product-image generation and editing |
-| [27 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-27.md) | Qwen-Image deployment and educational posters on ModelScope |
-| [28 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-28.md) | MiniMax H3 deployment tutorial pending |
-| [29 · 补充：AIGC 理论知识](content/chapters/chapter-29.md) | Image and video generation fundamentals |
+| [25 · 10 个 Case，带你看看 AIGC 的开源模型能做到什么地步](content/chapters/chapter-25.md) | Open generative-model use cases |
+| [26 · 定制？使用 DiffSynth 训练图像 LoRA](content/chapters/chapter-26.md) | Image LoRA customization with DiffSynth |
+| [27 · 一张商品营销图，从生成到修改怎么做？](content/chapters/chapter-27.md) | Product-image generation and editing |
+| [28 · 想要教学海报？要不试试让 AI 帮忙画一张](content/chapters/chapter-28.md) | Qwen-Image deployment and educational posters on ModelScope |
+| [29 · 开源模型也能做出像样的 AI 视频吗？](content/chapters/chapter-29.md) | MiniMax H3 deployment tutorial pending |
+| [30 · 补充：AIGC 理论知识](content/chapters/chapter-30.md) | Image and video generation fundamentals |
 | **Part 7 · Agents** | |
-| [30 · Agent 是什么，它能做什么事？](content/chapters/chapter-30.md) | Agent components, execution loop, and use cases |
-| [31 · MCP：让模型连接外部工具](content/chapters/chapter-31.md) | Connecting models to external tools |
-| [32 · Skill：把任务方法封装成能力](content/chapters/chapter-32.md) | Reusable task methods and workflows |
-| [33 · 快速使用 Claude Code](content/chapters/chapter-33.md) | Getting started with Claude Code |
-| [34 · 快速使用 PI](content/chapters/chapter-34.md) | Getting started with PI |
-| [35 · 快速使用 DeepSeek Harness](content/chapters/chapter-35.md) | Getting started with DeepSeek Harness |
-| [36 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-36.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
-| [37 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-37.md) | Build a verifiable scientific-discovery Agent with Qwen3 and compare model size and thinking mode |
-| [38 · 补充：Agent 框架知识](content/chapters/chapter-38.md) | Agent framework fundamentals |
+| [31 · Agent 是什么，它能做什么事？](content/chapters/chapter-31.md) | Agent components, execution loop, and use cases |
+| [32 · MCP：让模型连接外部工具](content/chapters/chapter-32.md) | Connecting models to external tools |
+| [33 · Skill：把任务方法封装成能力](content/chapters/chapter-33.md) | Reusable task methods and workflows |
+| [34 · 快速使用 Claude Code](content/chapters/chapter-34.md) | Getting started with Claude Code |
+| [35 · 快速使用 PI](content/chapters/chapter-35.md) | Getting started with PI |
+| [36 · 快速使用 DeepSeek Harness](content/chapters/chapter-36.md) | Getting started with DeepSeek Harness |
+| [37 · 产线巡检 Agent：用 Penguin Harness 快速开发与优化](content/chapters/chapter-37.md) | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation |
+| [38 · Mini AI Scientist：让 4B 开源模型自己做实验、发现隐藏规律](content/chapters/chapter-38.md) | Build a verifiable scientific-discovery Agent with Qwen3 and compare model size and thinking mode |
+| [39 · 补充：Agent 框架知识](content/chapters/chapter-39.md) | Agent framework fundamentals |
 | **Part 8 · Supplementary fundamentals** | |
-| [39 · 补充：大模型基础知识](content/chapters/chapter-39.md) | Model architecture, training, inference, and limitations |
-| [40 · 主流 LLM 评测](content/chapters/chapter-40.md) | Invitation to contribute evaluations of mainstream models |
+| [40 · 补充：大模型基础知识](content/chapters/chapter-40.md) | Model architecture, training, inference, and limitations |
+| [41 · 主流 LLM 评测](content/chapters/chapter-41.md) | Invitation to contribute evaluations of mainstream models |
 
 ## Application examples
 
 | Example | Workflow explored | Chapter |
 | --- | --- | --- |
-| AI fitness coach | Compare body keypoints and exercise movements | [17](content/chapters/chapter-17.md) |
-| Customer-service quality analysis | Turn call recordings into text and analysis | [18](content/chapters/chapter-18.md) |
-| Speech assistant | Connect speech recognition, model responses, and speech synthesis | [19](content/chapters/chapter-19.md) |
-| Enterprise knowledge assistant | Retrieve reference material for grounded answers | [20](content/chapters/chapter-20.md) |
-| Open decision models | Classify work messages and sentiment with a 0.8B Chinese model | [22](content/chapters/chapter-22.md) |
-| Product marketing visuals | Generate and edit product images | [26](content/chapters/chapter-26.md) |
-| Production-line inspection | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation | [36](content/chapters/chapter-36.md) |
-| Mini AI Scientist | Let open models propose hypotheses, design experiments, and verify discoveries automatically | [37](content/chapters/chapter-37.md) |
+| AI fitness coach | Compare body keypoints and exercise movements | [18](content/chapters/chapter-18.md) |
+| Customer-service quality analysis | Turn call recordings into text and analysis | [19](content/chapters/chapter-19.md) |
+| Speech assistant | Connect speech recognition, model responses, and speech synthesis | [20](content/chapters/chapter-20.md) |
+| Enterprise knowledge assistant | Retrieve reference material for grounded answers | [21](content/chapters/chapter-21.md) |
+| Open decision models | Classify work messages and sentiment with a 0.8B Chinese model | [23](content/chapters/chapter-23.md) |
+| Product marketing visuals | Generate and edit product images | [27](content/chapters/chapter-27.md) |
+| Production-line inspection | Develop a production-line inspection Agent with Penguin Harness and optimize it through evaluation | [37](content/chapters/chapter-37.md) |
+| Mini AI Scientist | Let open models propose hypotheses, design experiments, and verify discoveries automatically | [38](content/chapters/chapter-38.md) |
 
 ## Community
 

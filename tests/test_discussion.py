@@ -33,18 +33,18 @@ def test_renumbering_keeps_notes_with_original_article(site):
     with site[0].state.db() as db:
         for eid,chapter,kind in [('case','chapter-20','comment'),('agent','chapter-33','annotation'),('private','chapter-20','highlight'),('product','chapter-22','comment')]:
             db.execute('INSERT INTO entries VALUES (?,?,?,?,?,?,?,?,?,?)',(eid,chapter,'alice',kind,eid,'original quote',1,0,14,10))
-    case='/api/chapters/chapter-24/entries'
-    agent='/api/chapters/chapter-30/entries'
+    case='/api/chapters/chapter-25/entries'
+    agent='/api/chapters/chapter-31/entries'
     assert {x['id'] for x in c.get(case).json()['items']}=={'case','private'}
     assert c.get(agent).json()['items'][0]['id']=='agent'
-    assert c.get(agent).json()['items'][0]['chapter']=='chapter-30'
-    assert c.get('/api/chapters/chapter-22/entries').json()['items']==[]
+    assert c.get(agent).json()['items'][0]['chapter']=='chapter-31'
     assert c.get('/api/chapters/chapter-23/entries').json()['items']==[]
-    assert c.get('/api/chapters/chapter-37/entries').json()['items']==[]
-    assert c.get('/api/chapters/chapter-27/entries').json()['items']==[]
-    assert c.get('/api/chapters/chapter-26/entries').json()['items'][0]['id']=='product'
-    assert c.get('/api/chapters/chapter-28/entries').status_code==404
-    jev=c.post('/api/chapters/chapter-22/entries',json={'kind':'comment','text':'Jev comment'})
+    assert c.get('/api/chapters/chapter-24/entries').json()['items']==[]
+    assert c.get('/api/chapters/chapter-38/entries').json()['items']==[]
+    assert c.get('/api/chapters/chapter-28/entries').json()['items']==[]
+    assert c.get('/api/chapters/chapter-27/entries').json()['items'][0]['id']=='product'
+    assert c.get('/api/chapters/chapter-29/entries').status_code==404
+    jev=c.post('/api/chapters/chapter-23/entries',json={'kind':'comment','text':'Jev comment'})
     assert jev.status_code==201
     with site[0].state.db() as db:
         assert db.execute('SELECT chapter FROM entries WHERE id=?',(jev.json()['id'],)).fetchone()['chapter']=='jev-chinese-decision'
